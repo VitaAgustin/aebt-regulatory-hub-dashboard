@@ -4,6 +4,9 @@
 const SUPABASE_URL = "https://pbfzjtipyqtsamgqemvx.supabase.co/rest/v1/";
 const SUPABASE_ANON_KEY = "sb_publishable_X8aX5wtGRpYOCEaOtok1Ug_77MQdP9K";
 const STORAGE_BUCKET = "regulatory-files";
+const DOCUMENT_CACHE_KEY = "aebt-documents-v1";
+const SUPABASE_CLIENT_CDN =
+  "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.107.0/dist/umd/supabase.min.js";
 const SUPABASE_CLIENT_URL = SUPABASE_URL.trim()
   .replace(/\/rest\/v1\/?$/i, "")
   .replace(/\/+$/, "");
@@ -14,15 +17,7 @@ const configured =
   SUPABASE_ANON_KEY.length > 30 &&
   !SUPABASE_ANON_KEY.includes("YOUR_SUPABASE");
 
-const db = configured
-  ? window.supabase.createClient(SUPABASE_CLIENT_URL, SUPABASE_ANON_KEY, {
-      auth: {
-        persistSession: true,
-        autoRefreshToken: true,
-        detectSessionInUrl: true
-      }
-    })
-  : null;
+let db = null;
 
 const state = {
   documents: [],
@@ -30,7 +25,10 @@ const state = {
   documentsError: null,
   session: null,
   editingId: null,
-  signedUrls: new Map()
+  detailRenderToken: 0,
+  signedUrls: new Map(),
+  documentsPromise: null,
+  supabasePromise: null
 };
 
 const $ = (selector, parent = document) => parent.querySelector(selector);
@@ -45,14 +43,67 @@ async function initialize() {
     history.replaceState(null, "", `/#${legacyRoute || "home"}`);
   }
 
+  const hasCachedDocuments = hydrateDocumentCache();
+  if (!hasCachedDocuments) renderDocumentLoadingState();
+  route();
+
   if (!configured) {
     $("#config-alert").classList.remove("hidden");
     renderEmptyApplication();
-    route();
     return;
   }
 
-  setLoading(true, "Menghubungkan ke Supabase...");
+  state.supabasePromise = loadSupabaseClient();
+  const documentsPromise = loadDocuments({ preserveExisting: hasCachedDocuments });
+  const authPromise = state.supabasePromise.then(initializeAuth);
+  const [authResult, documentsResult] = await Promise.allSettled([
+    authPromise,
+    documentsPromise
+  ]);
+
+  if (authResult.status === "rejected") {
+    showToast(
+      `Session admin tidak dapat diperiksa: ${readableError(authResult.reason)}`,
+      true
+    );
+  }
+  if (documentsResult.status === "rejected") {
+    showToast(readableError(documentsResult.reason), true);
+  }
+
+  route();
+}
+
+async function loadSupabaseClient() {
+  if (!window.supabase) {
+    await new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = SUPABASE_CLIENT_CDN;
+      script.async = true;
+      script.onload = resolve;
+      script.onerror = () =>
+        reject(new Error("Library Supabase tidak dapat dimuat dari CDN."));
+      document.head.append(script);
+    });
+  }
+
+  db = window.supabase.createClient(SUPABASE_CLIENT_URL, SUPABASE_ANON_KEY, {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true
+    }
+  });
+  return db;
+}
+
+async function initializeAuth() {
+  db.auth.onAuthStateChange((_event, nextSession) => {
+    state.session = nextSession;
+    updateAdminState();
+    if (nextSession) loadAdminLogs();
+  });
+
   try {
     const {
       data: { session },
@@ -64,23 +115,8 @@ async function initialize() {
 
     state.session = session;
     updateAdminState();
-
-    db.auth.onAuthStateChange((_event, nextSession) => {
-      state.session = nextSession;
-      updateAdminState();
-      if (nextSession) loadAdminLogs();
-    });
   } catch (error) {
-    showToast(`Session admin tidak dapat diperiksa: ${readableError(error)}`, true);
-  }
-
-  try {
-    await loadDocuments();
-  } catch (error) {
-    showToast(readableError(error), true);
-  } finally {
-    setLoading(false);
-    route();
+    throw error;
   }
 }
 
@@ -118,36 +154,102 @@ function bindEvents() {
   $("#admin-documents-body").addEventListener("click", handleAdminTableAction);
 }
 
-async function loadDocuments() {
-  if (!db) {
-    state.documents = [];
-    state.documentsLoaded = true;
-    state.documentsError = null;
-    renderAll();
-    return [];
+async function loadDocuments({ preserveExisting = state.documents.length > 0 } = {}) {
+  if (state.documentsPromise) return state.documentsPromise;
+
+  state.documentsPromise = (async () => {
+    try {
+      const data = await fetchDocumentsFromRest();
+
+      state.documents = Array.isArray(data) ? data : [];
+      state.documentsLoaded = true;
+      state.documentsError = null;
+      writeDocumentCache(state.documents);
+      renderAll();
+      route();
+      return state.documents;
+    } catch (error) {
+      const fetchError = new Error(`Gagal memuat data dokumen: ${readableError(error)}`);
+      if (preserveExisting && state.documents.length) {
+        state.documentsLoaded = true;
+        state.documentsError = null;
+        renderAll();
+      } else {
+        state.documents = [];
+        state.documentsLoaded = false;
+        state.documentsError = fetchError;
+        renderDocumentFetchError(fetchError);
+      }
+      throw fetchError;
+    } finally {
+      state.documentsPromise = null;
+    }
+  })();
+
+  return state.documentsPromise;
+}
+
+async function fetchDocumentsFromRest() {
+  const endpoint = new URL(`${SUPABASE_CLIENT_URL}/rest/v1/documents`);
+  endpoint.searchParams.set("select", "*");
+  endpoint.searchParams.set("order", "updated_at.desc");
+
+  const response = await fetch(endpoint, {
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${SUPABASE_ANON_KEY}`
+    },
+    cache: "no-store"
+  });
+
+  if (!response.ok) {
+    const payload = await response.json().catch(() => null);
+    throw new Error(
+      payload?.message || `Supabase mengembalikan HTTP ${response.status}.`
+    );
   }
 
+  return response.json();
+}
+
+function hydrateDocumentCache() {
   try {
-    const { data, error } = await db
-      .from("documents")
-      .select("*")
-      .order("updated_at", { ascending: false });
+    const cached = JSON.parse(localStorage.getItem(DOCUMENT_CACHE_KEY) || "null");
+    if (!Array.isArray(cached?.documents)) return false;
 
-    if (error) throw error;
-
-    state.documents = Array.isArray(data) ? data : [];
+    state.documents = cached.documents;
     state.documentsLoaded = true;
     state.documentsError = null;
     renderAll();
-    return state.documents;
-  } catch (error) {
-    const fetchError = new Error(`Gagal memuat data dokumen: ${readableError(error)}`);
-    state.documents = [];
-    state.documentsLoaded = false;
-    state.documentsError = fetchError;
-    renderDocumentFetchError(fetchError);
-    throw fetchError;
+    return true;
+  } catch {
+    localStorage.removeItem(DOCUMENT_CACHE_KEY);
+    return false;
   }
+}
+
+function writeDocumentCache(documents) {
+  try {
+    localStorage.setItem(
+      DOCUMENT_CACHE_KEY,
+      JSON.stringify({ cachedAt: Date.now(), documents })
+    );
+  } catch {
+    // The live Supabase response remains usable when browser storage is unavailable.
+  }
+}
+
+function renderDocumentLoadingState() {
+  $("#documents-count").textContent = "Memuat...";
+  $("#recent-documents-body").innerHTML = emptyRow(
+    6,
+    "Memuat dokumen dari Supabase..."
+  );
+  $("#documents-body").innerHTML = emptyRow(7, "Memuat dokumen dari Supabase...");
+  $("#admin-documents-body").innerHTML = emptyRow(
+    5,
+    "Memuat dokumen dari Supabase..."
+  );
 }
 
 function renderAll() {
@@ -359,6 +461,7 @@ function renderServiceMapping() {
 async function renderDocumentDetail(id) {
   const container = $("#document-detail");
   const documentId = String(id || "").trim();
+  const renderToken = ++state.detailRenderToken;
 
   if (state.documentsError) {
     container.innerHTML = `
@@ -457,11 +560,11 @@ async function renderDocumentDetail(id) {
     </article>
   `;
 
-  if (storagePath) await attachSignedUrls(doc);
+  if (storagePath) await attachSignedUrls(doc, renderToken);
   else showFileUnavailable();
 }
 
-async function attachSignedUrls(doc) {
+async function attachSignedUrls(doc, renderToken) {
   const storagePath = validStoragePath(doc?.file_path);
   if (!storagePath) {
     showFileUnavailable();
@@ -469,39 +572,48 @@ async function attachSignedUrls(doc) {
   }
 
   try {
-    let signedUrl = state.signedUrls.get(storagePath);
-    if (!signedUrl) {
-      const { data, error } = await db.storage
-        .from(STORAGE_BUCKET)
-        .createSignedUrl(storagePath, 3600);
-      if (error) throw error;
-      if (!data?.signedUrl) throw new Error("Supabase tidak mengembalikan signed URL preview.");
-      signedUrl = data.signedUrl;
-      state.signedUrls.set(storagePath, signedUrl);
+    const storageClient = db || (await state.supabasePromise);
+    let signedUrls = state.signedUrls.get(storagePath);
+    if (!signedUrls) {
+      const [previewResult, downloadResult] = await Promise.all([
+        storageClient.storage
+          .from(STORAGE_BUCKET)
+          .createSignedUrl(storagePath, 3600),
+        storageClient.storage
+          .from(STORAGE_BUCKET)
+          .createSignedUrl(storagePath, 3600, {
+            download: doc.file_name || "dokumen.pdf"
+          })
+      ]);
+
+      if (previewResult.error) throw previewResult.error;
+      if (downloadResult.error) throw downloadResult.error;
+      if (!previewResult.data?.signedUrl || !downloadResult.data?.signedUrl) {
+        throw new Error("Supabase tidak mengembalikan signed URL PDF.");
+      }
+
+      signedUrls = {
+        preview: previewResult.data.signedUrl,
+        download: downloadResult.data.signedUrl
+      };
+      state.signedUrls.set(storagePath, signedUrls);
     }
 
-    const { data: downloadData, error: downloadError } = await db.storage
-      .from(STORAGE_BUCKET)
-      .createSignedUrl(storagePath, 3600, {
-        download: doc.file_name || "dokumen.pdf"
-      });
-    if (downloadError) throw downloadError;
-    if (!downloadData?.signedUrl) {
-      throw new Error("Supabase tidak mengembalikan signed URL download.");
-    }
+    if (renderToken !== state.detailRenderToken) return;
 
     const openLink = $("#open-file-link");
-    openLink.href = signedUrl;
+    openLink.href = signedUrls.preview;
     openLink.classList.remove("hidden");
 
     const downloadLink = $("#download-file-link");
-    downloadLink.href = downloadData.signedUrl;
+    downloadLink.href = signedUrls.download;
     downloadLink.classList.remove("hidden");
 
     $("#pdf-preview").outerHTML = `<iframe class="pdf-frame" src="${escapeAttribute(
-      signedUrl
+      signedUrls.preview
     )}" title="Preview ${escapeAttribute(doc.title)}"></iframe>`;
   } catch (error) {
+    if (renderToken !== state.detailRenderToken) return;
     hideFileActions();
     const preview = $("#pdf-preview");
     if (preview) {
@@ -912,8 +1024,12 @@ function renderDocumentFetchError(error) {
 }
 
 function ensureConfigured() {
-  if (configured) return true;
-  showToast("Konfigurasi Supabase belum lengkap.", true);
+  if (!configured) {
+    showToast("Konfigurasi Supabase belum lengkap.", true);
+    return false;
+  }
+  if (db) return true;
+  showToast("Koneksi Supabase masih disiapkan. Coba lagi sebentar.", true);
   return false;
 }
 
