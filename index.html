@@ -1,0 +1,445 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="AEBT Regulatory Knowledge Hub untuk regulasi, SOP, service mapping, dan repository PDF."
+    />
+    <title>AEBT Regulatory Knowledge Hub</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="header-inner">
+        <a class="brand" href="#home" aria-label="Buka halaman Home">
+          <span class="brand-mark">AE</span>
+          <span>
+            <strong>AEBT Regulatory</strong>
+            <small>Knowledge Hub</small>
+          </span>
+        </a>
+        <nav class="main-nav" aria-label="Navigasi utama">
+          <a href="#home" data-nav="home">Home</a>
+          <a href="#documents" data-nav="documents">Database Regulasi</a>
+          <a href="#sop" data-nav="sop">SOP Center</a>
+          <a href="#services" data-nav="services">Service Mapping</a>
+          <a href="#admin" data-nav="admin">Admin</a>
+        </nav>
+      </div>
+    </header>
+
+    <div id="config-alert" class="config-alert hidden" role="alert">
+      <strong>Konfigurasi Supabase belum lengkap.</strong>
+      Isi <code>SUPABASE_URL</code> dan <code>SUPABASE_ANON_KEY</code> di bagian
+      paling atas <code>app.js</code>.
+    </div>
+
+    <main>
+      <section id="view-home" class="view page-shell" data-view="home">
+        <div class="page-heading">
+          <div>
+            <p class="eyebrow">Regulatory intelligence</p>
+            <h1>AEBT Regulatory Knowledge Hub</h1>
+            <p class="page-description">
+              Pusat data regulasi, SOP, file PDF, dan pemetaan layanan untuk
+              mendukung pekerjaan kajian dan compliance SBU AEBT.
+            </p>
+          </div>
+          <a class="button primary" href="#documents">Lihat dokumen</a>
+        </div>
+
+        <div class="metrics-grid" aria-label="Ringkasan dokumen">
+          <article class="metric-card">
+            <span>Total dokumen</span>
+            <strong id="metric-total">0</strong>
+          </article>
+          <article class="metric-card">
+            <span>Regulasi</span>
+            <strong id="metric-regulations">0</strong>
+          </article>
+          <article class="metric-card">
+            <span>SOP</span>
+            <strong id="metric-sops">0</strong>
+          </article>
+          <article class="metric-card accent">
+            <span>Prioritas tinggi</span>
+            <strong id="metric-priority">0</strong>
+          </article>
+          <article class="metric-card warning">
+            <span>Perlu review</span>
+            <strong id="metric-review">0</strong>
+          </article>
+        </div>
+
+        <section class="content-section">
+          <div class="section-heading">
+            <div>
+              <h2>Dokumen terbaru</h2>
+              <p>Lima dokumen terakhir yang ditambahkan atau diperbarui.</p>
+            </div>
+            <a href="#documents">Lihat semua</a>
+          </div>
+          <div class="table-frame">
+            <table>
+              <thead>
+                <tr>
+                  <th>Dokumen</th>
+                  <th>Tipe</th>
+                  <th>Kategori</th>
+                  <th>Status</th>
+                  <th>Prioritas</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="recent-documents-body"></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+
+      <section id="view-documents" class="view page-shell hidden" data-view="documents">
+        <div class="page-heading compact">
+          <div>
+            <p class="eyebrow">Repository publik</p>
+            <h1 id="documents-title">Database Regulasi</h1>
+            <p class="page-description">
+              Cari, filter, buka detail, preview, dan download dokumen dari
+              Supabase.
+            </p>
+          </div>
+          <span id="documents-count" class="count-label">0 dokumen</span>
+        </div>
+
+        <form id="document-filters" class="filter-bar">
+          <label class="search-field">
+            <span>Cari dokumen</span>
+            <input
+              id="filter-search"
+              type="search"
+              placeholder="Judul, nomor, ringkasan, layanan..."
+            />
+          </label>
+          <label>
+            <span>Tipe</span>
+            <select id="filter-type">
+              <option value="">Semua tipe</option>
+              <option value="regulasi">Regulasi</option>
+              <option value="sop">SOP</option>
+            </select>
+          </label>
+          <label>
+            <span>Kategori</span>
+            <select id="filter-category">
+              <option value="">Semua kategori</option>
+            </select>
+          </label>
+          <label>
+            <span>Status</span>
+            <select id="filter-status">
+              <option value="">Semua status</option>
+              <option value="Berlaku">Berlaku</option>
+              <option value="Dicabut">Dicabut</option>
+              <option value="Diubah">Diubah</option>
+              <option value="Perlu Review">Perlu Review</option>
+            </select>
+          </label>
+          <button class="button secondary" type="reset">Reset</button>
+        </form>
+
+        <div class="table-frame">
+          <table>
+            <thead>
+              <tr>
+                <th>Dokumen</th>
+                <th>Kategori</th>
+                <th>Status</th>
+                <th>Layanan terkait</th>
+                <th>Prioritas</th>
+                <th>Terakhir dicek</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="documents-body"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="view-services" class="view page-shell hidden" data-view="services">
+        <div class="page-heading compact">
+          <div>
+            <p class="eyebrow">Business relevance</p>
+            <h1>Service Mapping</h1>
+            <p class="page-description">
+              Pemetaan layanan SBU yang muncul pada metadata dokumen regulasi dan
+              SOP.
+            </p>
+          </div>
+        </div>
+        <div id="service-mapping-grid" class="service-grid"></div>
+      </section>
+
+      <section id="view-detail" class="view page-shell hidden" data-view="detail">
+        <div class="detail-toolbar">
+          <a class="button secondary" href="#documents">Kembali</a>
+          <span id="detail-updated" class="muted"></span>
+        </div>
+        <div id="document-detail"></div>
+      </section>
+
+      <section id="view-admin" class="view page-shell hidden" data-view="admin">
+        <div class="page-heading compact">
+          <div>
+            <p class="eyebrow">Restricted access</p>
+            <h1>Admin Dokumen</h1>
+            <p class="page-description">
+              Login Supabase Auth diperlukan untuk menambah, mengedit, atau
+              menghapus dokumen.
+            </p>
+          </div>
+          <div id="admin-session-badge" class="session-badge hidden"></div>
+        </div>
+
+        <section id="admin-login-panel" class="auth-panel">
+          <div>
+            <h2>Login admin</h2>
+            <p>
+              Gunakan email dan password user yang dibuat di Supabase
+              Authentication.
+            </p>
+          </div>
+          <form id="admin-login-form" class="login-form">
+            <label>
+              <span>Email</span>
+              <input name="email" type="email" autocomplete="username" required />
+            </label>
+            <label>
+              <span>Password</span>
+              <input
+                name="password"
+                type="password"
+                autocomplete="current-password"
+                required
+              />
+            </label>
+            <button class="button primary" type="submit">Login</button>
+          </form>
+        </section>
+
+        <div id="admin-workspace" class="admin-workspace hidden">
+          <div class="admin-toolbar">
+            <div>
+              <strong id="admin-user-email"></strong>
+              <span>Session aktif</span>
+            </div>
+            <button id="admin-logout" class="button secondary" type="button">
+              Logout
+            </button>
+          </div>
+
+          <section class="editor-section">
+            <div class="section-heading">
+              <div>
+                <h2 id="editor-title">Tambah dokumen</h2>
+                <p id="editor-description">
+                  Upload PDF dan simpan metadata ke Supabase.
+                </p>
+              </div>
+              <button
+                id="cancel-edit"
+                class="button secondary hidden"
+                type="button"
+              >
+                Batal edit
+              </button>
+            </div>
+
+            <form id="document-form" class="document-form">
+              <input name="id" type="hidden" />
+              <input name="existing_file_path" type="hidden" />
+              <input name="existing_file_name" type="hidden" />
+
+              <fieldset>
+                <legend>Identitas dokumen</legend>
+                <div class="form-grid">
+                  <label>
+                    <span>Tipe dokumen *</span>
+                    <select name="document_type" required>
+                      <option value="regulasi">Regulasi</option>
+                      <option value="sop">SOP</option>
+                    </select>
+                  </label>
+                  <label class="span-2">
+                    <span>Judul *</span>
+                    <input name="title" required />
+                  </label>
+                  <label>
+                    <span>Nomor regulasi / kode SOP</span>
+                    <input name="regulation_number" />
+                  </label>
+                  <label>
+                    <span>Tahun</span>
+                    <input name="year" type="number" min="1900" max="2100" />
+                  </label>
+                  <label>
+                    <span>Instansi penerbit</span>
+                    <input name="issuing_body" />
+                  </label>
+                  <label>
+                    <span>Kategori</span>
+                    <input name="category" />
+                  </label>
+                  <label>
+                    <span>Sub-kategori</span>
+                    <input name="sub_category" />
+                  </label>
+                  <label>
+                    <span>Status</span>
+                    <select name="status">
+                      <option value="Berlaku">Berlaku</option>
+                      <option value="Dicabut">Dicabut</option>
+                      <option value="Diubah">Diubah</option>
+                      <option value="Perlu Review">Perlu Review</option>
+                    </select>
+                  </label>
+                </div>
+              </fieldset>
+
+              <fieldset>
+                <legend>Substansi dan service mapping</legend>
+                <div class="form-grid">
+                  <label class="span-2">
+                    <span>Ringkasan</span>
+                    <textarea name="summary"></textarea>
+                  </label>
+                  <label class="span-2">
+                    <span>Kewajiban utama</span>
+                    <textarea name="key_obligation"></textarea>
+                  </label>
+                  <label>
+                    <span>Pihak terdampak</span>
+                    <textarea name="impacted_party"></textarea>
+                  </label>
+                  <label>
+                    <span>Layanan terkait</span>
+                    <textarea
+                      name="related_services"
+                      placeholder="Pisahkan beberapa layanan dengan koma"
+                    ></textarea>
+                  </label>
+                  <label>
+                    <span>Relevansi SBU</span>
+                    <select name="sbu_relevance">
+                      <option value="">Belum dinilai</option>
+                      <option value="Sangat Tinggi">Sangat Tinggi</option>
+                      <option value="Tinggi">Tinggi</option>
+                      <option value="Sedang">Sedang</option>
+                      <option value="Rendah">Rendah</option>
+                    </select>
+                  </label>
+                  <label>
+                    <span>Priority score</span>
+                    <input name="priority_score" type="number" min="1" max="25" />
+                  </label>
+                  <label>
+                    <span>Peluang layanan</span>
+                    <textarea name="service_opportunity"></textarea>
+                  </label>
+                  <label>
+                    <span>Risiko compliance</span>
+                    <textarea name="compliance_risk"></textarea>
+                  </label>
+                  <label class="span-2">
+                    <span>Action point</span>
+                    <textarea name="action_point"></textarea>
+                  </label>
+                </div>
+              </fieldset>
+
+              <fieldset>
+                <legend>Sumber, file, dan pemutakhiran</legend>
+                <div class="form-grid">
+                  <label>
+                    <span>Link sumber resmi</span>
+                    <input name="source_url" type="url" />
+                  </label>
+                  <label>
+                    <span>Tanggal terakhir dicek</span>
+                    <input name="last_checked_at" type="date" />
+                  </label>
+                  <label>
+                    <span>PIC update</span>
+                    <input name="pic_update" />
+                  </label>
+                  <label>
+                    <span>File PDF <b id="file-required-mark">*</b></span>
+                    <input
+                      name="file"
+                      type="file"
+                      accept="application/pdf,.pdf"
+                      required
+                    />
+                  </label>
+                  <label class="span-2">
+                    <span>Catatan</span>
+                    <textarea name="notes"></textarea>
+                  </label>
+                </div>
+              </fieldset>
+
+              <div class="form-actions">
+                <span id="form-status" class="muted"></span>
+                <button id="save-document" class="button primary" type="submit">
+                  Simpan dokumen
+                </button>
+              </div>
+            </form>
+          </section>
+
+          <section class="content-section">
+            <div class="section-heading">
+              <div>
+                <h2>Kelola dokumen</h2>
+                <p>Edit metadata atau hapus dokumen yang sudah tersimpan.</p>
+              </div>
+            </div>
+            <div class="table-frame">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Dokumen</th>
+                    <th>Tipe</th>
+                    <th>Status</th>
+                    <th>File</th>
+                    <th>Aksi</th>
+                  </tr>
+                </thead>
+                <tbody id="admin-documents-body"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="content-section">
+            <div class="section-heading">
+              <div>
+                <h2>Riwayat perubahan</h2>
+                <p>Aktivitas tambah, edit, dan hapus terbaru.</p>
+              </div>
+            </div>
+            <div id="update-log-list" class="activity-list"></div>
+          </section>
+        </div>
+      </section>
+    </main>
+
+    <div id="loading-overlay" class="loading-overlay hidden" aria-live="polite">
+      <div class="spinner"></div>
+      <span id="loading-message">Memuat data...</span>
+    </div>
+    <div id="toast-region" class="toast-region" aria-live="polite"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="app.js" defer></script>
+  </body>
+</html>

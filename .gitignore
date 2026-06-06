@@ -1,5 +1,8 @@
 node_modules
 .next
+dist
+.npm-cache
+.tools
 .env.local
 .env
 .DS_Store
