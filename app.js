@@ -40,7 +40,10 @@ document.addEventListener("DOMContentLoaded", initialize);
 
 async function initialize() {
   bindEvents();
-  if (!location.hash) location.hash = "#home";
+  if (!location.hash) {
+    const legacyRoute = routeFromPathname();
+    history.replaceState(null, "", `/#${legacyRoute || "home"}`);
+  }
 
   if (!configured) {
     $("#config-alert").classList.remove("hidden");
@@ -79,6 +82,21 @@ async function initialize() {
     setLoading(false);
     route();
   }
+}
+
+function routeFromPathname() {
+  const path = decodeURIComponent(location.pathname)
+    .replace(/\/+$/, "")
+    .toLowerCase();
+
+  if (!path) return "home";
+  if (path === "/documents") return "documents";
+  if (path === "/sop") return "sop";
+  if (path === "/services" || path === "/service-mapping") return "services";
+  if (path === "/admin" || path === "/admin/upload") return "admin";
+
+  const documentMatch = location.pathname.match(/^\/documents\/([^/]+)\/?$/i);
+  return documentMatch ? `document/${encodeURIComponent(documentMatch[1])}` : null;
 }
 
 function bindEvents() {

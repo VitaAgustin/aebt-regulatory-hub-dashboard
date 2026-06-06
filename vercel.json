@@ -4,6 +4,36 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "cleanUrls": true,
+  "rewrites": [
+    {
+      "source": "/documents",
+      "destination": "/"
+    },
+    {
+      "source": "/documents/:id",
+      "destination": "/"
+    },
+    {
+      "source": "/sop",
+      "destination": "/"
+    },
+    {
+      "source": "/services",
+      "destination": "/"
+    },
+    {
+      "source": "/service-mapping",
+      "destination": "/"
+    },
+    {
+      "source": "/admin",
+      "destination": "/"
+    },
+    {
+      "source": "/admin/upload",
+      "destination": "/"
+    }
+  ],
   "headers": [
     {
       "source": "/app.js",
