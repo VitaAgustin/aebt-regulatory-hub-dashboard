@@ -38,8 +38,6 @@ Jangan pernah memasukkan `service_role`, secret key, atau database password ke
 3. Buat query baru.
 4. Salin seluruh isi `supabase-html-schema.sql`.
 5. Klik **Run**.
-6. Buat query baru, salin seluruh isi `supabase-service-catalog.sql`, lalu
-   klik **Run**.
 
 Script tersebut:
 
@@ -53,14 +51,6 @@ Script tersebut:
 - membuat private bucket `regulatory-files`;
 - mengizinkan public membuat signed URL untuk file;
 - mengizinkan authenticated user upload, update, dan delete file.
-
-File `supabase-service-catalog.sql`:
-
-- membuat tabel `service_categories` dan `service_items`;
-- memasukkan delapan kategori awal beserta sub-layanannya;
-- memberi public read access hanya untuk layanan aktif;
-- memberi authenticated user akses tambah dan edit katalog;
-- menggunakan `is_active` untuk menonaktifkan data tanpa menghapus riwayat.
 
 Jika data dari versi Next.js sudah ada, `create table if not exists` tidak
 menghapus data tersebut.
@@ -80,23 +70,7 @@ dianggap sebagai admin. Karena itu public sign-up harus dinonaktifkan.
 
 Admin kemudian login dari menu **Admin** pada aplikasi.
 
-## 4. Mengelola Katalog Layanan
-
-Setelah login, buka **Admin > Kelola Layanan**.
-
-- Gunakan form **Tambah kategori** untuk membuat kategori utama.
-- Gunakan form **Tambah sub-layanan** untuk memilih kategori dan menambahkan
-  layanan di bawahnya.
-- Tombol **Edit** mengubah nama atau deskripsi.
-- Tombol **Nonaktifkan** menyembunyikan layanan dari form dokumen dan Service
-  Mapping publik tanpa menghapus data lama.
-- Tombol **Aktifkan** menampilkan kembali kategori atau sub-layanan.
-
-Form tambah/edit dokumen dan halaman Service Mapping selalu membaca katalog
-terbaru dari Supabase. Nilai pilihan dokumen tetap disimpan pada kolom
-`documents.related_services` sebagai string yang dipisahkan koma.
-
-## 5. Menjalankan Web
+## 4. Menjalankan Web
 
 File dapat dibuka langsung melalui `index.html`, tetapi local static server
 lebih konsisten untuk Auth dan debugging.
@@ -125,7 +99,7 @@ Tambahkan URL hosting ke **Authentication > URL Configuration > Redirect
 URLs** jika nantinya menambahkan email confirmation, password reset, atau
 magic-link flow.
 
-## 6. Mengetes Upload PDF
+## 5. Mengetes Upload PDF
 
 1. Pastikan `supabase-html-schema.sql` sudah berhasil dijalankan.
 2. Pastikan publishable/anon key sudah dimasukkan ke `app.js`.
@@ -141,7 +115,7 @@ magic-link flow.
 11. Kembali ke menu **Database Regulasi** atau **SOP Center**.
 12. Buka detail dokumen dan cek preview serta tombol download.
 
-## 7. Edit dan Hapus
+## 6. Edit dan Hapus
 
 Setelah login:
 

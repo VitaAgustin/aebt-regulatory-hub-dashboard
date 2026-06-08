@@ -239,21 +239,7 @@
             </button>
           </div>
 
-          <nav class="admin-tabs" aria-label="Menu admin">
-            <button
-              class="admin-tab active"
-              type="button"
-              data-admin-tab="documents"
-            >
-              Kelola Dokumen
-            </button>
-            <button class="admin-tab" type="button" data-admin-tab="services">
-              Kelola Layanan
-            </button>
-          </nav>
-
-          <div id="admin-panel-documents" class="admin-panel">
-            <section class="editor-section">
+          <section class="editor-section">
             <div class="section-heading">
               <div>
                 <h2 id="editor-title">Tambah dokumen</h2>
@@ -403,9 +389,9 @@
                 </button>
               </div>
             </form>
-            </section>
+          </section>
 
-            <section class="content-section">
+          <section class="content-section">
             <div class="section-heading">
               <div>
                 <h2>Kelola dokumen</h2>
@@ -426,9 +412,9 @@
                 <tbody id="admin-documents-body"></tbody>
               </table>
             </div>
-            </section>
+          </section>
 
-            <section class="content-section">
+          <section class="content-section">
             <div class="section-heading">
               <div>
                 <h2>Riwayat perubahan</h2>
@@ -436,97 +422,7 @@
               </div>
             </div>
             <div id="update-log-list" class="activity-list"></div>
-            </section>
-          </div>
-
-          <div id="admin-panel-services" class="admin-panel hidden">
-            <section class="service-manager-forms">
-              <form id="service-category-form" class="editor-section compact-editor">
-                <input name="id" type="hidden" />
-                <div class="section-heading">
-                  <div>
-                    <h2 id="service-category-form-title">Tambah kategori</h2>
-                    <p>Kategori utama yang tampil di Service Mapping.</p>
-                  </div>
-                </div>
-                <div class="manager-form-grid">
-                  <label>
-                    <span>Nama kategori *</span>
-                    <input name="name" required />
-                  </label>
-                  <label>
-                    <span>Deskripsi</span>
-                    <textarea name="description"></textarea>
-                  </label>
-                </div>
-                <div class="form-actions">
-                  <button
-                    id="cancel-service-category-edit"
-                    class="button secondary hidden"
-                    type="button"
-                  >
-                    Batal
-                  </button>
-                  <button class="button primary" type="submit">
-                    Simpan kategori
-                  </button>
-                </div>
-              </form>
-
-              <form id="service-item-form" class="editor-section compact-editor">
-                <input name="id" type="hidden" />
-                <div class="section-heading">
-                  <div>
-                    <h2 id="service-item-form-title">Tambah sub-layanan</h2>
-                    <p>Sub-layanan yang dapat dipilih pada dokumen.</p>
-                  </div>
-                </div>
-                <div class="manager-form-grid">
-                  <label>
-                    <span>Kategori *</span>
-                    <select
-                      id="service-item-category"
-                      name="category_id"
-                      required
-                    ></select>
-                  </label>
-                  <label>
-                    <span>Nama sub-layanan *</span>
-                    <input name="name" required />
-                  </label>
-                  <label>
-                    <span>Deskripsi</span>
-                    <textarea name="description"></textarea>
-                  </label>
-                </div>
-                <div class="form-actions">
-                  <button
-                    id="cancel-service-item-edit"
-                    class="button secondary hidden"
-                    type="button"
-                  >
-                    Batal
-                  </button>
-                  <button class="button primary" type="submit">
-                    Simpan sub-layanan
-                  </button>
-                </div>
-              </form>
-            </section>
-
-            <section class="content-section">
-              <div class="section-heading">
-                <div>
-                  <h2>Katalog layanan</h2>
-                  <p>
-                    Edit atau nonaktifkan kategori dan sub-layanan tanpa
-                    menghapus riwayat dokumen lama.
-                  </p>
-                </div>
-              </div>
-              <div id="service-manager" class="service-manager"></div>
-            </section>
-          </div>
+          </section>
         </div>
       </section>
     </main>

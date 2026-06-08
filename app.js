@@ -17,20 +17,97 @@ const configured =
   SUPABASE_ANON_KEY.length > 30 &&
   !SUPABASE_ANON_KEY.includes("YOUR_SUPABASE");
 
+const SERVICE_CATALOG = [
+  {
+    category: "Asset Integrity Management (AIM)",
+    services: [
+      "Risk Based Inspection",
+      "Risk Management Services",
+      "Risk Survey",
+      "Risk Valuation",
+      "Technical Due Diligence",
+      "Third Party Liability (TPL)",
+      "Risk Assessment",
+      "Asset Hierarchy",
+      "Pipeline Integrity Services",
+      "Tank Integrity Services",
+      "Robotic Inspection Services"
+    ]
+  },
+  {
+    category: "Drilling Support Services",
+    services: ["Oil Country Tubular Goods (OCTG)", "Rig Assessment"]
+  },
+  {
+    category: "QA/QC, Inspection and Certification",
+    services: [
+      "Safety Device",
+      "Pressure Vessel",
+      "Storage Tank",
+      "Rotating Equipment",
+      "Electrical Equipment",
+      "Lifting Equipment",
+      "Metering System Pipeline",
+      "Installation of Geothermal Fluid Field",
+      "Installation of Migas Facility",
+      "Installation of Rig Drilling & Cementing Unit"
+    ]
+  },
+  {
+    category: "Professional Services",
+    services: ["Technical Manpower Supply"]
+  },
+  {
+    category: "Non Destructive Test (NDT)",
+    services: [
+      "Magnetic Particle Test",
+      "Ultrasonic Test",
+      "Penetrant Test",
+      "Radiographic Examination"
+    ]
+  },
+  {
+    category: "Advanced NDT",
+    services: [
+      "Phased Array Ultrasonic Testing (PAUT)",
+      "Long Range Ultrasonic Testing (LRUT)",
+      "Real Time Radiography (RTR)",
+      "Pulse Eddy Current (PEC)",
+      "Magnetic Flux Leakage (MFL)",
+      "Computerize RT (CR)",
+      "IRIS, RFT and ECT",
+      "Intelligent Pigging",
+      "Automatic Ultrasonic Testing (AUT)"
+    ]
+  },
+  {
+    category: "Consultancy",
+    services: [
+      "Quality Management Services (QMS)",
+      "Quantity Survey",
+      "Project Management Consultancy (PMC)",
+      "Permit Handling Management"
+    ]
+  },
+  {
+    category: "Renewable Energy Services",
+    services: [
+      "Geothermal Plant Services",
+      "Nuclear Power Plant Services",
+      "Hydrogen Infrastructure",
+      "Gas Testing for Coal Methane"
+    ]
+  }
+];
+
 let db = null;
 
 const state = {
   documents: [],
   documentsLoaded: false,
   documentsError: null,
-  serviceCategories: [],
-  serviceItems: [],
-  serviceCatalogLoaded: false,
-  serviceCatalogError: null,
   session: null,
   editingId: null,
-  editingServiceCategoryId: null,
-  editingServiceItemId: null,
   pendingEditId: null,
   detailRenderToken: 0,
   selectedServiceCategory: null,
@@ -38,7 +115,6 @@ const state = {
   legacyRelatedServices: [],
   signedUrls: new Map(),
   documentsPromise: null,
-  serviceCatalogPromise: null,
   supabasePromise: null
 };
 
@@ -49,6 +125,7 @@ document.addEventListener("DOMContentLoaded", initialize);
 
 async function initialize() {
   bindEvents();
+  renderServiceCheckboxes();
   if (!location.hash) {
     const legacyRoute = routeFromPathname();
     history.replaceState(null, "", `/#${legacyRoute || "home"}`);
@@ -66,14 +143,10 @@ async function initialize() {
 
   state.supabasePromise = loadSupabaseClient();
   const documentsPromise = loadDocuments({ preserveExisting: hasCachedDocuments });
-  const serviceCatalogPromise = state.supabasePromise.then(() =>
-    loadServiceCatalog()
-  );
   const authPromise = state.supabasePromise.then(initializeAuth);
-  const [authResult, documentsResult, serviceCatalogResult] = await Promise.allSettled([
+  const [authResult, documentsResult] = await Promise.allSettled([
     authPromise,
-    documentsPromise,
-    serviceCatalogPromise
+    documentsPromise
   ]);
 
   if (authResult.status === "rejected") {
@@ -84,12 +157,6 @@ async function initialize() {
   }
   if (documentsResult.status === "rejected") {
     showToast(readableError(documentsResult.reason), true);
-  }
-  if (serviceCatalogResult.status === "rejected") {
-    showToast(readableError(serviceCatalogResult.reason), true);
-  }
-  if (state.session?.user) {
-    await loadServiceCatalog({ force: true }).catch(() => {});
   }
 
   route();
@@ -123,7 +190,6 @@ async function initializeAuth() {
     state.session = nextSession;
     updateAdminState();
     if (nextSession) loadAdminLogs();
-    if (db) loadServiceCatalog({ force: true }).catch(() => {});
   });
 
   try {
@@ -170,26 +236,10 @@ function bindEvents() {
   $("#admin-logout").addEventListener("click", handleLogout);
   $("#document-form").addEventListener("submit", handleDocumentSubmit);
   $("#cancel-edit").addEventListener("click", resetEditor);
-  $("#service-category-form").addEventListener(
-    "submit",
-    handleServiceCategorySubmit
-  );
-  $("#service-item-form").addEventListener("submit", handleServiceItemSubmit);
-  $("#cancel-service-category-edit").addEventListener(
-    "click",
-    resetServiceCategoryForm
-  );
-  $("#cancel-service-item-edit").addEventListener(
-    "click",
-    resetServiceItemForm
-  );
   $("#related-services-selector").addEventListener(
     "change",
     syncSelectedServicesSummary
   );
-  $$("[data-admin-tab]").forEach((button) => {
-    button.addEventListener("click", () => switchAdminTab(button.dataset.adminTab));
-  });
 
   $("#documents-body").addEventListener("click", handleTableAction);
   $("#recent-documents-body").addEventListener("click", handleTableAction);
@@ -197,7 +247,6 @@ function bindEvents() {
   $("#service-mapping-grid").addEventListener("click", handleServiceCardAction);
   $("#service-documents-panel").addEventListener("click", handleServiceDocumentAction);
   $("#admin-documents-body").addEventListener("click", handleAdminTableAction);
-  $("#service-manager").addEventListener("click", handleServiceManagerAction);
 }
 
 async function loadDocuments({ preserveExisting = state.documents.length > 0 } = {}) {
@@ -233,61 +282,6 @@ async function loadDocuments({ preserveExisting = state.documents.length > 0 } =
   })();
 
   return state.documentsPromise;
-}
-
-async function loadServiceCatalog({ force = false } = {}) {
-  if (state.serviceCatalogPromise) {
-    if (!force) return state.serviceCatalogPromise;
-    await state.serviceCatalogPromise.catch(() => {});
-  }
-
-  state.serviceCatalogPromise = (async () => {
-    try {
-      const [categoryResult, itemResult] = await Promise.all([
-        db
-          .from("service_categories")
-          .select("id,name,description,is_active,created_at,updated_at")
-          .order("name", { ascending: true }),
-        db
-          .from("service_items")
-          .select(
-            "id,category_id,name,description,is_active,created_at,updated_at"
-          )
-          .order("name", { ascending: true })
-      ]);
-
-      if (categoryResult.error) throw categoryResult.error;
-      if (itemResult.error) throw itemResult.error;
-
-      state.serviceCategories = Array.isArray(categoryResult.data)
-        ? categoryResult.data
-        : [];
-      state.serviceItems = Array.isArray(itemResult.data) ? itemResult.data : [];
-      state.serviceCatalogLoaded = true;
-      state.serviceCatalogError = null;
-      renderServiceCheckboxesFromDatabase();
-      renderServiceMappingFromDatabase();
-      renderServiceManager();
-      renderMetrics();
-      return getServiceCatalog();
-    } catch (error) {
-      state.serviceCategories = [];
-      state.serviceItems = [];
-      state.serviceCatalogLoaded = false;
-      state.serviceCatalogError = new Error(
-        `Gagal memuat katalog layanan: ${readableError(error)}`
-      );
-      renderServiceCheckboxesFromDatabase();
-      renderServiceMappingFromDatabase();
-      renderServiceManager();
-      renderMetrics();
-      throw state.serviceCatalogError;
-    } finally {
-      state.serviceCatalogPromise = null;
-    }
-  })();
-
-  return state.serviceCatalogPromise;
 }
 
 async function fetchDocumentsFromRest() {
@@ -393,10 +387,7 @@ function route() {
     renderDocumentDetail(routeId);
   } else if (routeName === "admin") {
     updateAdminState();
-    if (state.session) {
-      loadAdminLogs();
-      renderServiceManager();
-    }
+    if (state.session) loadAdminLogs();
   }
 
   window.scrollTo({ top: 0, behavior: "auto" });
@@ -414,7 +405,7 @@ function renderMetrics() {
   $("#metric-review").textContent = docs.filter(
     (doc) => doc.status === "Perlu Review"
   ).length;
-  $("#metric-services").textContent = getServiceCatalog().length;
+  $("#metric-services").textContent = SERVICE_CATALOG.length;
 }
 
 function loadRecentDocuments() {
@@ -532,63 +523,44 @@ function normalizeText(value) {
     .trim();
 }
 
+function getServiceCategoryPrefix(categoryName) {
+  const category = normalizeServiceName(categoryName);
+  const shortName = category.match(/\(([^)]+)\)\s*$/)?.[1]?.trim();
+  return shortName || category;
+}
+
 function formatServiceValue(categoryName, serviceName) {
-  return `${normalizeServiceName(categoryName)} - ${normalizeServiceName(serviceName)}`;
+  return `${getServiceCategoryPrefix(categoryName)} - ${normalizeServiceName(
+    serviceName
+  )}`;
 }
 
-function getServiceCatalog({ includeInactive = false } = {}) {
-  const categories = (Array.isArray(state.serviceCategories)
-    ? state.serviceCategories
-    : []
-  ).filter((category) => includeInactive || category.is_active);
-  const items = Array.isArray(state.serviceItems) ? state.serviceItems : [];
-
-  return categories.map((category) => ({
-    ...category,
-    category: category.name,
-    items: items.filter(
-      (item) =>
-        item.category_id === category.id && (includeInactive || item.is_active)
-    )
-  }));
-}
-
-function getServiceEntries({ includeInactive = false } = {}) {
-  return getServiceCatalog({ includeInactive }).flatMap((category) =>
-    category.items.map((item) => ({
-      categoryId: category.id,
+function getServiceEntries() {
+  return SERVICE_CATALOG.flatMap((category) =>
+    category.services.map((service) => ({
       category: category.category,
       categoryKey: normalizeText(category.category),
-      serviceId: item.id,
-      service: item.name,
-      serviceKey: normalizeText(item.name),
-      value: formatServiceValue(category.category, item.name),
-      valueKey: normalizeText(formatServiceValue(category.category, item.name))
+      categoryPrefix: getServiceCategoryPrefix(category.category),
+      service,
+      serviceKey: normalizeText(service),
+      value: formatServiceValue(category.category, service),
+      valueKey: normalizeText(formatServiceValue(category.category, service))
     }))
   );
 }
 
-function findServiceCategory(categoryName, { includeInactive = false } = {}) {
+function findServiceCategory(categoryName) {
   const key = normalizeText(categoryName);
-  return getServiceCatalog({ includeInactive }).find(
-    (category) =>
-      category.id === categoryName || normalizeText(category.category) === key
-  );
+  return SERVICE_CATALOG.find((category) => normalizeText(category.category) === key);
 }
 
-function findServiceEntry(
-  subServiceName,
-  categoryName = state.selectedServiceCategory,
-  { includeInactive = false } = {}
-) {
+function findServiceEntry(subServiceName, categoryName = state.selectedServiceCategory) {
   const serviceKey = normalizeText(subServiceName);
   const categoryKey = normalizeText(categoryName);
-  return getServiceEntries({ includeInactive }).find(
+  return getServiceEntries().find(
     (entry) =>
-      (entry.serviceId === subServiceName || entry.serviceKey === serviceKey) &&
-      (!categoryKey ||
-        entry.categoryId === categoryName ||
-        entry.categoryKey === categoryKey)
+      entry.serviceKey === serviceKey &&
+      (!categoryKey || entry.categoryKey === categoryKey)
   );
 }
 
@@ -606,8 +578,17 @@ function documentMatchesSubService(doc, categoryName, subServiceName) {
   const serviceKey = normalizeText(subServiceName);
   const valueKey = normalizeText(formatServiceValue(categoryName, subServiceName));
   const relatedText = normalizeText(doc.related_services);
+  const relatedTerms = splitServices(doc.related_services).map(normalizeText);
 
-  return relatedText.includes(valueKey) || relatedText.includes(serviceKey);
+  return (
+    relatedTerms.some(
+      (term) =>
+        term === serviceKey ||
+        term === valueKey ||
+        term.endsWith(` ${serviceKey}`) ||
+        term.includes(serviceKey)
+    ) || relatedText.includes(serviceKey)
+  );
 }
 
 function getDocumentsByServiceCategory(categoryName) {
@@ -616,8 +597,8 @@ function getDocumentsByServiceCategory(categoryName) {
 
   return uniqueDocuments(
     safeDocuments().filter((doc) =>
-      category.items.some((item) =>
-        documentMatchesSubService(doc, category.category, item.name)
+      category.services.some((service) =>
+        documentMatchesSubService(doc, category.category, service)
       )
     )
   );
@@ -635,25 +616,12 @@ function getDocumentsBySubService(subServiceName) {
 }
 
 function renderServiceMapping() {
-  renderServiceMappingFromDatabase();
-}
-
-function renderServiceMappingFromDatabase() {
   const container = $("#service-mapping-grid");
   const panel = $("#service-documents-panel");
-  const catalog = getServiceCatalog();
 
-  if (!state.serviceCatalogLoaded && !state.serviceCatalogError) {
+  if (!SERVICE_CATALOG.length) {
     container.innerHTML =
-      '<div class="service-card empty-service"><strong>Memuat katalog layanan...</strong><p>Mengambil kategori dan sub-layanan dari Supabase.</p></div>';
-    panel.classList.add("hidden");
-    panel.innerHTML = "";
-    return;
-  }
-
-  if (!catalog.length) {
-    container.innerHTML =
-      '<div class="service-card empty-service"><strong>Belum ada data layanan.</strong><p>Tambahkan layanan melalui Admin &rarr; Kelola Layanan.</p></div>';
+      '<div class="service-card empty-service"><strong>Belum ada service mapping</strong><p>Katalog layanan belum tersedia.</p></div>';
     state.selectedServiceCategory = null;
     state.selectedSubServiceName = null;
     panel.classList.add("hidden");
@@ -669,7 +637,7 @@ function renderServiceMappingFromDatabase() {
     state.selectedSubServiceName = null;
   }
 
-  container.innerHTML = catalog.map((category) => {
+  container.innerHTML = SERVICE_CATALOG.map((category) => {
     const documents = getDocumentsByServiceCategory(category.category);
     const regulationCount = documents.filter(
       (doc) => doc.document_type === "regulasi"
@@ -680,7 +648,7 @@ function renderServiceMappingFromDatabase() {
       <article class="service-card category-card ${
         state.selectedServiceCategory === category.category ? "active" : ""
       }" data-service-category="${escapeAttribute(category.category)}">
-        <small>${category.items.length} sub-layanan</small>
+        <small>${category.services.length} sub-layanan</small>
         <strong>${escapeHtml(category.category)}</strong>
         <div class="service-stats">
           <span>${documents.length} dokumen</span>
@@ -721,9 +689,8 @@ function renderServiceCategoryDetail(categoryName) {
   state.selectedServiceCategory = category.category;
   if (
     state.selectedSubServiceName &&
-    !category.items.some(
-      (item) =>
-        normalizeText(item.name) === normalizeText(state.selectedSubServiceName)
+    !category.services.some(
+      (service) => normalizeText(service) === normalizeText(state.selectedSubServiceName)
     )
   ) {
     state.selectedSubServiceName = null;
@@ -739,21 +706,21 @@ function renderServiceCategoryDetail(categoryName) {
       </div>
     </div>
     <div class="sub-service-grid">
-      ${category.items
-        .map((item) => {
+      ${category.services
+        .map((service) => {
           const documents = getDocumentsBySubServiceWithCategory(
-            item.name,
+            service,
             category.category
           );
           return `
             <button class="sub-service-card ${
-              normalizeText(state.selectedSubServiceName) === normalizeText(item.name)
+              normalizeText(state.selectedSubServiceName) === normalizeText(service)
                 ? "active"
                 : ""
             }" type="button" data-sub-service="${escapeAttribute(
-              item.name
+              service
             )}" data-service-category="${escapeAttribute(category.category)}">
-              <strong>${escapeHtml(item.name)}</strong>
+              <strong>${escapeHtml(service)}</strong>
               <span>${documents.length} dokumen terkait</span>
             </button>
           `;
@@ -1071,7 +1038,7 @@ async function handleLogin(event) {
     state.session = data.session;
     event.currentTarget.reset();
     updateAdminState();
-    await Promise.all([loadAdminLogs(), loadServiceCatalog({ force: true })]);
+    await loadAdminLogs();
     if (state.pendingEditId) {
       const pendingId = state.pendingEditId;
       state.pendingEditId = null;
@@ -1114,68 +1081,29 @@ function updateAdminState() {
   }
 }
 
-function switchAdminTab(tabName) {
-  const activeTab = tabName === "services" ? "services" : "documents";
-  $$("[data-admin-tab]").forEach((button) => {
-    button.classList.toggle("active", button.dataset.adminTab === activeTab);
-  });
-  $("#admin-panel-documents").classList.toggle(
-    "hidden",
-    activeTab !== "documents"
-  );
-  $("#admin-panel-services").classList.toggle(
-    "hidden",
-    activeTab !== "services"
-  );
-  if (activeTab === "services") renderServiceManager();
-}
-
 function renderServiceCheckboxes() {
-  renderServiceCheckboxesFromDatabase();
-}
-
-function renderServiceCheckboxesFromDatabase() {
   const container = $("#related-services-selector");
   if (!container) return;
-  const hiddenField = $('#document-form input[name="related_services"]');
-  const currentValue = hiddenField?.value || "";
-  const catalog = getServiceCatalog();
 
-  if (!state.serviceCatalogLoaded && !state.serviceCatalogError) {
-    container.innerHTML =
-      '<div class="service-picker-message">Memuat layanan dari Supabase...</div>';
-    syncSelectedServicesSummary();
-    return;
-  }
-
-  if (!catalog.length) {
-    container.innerHTML =
-      '<div class="service-picker-message">Belum ada data layanan. Tambahkan layanan melalui Admin &rarr; Kelola Layanan.</div>';
-    state.legacyRelatedServices = splitServices(currentValue);
-    syncSelectedServicesSummary();
-    return;
-  }
-
-  container.innerHTML = catalog.map((category, index) => `
+  container.innerHTML = SERVICE_CATALOG.map((category, index) => `
     <details class="service-accordion" ${index === 0 ? "open" : ""}>
       <summary>
         <span>${escapeHtml(category.category)}</span>
-        <small>${category.items.length} layanan</small>
+        <small>${category.services.length} layanan</small>
       </summary>
       <div class="service-option-list">
-        ${category.items
-          .map((item) => {
-            const value = formatServiceValue(category.category, item.name);
+        ${category.services
+          .map((service) => {
+            const value = formatServiceValue(category.category, service);
             return `
               <label class="service-option">
                 <input
                   type="checkbox"
                   value="${escapeAttribute(value)}"
-                  data-service-id="${escapeAttribute(item.id)}"
                   data-service-category="${escapeAttribute(category.category)}"
-                  data-service-name="${escapeAttribute(item.name)}"
+                  data-service-name="${escapeAttribute(service)}"
                 />
-                <span>${escapeHtml(item.name)}</span>
+                <span>${escapeHtml(service)}</span>
               </label>
             `;
           })
@@ -1184,7 +1112,7 @@ function renderServiceCheckboxesFromDatabase() {
     </details>
   `).join("");
 
-  setSelectedServices(currentValue);
+  syncSelectedServicesSummary();
 }
 
 function getSelectedServices() {
@@ -1199,38 +1127,28 @@ function getSelectedServices() {
 }
 
 function setSelectedServices(relatedServicesString) {
-  const source = String(relatedServicesString || "").trim();
-  const sourceKey = normalizeText(source);
-  const terms = splitServices(source);
+  const terms = splitServices(relatedServicesString);
   const checkboxes = $$('#related-services-selector input[type="checkbox"]');
   const entries = getServiceEntries();
   const matchedValues = new Set();
-  const matchedEntries = [];
   state.legacyRelatedServices = [];
 
   checkboxes.forEach((input) => {
     input.checked = false;
   });
 
-  entries.forEach((entry) => {
-    if (
-      sourceKey.includes(entry.valueKey) ||
-      sourceKey.includes(entry.serviceKey)
-    ) {
-      matchedValues.add(entry.valueKey);
-      matchedEntries.push(entry);
-    }
-  });
-
   terms.forEach((term) => {
     const termKey = normalizeText(term);
-    const isKnownFragment = matchedEntries.some(
-      (entry) =>
-        entry.valueKey.includes(termKey) ||
-        entry.serviceKey.includes(termKey) ||
-        termKey.includes(entry.serviceKey)
+    const entry = entries.find(
+      (item) =>
+        termKey === item.valueKey ||
+        termKey === item.serviceKey ||
+        termKey.endsWith(` ${item.serviceKey}`) ||
+        termKey.includes(item.serviceKey)
     );
-    if (term && !isKnownFragment) state.legacyRelatedServices.push(term);
+
+    if (entry) matchedValues.add(entry.valueKey);
+    else if (term) state.legacyRelatedServices.push(term);
   });
 
   checkboxes.forEach((input) => {
@@ -1266,384 +1184,6 @@ function syncSelectedServicesSummary() {
     : "";
 
   summary.innerHTML = `${escapeHtml(selectedLine)}${legacyLine}`;
-}
-
-function renderServiceManager() {
-  const container = $("#service-manager");
-  const categorySelect = $("#service-item-category");
-  if (!container || !categorySelect) return;
-
-  const previousCategory = categorySelect.value;
-  const catalog = getServiceCatalog({ includeInactive: true });
-  categorySelect.innerHTML = catalog.length
-    ? catalog
-        .map(
-          (category) => `
-            <option value="${escapeAttribute(category.id)}">
-              ${escapeHtml(category.category)}${category.is_active ? "" : " (Nonaktif)"}
-            </option>
-          `
-        )
-        .join("")
-    : '<option value="">Belum ada kategori</option>';
-  categorySelect.disabled = !catalog.length;
-  if (catalog.some((category) => category.id === previousCategory)) {
-    categorySelect.value = previousCategory;
-  }
-
-  if (!state.serviceCatalogLoaded && !state.serviceCatalogError) {
-    container.innerHTML =
-      '<div class="empty-state">Memuat katalog layanan dari Supabase...</div>';
-    return;
-  }
-
-  if (state.serviceCatalogError) {
-    container.innerHTML = `
-      <div class="manager-alert">
-        <strong>Katalog layanan belum dapat dimuat.</strong>
-        <p>${escapeHtml(readableError(state.serviceCatalogError))}</p>
-        <p>Jalankan file supabase-service-catalog.sql melalui SQL Editor Supabase.</p>
-      </div>
-    `;
-    return;
-  }
-
-  if (!catalog.length) {
-    container.innerHTML =
-      '<div class="empty-state">Belum ada data layanan. Tambahkan kategori melalui form di atas.</div>';
-    return;
-  }
-
-  container.innerHTML = catalog
-    .map(
-      (category) => `
-        <article class="manager-category ${category.is_active ? "" : "inactive"}">
-          <header>
-            <div>
-              <div class="manager-title-row">
-                <h3>${escapeHtml(category.category)}</h3>
-                ${activeStatusBadge(category.is_active)}
-              </div>
-              <p>${escapeHtml(category.description || "Tanpa deskripsi.")}</p>
-            </div>
-            <div class="table-actions">
-              <button class="button secondary small" type="button"
-                data-edit-service-category="${escapeAttribute(category.id)}">Edit</button>
-              <button class="button ${category.is_active ? "danger" : "secondary"} small" type="button"
-                data-toggle-service-category="${escapeAttribute(category.id)}"
-                data-active="${category.is_active}">
-                ${category.is_active ? "Nonaktifkan" : "Aktifkan"}
-              </button>
-            </div>
-          </header>
-          <div class="manager-item-list">
-            ${
-              category.items.length
-                ? category.items
-                    .map(
-                      (item) => `
-                        <div class="manager-item ${item.is_active ? "" : "inactive"}">
-                          <div>
-                            <div class="manager-title-row">
-                              <strong>${escapeHtml(item.name)}</strong>
-                              ${activeStatusBadge(item.is_active)}
-                            </div>
-                            <small>${escapeHtml(item.description || "Tanpa deskripsi.")}</small>
-                          </div>
-                          <div class="table-actions">
-                            <button class="button secondary small" type="button"
-                              data-edit-service-item="${escapeAttribute(item.id)}">Edit</button>
-                            <button class="button ${item.is_active ? "danger" : "secondary"} small" type="button"
-                              data-toggle-service-item="${escapeAttribute(item.id)}"
-                              data-active="${item.is_active}">
-                              ${item.is_active ? "Nonaktifkan" : "Aktifkan"}
-                            </button>
-                          </div>
-                        </div>
-                      `
-                    )
-                    .join("")
-                : '<div class="empty-state">Belum ada sub-layanan pada kategori ini.</div>'
-            }
-          </div>
-        </article>
-      `
-    )
-    .join("");
-}
-
-function activeStatusBadge(isActive) {
-  return `<span class="active-status ${isActive ? "active" : "inactive"}">${
-    isActive ? "Aktif" : "Nonaktif"
-  }</span>`;
-}
-
-async function handleServiceCategorySubmit(event) {
-  event.preventDefault();
-  if (!requireAdmin()) return;
-
-  const form = new FormData(event.currentTarget);
-  const id = cleanText(form.get("id"));
-  const payload = {
-    name: cleanText(form.get("name")),
-    description: cleanText(form.get("description"))
-  };
-  if (!payload.name) {
-    showToast("Nama kategori wajib diisi.", true);
-    return;
-  }
-
-  setLoading(true, id ? "Memperbarui kategori..." : "Menambahkan kategori...");
-  try {
-    if (id) await updateServiceCategory(id, payload);
-    else await createServiceCategory(payload);
-    resetServiceCategoryForm();
-    await loadServiceCatalog({ force: true });
-    showToast(id ? "Kategori berhasil diperbarui." : "Kategori berhasil ditambahkan.");
-  } catch (error) {
-    showToast(readableError(error), true);
-  } finally {
-    setLoading(false);
-  }
-}
-
-async function createServiceCategory(payload) {
-  if (!requireAdmin()) throw new Error("Login admin diperlukan.");
-  const { data, error } = await db
-    .from("service_categories")
-    .insert({ ...payload, is_active: true })
-    .select()
-    .single();
-  if (error) throw error;
-  await insertLog(
-    null,
-    "Tambah kategori layanan",
-    `Menambahkan kategori layanan: ${data.name}`,
-    {}
-  );
-  return data;
-}
-
-async function updateServiceCategory(id, payload) {
-  if (!requireAdmin()) throw new Error("Login admin diperlukan.");
-  const { data, error } = await db
-    .from("service_categories")
-    .update(payload)
-    .eq("id", id)
-    .select()
-    .single();
-  if (error) throw error;
-  await insertLog(
-    null,
-    "Edit kategori layanan",
-    `Memperbarui kategori layanan: ${data.name}`,
-    {}
-  );
-  return data;
-}
-
-async function deactivateServiceCategory(id) {
-  return updateServiceCategory(id, { is_active: false });
-}
-
-async function handleServiceItemSubmit(event) {
-  event.preventDefault();
-  if (!requireAdmin()) return;
-
-  const form = new FormData(event.currentTarget);
-  const id = cleanText(form.get("id"));
-  const payload = {
-    category_id: cleanText(form.get("category_id")),
-    name: cleanText(form.get("name")),
-    description: cleanText(form.get("description"))
-  };
-  if (!payload.category_id || !payload.name) {
-    showToast("Kategori dan nama sub-layanan wajib diisi.", true);
-    return;
-  }
-
-  setLoading(true, id ? "Memperbarui sub-layanan..." : "Menambahkan sub-layanan...");
-  try {
-    if (id) await updateServiceItem(id, payload);
-    else await createServiceItem(payload);
-    resetServiceItemForm();
-    await loadServiceCatalog({ force: true });
-    showToast(
-      id ? "Sub-layanan berhasil diperbarui." : "Sub-layanan berhasil ditambahkan."
-    );
-  } catch (error) {
-    showToast(readableError(error), true);
-  } finally {
-    setLoading(false);
-  }
-}
-
-async function createServiceItem(payload) {
-  if (!requireAdmin()) throw new Error("Login admin diperlukan.");
-  const { data, error } = await db
-    .from("service_items")
-    .insert({ ...payload, is_active: true })
-    .select()
-    .single();
-  if (error) throw error;
-  await insertLog(
-    null,
-    "Tambah sub-layanan",
-    `Menambahkan sub-layanan: ${data.name}`,
-    {}
-  );
-  return data;
-}
-
-async function updateServiceItem(id, payload) {
-  if (!requireAdmin()) throw new Error("Login admin diperlukan.");
-  const { data, error } = await db
-    .from("service_items")
-    .update(payload)
-    .eq("id", id)
-    .select()
-    .single();
-  if (error) throw error;
-  await insertLog(
-    null,
-    "Edit sub-layanan",
-    `Memperbarui sub-layanan: ${data.name}`,
-    {}
-  );
-  return data;
-}
-
-async function deactivateServiceItem(id) {
-  return updateServiceItem(id, { is_active: false });
-}
-
-function handleServiceManagerAction(event) {
-  const editCategory = event.target.closest("[data-edit-service-category]");
-  const toggleCategory = event.target.closest("[data-toggle-service-category]");
-  const editItem = event.target.closest("[data-edit-service-item]");
-  const toggleItem = event.target.closest("[data-toggle-service-item]");
-
-  if (editCategory) {
-    startServiceCategoryEdit(editCategory.dataset.editServiceCategory);
-    return;
-  }
-  if (editItem) {
-    startServiceItemEdit(editItem.dataset.editServiceItem);
-    return;
-  }
-  if (toggleCategory) {
-    toggleServiceCategoryStatus(
-      toggleCategory.dataset.toggleServiceCategory,
-      toggleCategory.dataset.active === "true"
-    );
-    return;
-  }
-  if (toggleItem) {
-    toggleServiceItemStatus(
-      toggleItem.dataset.toggleServiceItem,
-      toggleItem.dataset.active === "true"
-    );
-  }
-}
-
-function startServiceCategoryEdit(id) {
-  const category = state.serviceCategories.find((item) => item.id === id);
-  if (!category) return;
-  state.editingServiceCategoryId = id;
-  const form = $("#service-category-form");
-  form.elements.id.value = category.id;
-  form.elements.name.value = category.name;
-  form.elements.description.value = category.description || "";
-  $("#service-category-form-title").textContent = "Edit kategori";
-  $("#cancel-service-category-edit").classList.remove("hidden");
-  form.scrollIntoView({ behavior: "smooth", block: "start" });
-}
-
-function resetServiceCategoryForm() {
-  state.editingServiceCategoryId = null;
-  const form = $("#service-category-form");
-  form.reset();
-  form.elements.id.value = "";
-  $("#service-category-form-title").textContent = "Tambah kategori";
-  $("#cancel-service-category-edit").classList.add("hidden");
-}
-
-function startServiceItemEdit(id) {
-  const item = state.serviceItems.find((entry) => entry.id === id);
-  if (!item) return;
-  state.editingServiceItemId = id;
-  const form = $("#service-item-form");
-  form.elements.id.value = item.id;
-  form.elements.category_id.value = item.category_id;
-  form.elements.name.value = item.name;
-  form.elements.description.value = item.description || "";
-  $("#service-item-form-title").textContent = "Edit sub-layanan";
-  $("#cancel-service-item-edit").classList.remove("hidden");
-  form.scrollIntoView({ behavior: "smooth", block: "start" });
-}
-
-function resetServiceItemForm() {
-  state.editingServiceItemId = null;
-  const form = $("#service-item-form");
-  form.reset();
-  form.elements.id.value = "";
-  $("#service-item-form-title").textContent = "Tambah sub-layanan";
-  $("#cancel-service-item-edit").classList.add("hidden");
-}
-
-async function toggleServiceCategoryStatus(id, isActive) {
-  if (!requireAdmin()) return;
-  const category = state.serviceCategories.find((item) => item.id === id);
-  if (!category) return;
-  if (
-    isActive &&
-    !window.confirm(
-      `Nonaktifkan kategori "${category.name}"? Kategori tidak akan tampil untuk publik.`
-    )
-  ) {
-    return;
-  }
-
-  setLoading(true, isActive ? "Menonaktifkan kategori..." : "Mengaktifkan kategori...");
-  try {
-    if (isActive) await deactivateServiceCategory(id);
-    else await updateServiceCategory(id, { is_active: true });
-    await loadServiceCatalog({ force: true });
-    showToast(isActive ? "Kategori dinonaktifkan." : "Kategori diaktifkan.");
-  } catch (error) {
-    showToast(readableError(error), true);
-  } finally {
-    setLoading(false);
-  }
-}
-
-async function toggleServiceItemStatus(id, isActive) {
-  if (!requireAdmin()) return;
-  const item = state.serviceItems.find((entry) => entry.id === id);
-  if (!item) return;
-  if (
-    isActive &&
-    !window.confirm(
-      `Nonaktifkan sub-layanan "${item.name}"? Sub-layanan tidak akan tampil untuk publik.`
-    )
-  ) {
-    return;
-  }
-
-  setLoading(
-    true,
-    isActive ? "Menonaktifkan sub-layanan..." : "Mengaktifkan sub-layanan..."
-  );
-  try {
-    if (isActive) await deactivateServiceItem(id);
-    else await updateServiceItem(id, { is_active: true });
-    await loadServiceCatalog({ force: true });
-    showToast(isActive ? "Sub-layanan dinonaktifkan." : "Sub-layanan diaktifkan.");
-  } catch (error) {
-    showToast(readableError(error), true);
-  } finally {
-    setLoading(false);
-  }
 }
 
 function documentRowActions(documentId, detailLabel = "Detail") {
@@ -1996,7 +1536,6 @@ function openDocumentEditor(documentId) {
   }
 
   location.hash = "#admin";
-  switchAdminTab("documents");
   window.setTimeout(() => startEdit(id), 0);
 }
 
@@ -2004,10 +1543,6 @@ function renderEmptyApplication(message = "Hubungkan aplikasi ke Supabase untuk 
   state.documents = [];
   state.documentsLoaded = true;
   state.documentsError = null;
-  state.serviceCategories = [];
-  state.serviceItems = [];
-  state.serviceCatalogLoaded = true;
-  state.serviceCatalogError = null;
   renderAll();
   $("#recent-documents-body").innerHTML = emptyRow(5, message);
   $("#documents-body").innerHTML = emptyRow(6, message);
