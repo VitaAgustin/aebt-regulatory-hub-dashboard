@@ -988,6 +988,79 @@ tbody tr:hover td {
   color: var(--muted);
 }
 
+.custom-service-admin {
+  display: grid;
+  gap: 14px;
+}
+
+.custom-service-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 13px;
+}
+
+.custom-service-list {
+  display: grid;
+  gap: 10px;
+}
+
+.custom-service-card {
+  padding: 14px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fbfdfc;
+}
+
+.custom-service-card.inactive {
+  background: #f5f7f6;
+}
+
+.custom-service-card p {
+  margin: 5px 0 10px;
+  color: var(--muted);
+}
+
+.manager-title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.active-status {
+  display: inline-flex;
+  padding: 3px 7px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 850;
+}
+
+.active-status.active {
+  background: #e4f5ee;
+  color: var(--green);
+}
+
+.active-status.inactive {
+  background: #ecefed;
+  color: var(--muted);
+}
+
+.manager-alert {
+  padding: 16px;
+  border: 1px solid #efb8b2;
+  border-radius: 6px;
+  background: #fff5f3;
+  color: #7f2118;
+}
+
+.manager-alert p {
+  margin: 5px 0 0;
+}
+
 .table-actions {
   display: flex;
   flex-wrap: wrap;
@@ -1135,7 +1208,8 @@ tbody tr:hover td {
   .meta-grid,
   .detail-columns,
   .form-grid,
-  .service-option-list {
+  .service-option-list,
+  .custom-service-form {
     grid-template-columns: 1fr;
   }
 
@@ -1146,7 +1220,8 @@ tbody tr:hover td {
 
   .detail-title-row,
   .section-heading,
-  .form-actions {
+  .form-actions,
+  .custom-service-card {
     align-items: flex-start;
     flex-direction: column;
   }

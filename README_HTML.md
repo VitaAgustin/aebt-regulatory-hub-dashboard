@@ -38,6 +38,8 @@ Jangan pernah memasukkan `service_role`, secret key, atau database password ke
 3. Buat query baru.
 4. Salin seluruh isi `supabase-html-schema.sql`.
 5. Klik **Run**.
+6. Jika ingin admin bisa menambah kategori jasa baru dari web, jalankan juga
+   `supabase-custom-service-categories.sql`.
 
 Script tersebut:
 
@@ -51,6 +53,11 @@ Script tersebut:
 - membuat private bucket `regulatory-files`;
 - mengizinkan public membuat signed URL untuk file;
 - mengizinkan authenticated user upload, update, dan delete file.
+
+File `supabase-custom-service-categories.sql` membuat tabel
+`custom_service_categories`. Public user hanya bisa membaca kategori aktif,
+sedangkan admin yang login dengan Supabase Auth bisa menambahkan dan
+menonaktifkan kategori jasa tambahan.
 
 Jika data dari versi Next.js sudah ada, `create table if not exists` tidak
 menghapus data tersebut.
@@ -70,7 +77,24 @@ dianggap sebagai admin. Karena itu public sign-up harus dinonaktifkan.
 
 Admin kemudian login dari menu **Admin** pada aplikasi.
 
-## 4. Menjalankan Web
+## 4. Menambah Kategori Jasa
+
+1. Jalankan `supabase-custom-service-categories.sql` dari SQL Editor Supabase.
+2. Login melalui menu **Admin**.
+3. Pada panel **Tambah kategori jasa**, isi nama kategori.
+4. Isi sub-layanan, satu sub-layanan per baris.
+5. Klik **Simpan kategori jasa**.
+
+Kategori tambahan akan muncul di:
+
+- checklist **Layanan terkait** pada form tambah/edit dokumen;
+- kartu **Service Mapping**;
+- hitungan **Total kategori layanan** di Home.
+
+Kategori bawaan di `app.js` tetap ada. Kategori tambahan dari admin disimpan di
+Supabase agar bisa ditambah tanpa mengubah kode.
+
+## 5. Menjalankan Web
 
 File dapat dibuka langsung melalui `index.html`, tetapi local static server
 lebih konsisten untuk Auth dan debugging.
@@ -99,7 +123,7 @@ Tambahkan URL hosting ke **Authentication > URL Configuration > Redirect
 URLs** jika nantinya menambahkan email confirmation, password reset, atau
 magic-link flow.
 
-## 5. Mengetes Upload PDF
+## 6. Mengetes Upload PDF
 
 1. Pastikan `supabase-html-schema.sql` sudah berhasil dijalankan.
 2. Pastikan publishable/anon key sudah dimasukkan ke `app.js`.
@@ -115,7 +139,7 @@ magic-link flow.
 11. Kembali ke menu **Database Regulasi** atau **SOP Center**.
 12. Buka detail dokumen dan cek preview serta tombol download.
 
-## 6. Edit dan Hapus
+## 7. Edit dan Hapus
 
 Setelah login:
 

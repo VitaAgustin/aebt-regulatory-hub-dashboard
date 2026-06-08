@@ -239,6 +239,53 @@
             </button>
           </div>
 
+          <section class="custom-service-admin content-section">
+            <div class="section-heading">
+              <div>
+                <h2>Tambah kategori jasa</h2>
+                <p>
+                  Kategori tambahan hanya dapat dibuat oleh admin dan akan
+                  tampil di Service Mapping serta field Layanan Terkait.
+                </p>
+              </div>
+            </div>
+            <form id="custom-service-category-form" class="custom-service-form">
+              <label>
+                <span>Nama kategori jasa *</span>
+                <input
+                  name="name"
+                  placeholder="Contoh: Environmental Services"
+                  required
+                />
+              </label>
+              <label>
+                <span>Deskripsi</span>
+                <textarea
+                  name="description"
+                  placeholder="Ringkasan kategori jasa"
+                ></textarea>
+              </label>
+              <label class="span-2">
+                <span>Sub-layanan *</span>
+                <textarea
+                  name="services"
+                  placeholder="Tulis satu sub-layanan per baris"
+                  required
+                ></textarea>
+              </label>
+              <div class="form-actions span-2">
+                <span id="custom-service-status" class="muted"></span>
+                <button class="button primary" type="submit">
+                  Simpan kategori jasa
+                </button>
+              </div>
+            </form>
+            <div
+              id="custom-service-category-list"
+              class="custom-service-list"
+            ></div>
+          </section>
+
           <section class="editor-section">
             <div class="section-heading">
               <div>

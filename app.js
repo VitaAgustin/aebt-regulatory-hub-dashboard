@@ -5,6 +5,7 @@ const SUPABASE_URL = "https://pbfzjtipyqtsamgqemvx.supabase.co/rest/v1/";
 const SUPABASE_ANON_KEY = "sb_publishable_X8aX5wtGRpYOCEaOtok1Ug_77MQdP9K";
 const STORAGE_BUCKET = "regulatory-files";
 const DOCUMENT_CACHE_KEY = "aebt-documents-v1";
+const CUSTOM_SERVICE_TABLE = "custom_service_categories";
 const SUPABASE_CLIENT_CDN =
   "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.107.0/dist/umd/supabase.min.js";
 const SUPABASE_CLIENT_URL = SUPABASE_URL.trim()
@@ -106,6 +107,9 @@ const state = {
   documents: [],
   documentsLoaded: false,
   documentsError: null,
+  customServiceCategories: [],
+  customServiceLoaded: false,
+  customServiceError: null,
   session: null,
   editingId: null,
   pendingEditId: null,
@@ -115,6 +119,7 @@ const state = {
   legacyRelatedServices: [],
   signedUrls: new Map(),
   documentsPromise: null,
+  customServicePromise: null,
   supabasePromise: null
 };
 
@@ -143,10 +148,14 @@ async function initialize() {
 
   state.supabasePromise = loadSupabaseClient();
   const documentsPromise = loadDocuments({ preserveExisting: hasCachedDocuments });
+  const customServicesPromise = state.supabasePromise.then(() =>
+    loadCustomServiceCategories()
+  );
   const authPromise = state.supabasePromise.then(initializeAuth);
   const [authResult, documentsResult] = await Promise.allSettled([
     authPromise,
-    documentsPromise
+    documentsPromise,
+    customServicesPromise
   ]);
 
   if (authResult.status === "rejected") {
@@ -190,6 +199,7 @@ async function initializeAuth() {
     state.session = nextSession;
     updateAdminState();
     if (nextSession) loadAdminLogs();
+    if (db) loadCustomServiceCategories({ force: true }).catch(() => {});
   });
 
   try {
@@ -236,6 +246,10 @@ function bindEvents() {
   $("#admin-logout").addEventListener("click", handleLogout);
   $("#document-form").addEventListener("submit", handleDocumentSubmit);
   $("#cancel-edit").addEventListener("click", resetEditor);
+  $("#custom-service-category-form").addEventListener(
+    "submit",
+    handleCustomServiceCategorySubmit
+  );
   $("#related-services-selector").addEventListener(
     "change",
     syncSelectedServicesSummary
@@ -247,6 +261,10 @@ function bindEvents() {
   $("#service-mapping-grid").addEventListener("click", handleServiceCardAction);
   $("#service-documents-panel").addEventListener("click", handleServiceDocumentAction);
   $("#admin-documents-body").addEventListener("click", handleAdminTableAction);
+  $("#custom-service-category-list").addEventListener(
+    "click",
+    handleCustomServiceCategoryAction
+  );
 }
 
 async function loadDocuments({ preserveExisting = state.documents.length > 0 } = {}) {
@@ -282,6 +300,43 @@ async function loadDocuments({ preserveExisting = state.documents.length > 0 } =
   })();
 
   return state.documentsPromise;
+}
+
+async function loadCustomServiceCategories({ force = false } = {}) {
+  if (state.customServicePromise) {
+    if (!force) return state.customServicePromise;
+    await state.customServicePromise.catch(() => {});
+  }
+
+  state.customServicePromise = (async () => {
+    try {
+      const { data, error } = await db
+        .from(CUSTOM_SERVICE_TABLE)
+        .select("id,name,description,services,is_active,created_at,updated_at")
+        .order("name", { ascending: true });
+
+      if (error) throw error;
+
+      state.customServiceCategories = Array.isArray(data) ? data : [];
+      state.customServiceLoaded = true;
+      state.customServiceError = null;
+    } catch (error) {
+      state.customServiceCategories = [];
+      state.customServiceLoaded = false;
+      state.customServiceError = new Error(
+        `Kategori jasa tambahan belum siap: ${readableError(error)}`
+      );
+    } finally {
+      state.customServicePromise = null;
+      renderAll();
+      renderServiceCheckboxes();
+      renderCustomServiceCategoryManager();
+    }
+
+    return state.customServiceCategories;
+  })();
+
+  return state.customServicePromise;
 }
 
 async function fetchDocumentsFromRest() {
@@ -354,6 +409,7 @@ function renderAll() {
   renderDocumentTable();
   renderServiceMapping();
   renderAdminDocuments();
+  renderCustomServiceCategoryManager();
 }
 
 function route() {
@@ -405,7 +461,7 @@ function renderMetrics() {
   $("#metric-review").textContent = docs.filter(
     (doc) => doc.status === "Perlu Review"
   ).length;
-  $("#metric-services").textContent = SERVICE_CATALOG.length;
+  $("#metric-services").textContent = getMergedServiceCatalog().length;
 }
 
 function loadRecentDocuments() {
@@ -535,8 +591,42 @@ function formatServiceValue(categoryName, serviceName) {
   )}`;
 }
 
+function getMergedServiceCatalog({ includeInactive = false } = {}) {
+  const builtInCategories = SERVICE_CATALOG.map((category) => ({
+    ...category,
+    description: "",
+    isCustom: false,
+    is_active: true
+  }));
+
+  const customCategories = (Array.isArray(state.customServiceCategories)
+    ? state.customServiceCategories
+    : []
+  )
+    .filter((category) => includeInactive || category.is_active)
+    .map((category) => ({
+      id: category.id,
+      category: normalizeServiceName(category.name),
+      description: category.description || "",
+      services: sanitizeServiceList(category.services),
+      isCustom: true,
+      is_active: Boolean(category.is_active)
+    }))
+    .filter((category) => category.category && category.services.length);
+
+  const seen = new Set(builtInCategories.map((category) => normalizeText(category.category)));
+  const uniqueCustomCategories = customCategories.filter((category) => {
+    const key = normalizeText(category.category);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+
+  return [...builtInCategories, ...uniqueCustomCategories];
+}
+
 function getServiceEntries() {
-  return SERVICE_CATALOG.flatMap((category) =>
+  return getMergedServiceCatalog().flatMap((category) =>
     category.services.map((service) => ({
       category: category.category,
       categoryKey: normalizeText(category.category),
@@ -551,7 +641,9 @@ function getServiceEntries() {
 
 function findServiceCategory(categoryName) {
   const key = normalizeText(categoryName);
-  return SERVICE_CATALOG.find((category) => normalizeText(category.category) === key);
+  return getMergedServiceCatalog().find(
+    (category) => normalizeText(category.category) === key
+  );
 }
 
 function findServiceEntry(subServiceName, categoryName = state.selectedServiceCategory) {
@@ -619,7 +711,9 @@ function renderServiceMapping() {
   const container = $("#service-mapping-grid");
   const panel = $("#service-documents-panel");
 
-  if (!SERVICE_CATALOG.length) {
+  const catalog = getMergedServiceCatalog();
+
+  if (!catalog.length) {
     container.innerHTML =
       '<div class="service-card empty-service"><strong>Belum ada service mapping</strong><p>Katalog layanan belum tersedia.</p></div>';
     state.selectedServiceCategory = null;
@@ -637,7 +731,7 @@ function renderServiceMapping() {
     state.selectedSubServiceName = null;
   }
 
-  container.innerHTML = SERVICE_CATALOG.map((category) => {
+  container.innerHTML = catalog.map((category) => {
     const documents = getDocumentsByServiceCategory(category.category);
     const regulationCount = documents.filter(
       (doc) => doc.document_type === "regulasi"
@@ -1085,7 +1179,7 @@ function renderServiceCheckboxes() {
   const container = $("#related-services-selector");
   if (!container) return;
 
-  container.innerHTML = SERVICE_CATALOG.map((category, index) => `
+  container.innerHTML = getMergedServiceCatalog().map((category, index) => `
     <details class="service-accordion" ${index === 0 ? "open" : ""}>
       <summary>
         <span>${escapeHtml(category.category)}</span>
@@ -1184,6 +1278,181 @@ function syncSelectedServicesSummary() {
     : "";
 
   summary.innerHTML = `${escapeHtml(selectedLine)}${legacyLine}`;
+}
+
+function renderCustomServiceCategoryManager() {
+  const container = $("#custom-service-category-list");
+  if (!container) return;
+
+  if (state.customServiceError) {
+    container.innerHTML = `
+      <div class="manager-alert">
+        <strong>Fitur kategori tambahan belum siap.</strong>
+        <p>${escapeHtml(readableError(state.customServiceError))}</p>
+        <p>Jalankan file supabase-custom-service-categories.sql di SQL Editor Supabase.</p>
+      </div>
+    `;
+    return;
+  }
+
+  if (!state.customServiceLoaded) {
+    container.innerHTML =
+      '<div class="empty-state">Memuat kategori jasa tambahan...</div>';
+    return;
+  }
+
+  const categories = getMergedServiceCatalog({ includeInactive: true }).filter(
+    (category) => category.isCustom
+  );
+  if (!categories.length) {
+    container.innerHTML =
+      '<div class="empty-state">Belum ada kategori jasa tambahan.</div>';
+    return;
+  }
+
+  container.innerHTML = categories
+    .map(
+      (category) => `
+        <article class="custom-service-card ${category.is_active ? "" : "inactive"}">
+          <div>
+            <div class="manager-title-row">
+              <strong>${escapeHtml(category.category)}</strong>
+              ${activeStatusBadge(category.is_active)}
+            </div>
+            <p>${escapeHtml(category.description || "Tanpa deskripsi.")}</p>
+            <div class="tag-list">
+              ${category.services
+                .map(
+                  (service) =>
+                    `<span class="service-tag">${escapeHtml(service)}</span>`
+                )
+                .join("")}
+            </div>
+          </div>
+          <div class="table-actions">
+            ${
+              category.is_active
+                ? `<button class="button danger small" type="button" data-deactivate-custom-service="${escapeAttribute(
+                    category.id
+                  )}">Nonaktifkan</button>`
+                : '<span class="muted">Nonaktif</span>'
+            }
+          </div>
+        </article>
+      `
+    )
+    .join("");
+}
+
+function activeStatusBadge(isActive) {
+  return `<span class="active-status ${isActive ? "active" : "inactive"}">${
+    isActive ? "Aktif" : "Nonaktif"
+  }</span>`;
+}
+
+async function handleCustomServiceCategorySubmit(event) {
+  event.preventDefault();
+  if (!requireAdmin()) return;
+
+  const form = event.currentTarget;
+  const data = new FormData(form);
+  const payload = {
+    name: cleanText(data.get("name")),
+    description: cleanText(data.get("description")),
+    services: sanitizeServiceList(String(data.get("services") || ""))
+  };
+
+  if (!payload.name || !payload.services.length) {
+    showToast("Nama kategori dan minimal satu sub-layanan wajib diisi.", true);
+    return;
+  }
+  const duplicateCategory = getMergedServiceCatalog({ includeInactive: true }).some(
+    (category) => normalizeText(category.category) === normalizeText(payload.name)
+  );
+  if (duplicateCategory) {
+    showToast("Kategori jasa dengan nama tersebut sudah ada.", true);
+    return;
+  }
+
+  setCustomServiceBusy(true, "Menyimpan kategori jasa...");
+  try {
+    await createCustomServiceCategory(payload);
+    form.reset();
+    await loadCustomServiceCategories({ force: true });
+    showToast(`Kategori jasa "${payload.name}" berhasil ditambahkan.`);
+  } catch (error) {
+    showToast(readableError(error), true);
+  } finally {
+    setCustomServiceBusy(false);
+  }
+}
+
+async function createCustomServiceCategory(payload) {
+  if (!requireAdmin()) throw new Error("Login admin diperlukan.");
+  const { data, error } = await db
+    .from(CUSTOM_SERVICE_TABLE)
+    .insert({ ...payload, is_active: true })
+    .select()
+    .single();
+  if (error) throw error;
+
+  await insertLog(
+    null,
+    "Tambah kategori jasa",
+    `Menambahkan kategori jasa: ${data.name}`,
+    { pic_update: state.session.user.email }
+  );
+  return data;
+}
+
+function handleCustomServiceCategoryAction(event) {
+  const button = event.target.closest("[data-deactivate-custom-service]");
+  if (!button) return;
+  deactivateCustomServiceCategory(button.dataset.deactivateCustomService);
+}
+
+async function deactivateCustomServiceCategory(id) {
+  if (!requireAdmin()) return;
+  const category = state.customServiceCategories.find((item) => item.id === id);
+  if (!category) return;
+
+  const confirmed = window.confirm(
+    `Nonaktifkan kategori jasa "${category.name}"? Kategori tidak akan tampil untuk publik.`
+  );
+  if (!confirmed) return;
+
+  setCustomServiceBusy(true, "Menonaktifkan kategori jasa...");
+  try {
+    const { error } = await db
+      .from(CUSTOM_SERVICE_TABLE)
+      .update({ is_active: false })
+      .eq("id", id);
+    if (error) throw error;
+
+    await insertLog(
+      null,
+      "Nonaktifkan kategori jasa",
+      `Menonaktifkan kategori jasa: ${category.name}`,
+      { pic_update: state.session.user.email }
+    );
+    await loadCustomServiceCategories({ force: true });
+    showToast("Kategori jasa dinonaktifkan.");
+  } catch (error) {
+    showToast(readableError(error), true);
+  } finally {
+    setCustomServiceBusy(false);
+  }
+}
+
+function setCustomServiceBusy(active, message = "") {
+  const form = $("#custom-service-category-form");
+  if (form) {
+    $$("button, input, textarea", form).forEach((field) => {
+      field.disabled = active;
+    });
+  }
+  const status = $("#custom-service-status");
+  if (status) status.textContent = active ? message : "";
 }
 
 function documentRowActions(documentId, detailLabel = "Detail") {
@@ -1543,6 +1812,9 @@ function renderEmptyApplication(message = "Hubungkan aplikasi ke Supabase untuk 
   state.documents = [];
   state.documentsLoaded = true;
   state.documentsError = null;
+  state.customServiceCategories = [];
+  state.customServiceLoaded = true;
+  state.customServiceError = null;
   renderAll();
   $("#recent-documents-body").innerHTML = emptyRow(5, message);
   $("#documents-body").innerHTML = emptyRow(6, message);
@@ -1625,6 +1897,22 @@ function splitServices(value) {
     .split(/[,;\n|]+/)
     .map((item) => item.trim())
     .filter(Boolean);
+}
+
+function sanitizeServiceList(value) {
+  const list = Array.isArray(value)
+    ? value
+    : String(value || "").split(/[\n;|]+/);
+  const seen = new Set();
+  return list
+    .map(normalizeServiceName)
+    .filter(Boolean)
+    .filter((service) => {
+      const key = normalizeText(service);
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
 }
 
 function slugify(value) {
