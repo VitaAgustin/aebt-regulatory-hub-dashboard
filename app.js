@@ -147,6 +147,7 @@ const state = {
   documentsError: null,
   session: null,
   editingId: null,
+  pendingEditId: null,
   detailRenderToken: 0,
   selectedServiceKey: null,
   signedUrls: new Map(),
@@ -274,6 +275,7 @@ function bindEvents() {
 
   $("#documents-body").addEventListener("click", handleTableAction);
   $("#recent-documents-body").addEventListener("click", handleTableAction);
+  $("#document-detail").addEventListener("click", handleDetailAction);
   $("#service-mapping-grid").addEventListener("click", handleServiceCardAction);
   $("#service-documents-panel").addEventListener("click", handleServiceDocumentAction);
   $("#admin-documents-body").addEventListener("click", handleAdminTableAction);
@@ -459,7 +461,7 @@ function loadRecentDocuments() {
           <td>${typeBadge(doc.document_type)}</td>
           <td>${escapeHtml(doc.category || "-")}</td>
           <td>${statusBadge(doc.status)}</td>
-          <td><button class="button secondary small" data-detail-id="${doc.id}">Detail</button></td>
+          <td>${documentRowActions(doc.id)}</td>
         </tr>
       `
     )
@@ -532,7 +534,7 @@ function renderDocumentTable() {
           <td>${statusBadge(doc.status)}</td>
           <td>${escapeHtml(doc.related_services || "-")}</td>
           <td>${formatDate(doc.last_checked_at)}</td>
-          <td><button class="button secondary small" data-detail-id="${doc.id}">Detail</button></td>
+          <td>${documentRowActions(doc.id)}</td>
         </tr>
       `
     )
@@ -746,9 +748,7 @@ function renderServiceDocuments(serviceName) {
                   <td>${escapeHtml(doc.category || "-")}</td>
                   <td>${statusBadge(doc.status)}</td>
                   <td>${escapeHtml(doc.year || "-")}</td>
-                  <td><button class="button secondary small" type="button" data-detail-id="${escapeAttribute(
-                    doc.id
-                  )}">Buka Detail</button></td>
+                  <td>${documentRowActions(doc.id, "Buka Detail")}</td>
                 </tr>
               `
                   )
@@ -770,8 +770,10 @@ function handleServiceCardAction(event) {
 }
 
 function handleServiceDocumentAction(event) {
-  const button = event.target.closest("[data-detail-id]");
-  if (button) openDocumentDetail(button.dataset.detailId);
+  const editButton = event.target.closest("[data-edit-id]");
+  const detailButton = event.target.closest("[data-detail-id]");
+  if (editButton) openDocumentEditor(editButton.dataset.editId);
+  if (detailButton) openDocumentDetail(detailButton.dataset.detailId);
 }
 
 async function renderDocumentDetail(id) {
@@ -815,6 +817,9 @@ async function renderDocumentDetail(id) {
             <p class="muted">${escapeHtml(doc.regulation_number || doc.file_name || "-")}</p>
           </div>
           <div class="detail-actions">
+            <button id="edit-detail-document" class="button secondary" type="button" data-edit-id="${escapeAttribute(
+              doc.id
+            )}">Edit dokumen</button>
             <a id="open-file-link" class="button secondary hidden" target="_blank" rel="noopener">Buka file</a>
             <a id="download-file-link" class="button primary hidden">Download PDF</a>
           </div>
@@ -971,6 +976,11 @@ async function handleLogin(event) {
     event.currentTarget.reset();
     updateAdminState();
     await loadAdminLogs();
+    if (state.pendingEditId) {
+      const pendingId = state.pendingEditId;
+      state.pendingEditId = null;
+      startEdit(pendingId);
+    }
     showToast("Login berhasil.");
   } catch (error) {
     showToast(readableError(error), true);
@@ -1006,6 +1016,18 @@ function updateAdminState() {
     $("#admin-user-email").textContent = email;
     $("#admin-session-badge").textContent = "Authenticated";
   }
+}
+
+function documentRowActions(documentId, detailLabel = "Detail") {
+  const id = escapeAttribute(documentId);
+  return `
+    <div class="table-actions">
+      <button class="button secondary small" type="button" data-detail-id="${id}">${escapeHtml(
+        detailLabel
+      )}</button>
+      <button class="button primary small" type="button" data-edit-id="${id}">Edit</button>
+    </div>
+  `;
 }
 
 async function handleDocumentSubmit(event) {
@@ -1313,14 +1335,37 @@ async function loadAdminLogs() {
 }
 
 function handleTableAction(event) {
-  const button = event.target.closest("[data-detail-id]");
-  if (button) openDocumentDetail(button.dataset.detailId);
+  const editButton = event.target.closest("[data-edit-id]");
+  const detailButton = event.target.closest("[data-detail-id]");
+  if (editButton) openDocumentEditor(editButton.dataset.editId);
+  if (detailButton) openDocumentDetail(detailButton.dataset.detailId);
+}
+
+function handleDetailAction(event) {
+  const editButton = event.target.closest("[data-edit-id]");
+  if (editButton) openDocumentEditor(editButton.dataset.editId);
 }
 
 function openDocumentDetail(documentId) {
   const id = String(documentId || "").trim();
   if (!id) return;
   location.hash = `#document/${encodeURIComponent(id)}`;
+}
+
+function openDocumentEditor(documentId) {
+  const id = String(documentId || "").trim();
+  if (!id) return;
+
+  if (!ensureConfigured()) return;
+  if (!state.session?.user) {
+    state.pendingEditId = id;
+    location.hash = "#admin";
+    showToast("Login admin diperlukan untuk mengedit dokumen.", true);
+    return;
+  }
+
+  location.hash = "#admin";
+  window.setTimeout(() => startEdit(id), 0);
 }
 
 function renderEmptyApplication(message = "Hubungkan aplikasi ke Supabase untuk memuat data.") {
