@@ -17,6 +17,128 @@ const configured =
   SUPABASE_ANON_KEY.length > 30 &&
   !SUPABASE_ANON_KEY.includes("YOUR_SUPABASE");
 
+const SERVICE_PORTFOLIOS = [
+  {
+    code: "EBT 041",
+    name: "Energi Baru Terbarukan",
+    theme: "green",
+    services: [
+      {
+        code: "AEB - 1A",
+        name: "Sampling dan Analisa di Bidang EBT (Gas Methana, Shale Gas, Panas Bumi dan Lainnya)",
+        aliases: [
+          "AEB 1A",
+          "Sampling EBT",
+          "Analisa EBT",
+          "Gas Methana",
+          "Shale Gas",
+          "Panas Bumi",
+          "Geothermal"
+        ]
+      },
+      {
+        code: "AEB - 1B",
+        name: "Verifikasi dan Inspeksi Peralatan dan Instalasi di bidang EBT",
+        aliases: [
+          "AEB 1B",
+          "Verifikasi EBT",
+          "Inspeksi EBT",
+          "Instalasi EBT",
+          "Peralatan EBT",
+          "Kendaraan Listrik",
+          "Charging",
+          "SPKLU"
+        ]
+      },
+      {
+        code: "AEB - 1C",
+        name: "Konsultasi di bidang EBT",
+        aliases: [
+          "AEB 1C",
+          "Konsultasi EBT",
+          "Kajian EBT",
+          "Regulasi EBT",
+          "Regulasi ESDM"
+        ]
+      }
+    ]
+  },
+  {
+    code: "IAPPM 042",
+    name: "Industri, Migas, Pertambangan, dan Pembangkit",
+    theme: "orange",
+    services: [
+      {
+        code: "AEB - 2A",
+        name: "Inspeksi Peralatan dan Instalasi Industri Minyak dan Gas Bumi",
+        aliases: [
+          "AEB 2A",
+          "Inspeksi Migas",
+          "Inspeksi Teknis dan Keselamatan",
+          "Inspeksi Peralatan Migas",
+          "Instalasi Minyak dan Gas Bumi"
+        ]
+      },
+      {
+        code: "AEB - 2B",
+        name: "Konsultasi Terhadap Kehandalan dan Keamanan Peralatan dan Instalasi Industri Minyak dan Gas Bumi",
+        aliases: [
+          "AEB 2B",
+          "Kehandalan",
+          "Keamanan Peralatan",
+          "Remaining Life Assessment",
+          "RLA",
+          "Manajemen Risiko",
+          "Analisis Risiko"
+        ]
+      },
+      {
+        code: "AEB - 2C",
+        name: "QA/QC untuk Fasilitas Industri, Minyak dan Gas, Pertambangan dan Pembangkit Listrik",
+        aliases: [
+          "AEB 2C",
+          "QA QC",
+          "QA/QC",
+          "Fasilitas Industri",
+          "Pertambangan",
+          "Pembangkit Listrik",
+          "Desain Instalasi",
+          "Penelaahan Desain"
+        ]
+      },
+      {
+        code: "AEB - 2D",
+        name: "Verifikasi dan Pemeriksaan Mesin Pada Saat Beroperasi",
+        aliases: [
+          "AEB 2D",
+          "Pemeriksaan Mesin",
+          "Mesin Beroperasi",
+          "Mesin Pada Saat Beroperasi"
+        ]
+      },
+      {
+        code: "AEB - 2E",
+        name: "Verifikasi dan Inspeksi Peralatan dan Instalasi Industri Migas dan Peralatan Pendukung Lainnya",
+        aliases: [
+          "AEB 2E",
+          "Verifikasi Migas",
+          "Peralatan Pendukung",
+          "Perusahaan Inspeksi",
+          "Cementing Unit",
+          "Penyemenan",
+          "Reverse Engineering",
+          "Rekayasa Terbalik"
+        ]
+      },
+      {
+        code: "AEB - 2F",
+        name: "Non-Destructive Test",
+        aliases: ["AEB 2F", "NDT", "Non Destructive Test", "Non-Destructive Test"]
+      }
+    ]
+  }
+];
+
 let db = null;
 
 const state = {
@@ -421,23 +543,84 @@ function normalizeServiceName(service) {
   return String(service || "").replace(/\s+/g, " ").trim();
 }
 
+function normalizeServiceKey(value) {
+  return normalizeServiceName(value)
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLocaleLowerCase("id-ID")
+    .replace(/&/g, " dan ")
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function makePortfolioServiceKey(value) {
+  return normalizeServiceKey(value).replace(/\s+/g, "-");
+}
+
+function getPortfolioServices() {
+  return SERVICE_PORTFOLIOS.flatMap((portfolio) =>
+    portfolio.services.map((service) => ({
+      ...service,
+      key: makePortfolioServiceKey(service.code),
+      portfolioCode: portfolio.code,
+      portfolioName: portfolio.name,
+      theme: portfolio.theme
+    }))
+  );
+}
+
 function getServiceGroups(documents) {
-  const groups = new Map();
+  const groups = new Map(
+    getPortfolioServices().map((service) => [
+      service.key,
+      { ...service, docs: [] }
+    ])
+  );
 
   (Array.isArray(documents) ? documents : []).forEach((doc) => {
-    splitServices(doc.related_services).forEach((rawService) => {
-      const name = normalizeServiceName(rawService);
-      if (!name) return;
-
-      const key = name.toLocaleLowerCase("id-ID");
-      const current = groups.get(key) || { key, name, docs: [] };
-      current.docs.push(doc);
-      groups.set(key, current);
+    const matchedKeys = new Set();
+    groups.forEach((service) => {
+      if (documentMatchesPortfolioService(doc, service)) {
+        matchedKeys.add(service.key);
+      }
     });
+
+    matchedKeys.forEach((key) => groups.get(key)?.docs.push(doc));
   });
 
-  return [...groups.values()].sort(
-    (a, b) => b.docs.length - a.docs.length || a.name.localeCompare(b.name, "id")
+  return [...groups.values()];
+}
+
+function documentMatchesPortfolioService(doc, service) {
+  const aliases = [service.code, service.name, ...(service.aliases || [])]
+    .map(normalizeServiceKey)
+    .filter(Boolean);
+  const serviceTerms = splitServices(doc.related_services).map(normalizeServiceKey);
+  const combinedText = normalizeServiceKey(
+    [
+      doc.related_services,
+      doc.category,
+      doc.title,
+      doc.summary,
+      doc.service_opportunity
+    ]
+      .filter(Boolean)
+      .join(" ")
+  );
+
+  return (
+    serviceTerms.some((term) =>
+      aliases.some(
+        (alias) =>
+          term === alias ||
+          term.includes(alias) ||
+          (term.length > 4 && alias.includes(term))
+      )
+    ) ||
+    aliases
+      .filter((alias) => alias.length > 5)
+      .some((alias) => combinedText.includes(alias))
   );
 }
 
@@ -448,7 +631,7 @@ function renderServiceMapping() {
 
   if (!items.length) {
     container.innerHTML =
-      '<div class="service-card empty-service"><strong>Belum ada service mapping</strong><p>Isi field layanan terkait pada dokumen dengan koma, misalnya Kajian EBT, TKDN, Inspeksi Teknis.</p></div>';
+      '<div class="service-card empty-service"><strong>Belum ada service mapping</strong><p>Portofolio layanan belum tersedia.</p></div>';
     state.selectedServiceKey = null;
     panel.classList.add("hidden");
     panel.innerHTML = "";
@@ -459,22 +642,45 @@ function renderServiceMapping() {
     state.selectedServiceKey = null;
   }
 
-  container.innerHTML = items
-    .map(
-      (item) => `
-        <article class="service-card ${
-          state.selectedServiceKey === item.key ? "active" : ""
-        }" data-service-key="${escapeAttribute(item.key)}">
-          <strong>${escapeHtml(item.name)}</strong>
-          <span>${item.docs.length} dokumen</span>
-          <p>Regulasi/SOP yang berkaitan dengan ${escapeHtml(item.name)}.</p>
-          <button class="button secondary small" type="button" data-service-key="${escapeAttribute(
-            item.key
-          )}">Lihat dokumen</button>
-        </article>
-      `
-    )
-    .join("");
+  container.innerHTML = SERVICE_PORTFOLIOS.map((portfolio) => {
+    const portfolioItems = items.filter(
+      (item) => item.portfolioCode === portfolio.code
+    );
+    const documentCount = new Set(
+      portfolioItems.flatMap((item) => item.docs.map((doc) => doc.id))
+    ).size;
+
+    return `
+      <section class="portfolio-block ${portfolio.theme}">
+        <div class="portfolio-heading">
+          <span>${escapeHtml(portfolio.code)}</span>
+          <div>
+            <h2>${escapeHtml(portfolio.name)}</h2>
+            <p>${documentCount} dokumen terkait portofolio ini.</p>
+          </div>
+        </div>
+        <div class="portfolio-service-grid">
+          ${portfolioItems
+            .map(
+              (item) => `
+                <article class="service-card ${item.theme} ${
+                  state.selectedServiceKey === item.key ? "active" : ""
+                }" data-service-key="${escapeAttribute(item.key)}">
+                  <small>${escapeHtml(item.code)}</small>
+                  <strong>${escapeHtml(item.name)}</strong>
+                  <span>${item.docs.length} dokumen</span>
+                  <p>Regulasi/SOP yang berkaitan dengan ${escapeHtml(item.code)}.</p>
+                  <button class="button secondary small" type="button" data-service-key="${escapeAttribute(
+                    item.key
+                  )}">Lihat dokumen</button>
+                </article>
+              `
+            )
+            .join("")}
+        </div>
+      </section>
+    `;
+  }).join("");
 
   if (state.selectedServiceKey) renderServiceDocuments(state.selectedServiceKey);
   else {
@@ -486,9 +692,13 @@ function renderServiceMapping() {
 function renderServiceDocuments(serviceName) {
   const panel = $("#service-documents-panel");
   const normalized = normalizeServiceName(serviceName);
-  const key = normalized.toLocaleLowerCase("id-ID");
+  const key = makePortfolioServiceKey(normalized);
   const group = getServiceGroups(safeDocuments()).find(
-    (item) => item.key === key || item.name.toLocaleLowerCase("id-ID") === key
+    (item) =>
+      item.key === serviceName ||
+      item.key === key ||
+      makePortfolioServiceKey(item.name) === key ||
+      makePortfolioServiceKey(item.code) === key
   );
 
   if (!group) {
@@ -503,8 +713,8 @@ function renderServiceDocuments(serviceName) {
   panel.innerHTML = `
     <div class="section-heading">
       <div>
-        <h2>${escapeHtml(group.name)}</h2>
-        <p>${group.docs.length} dokumen terkait layanan/jasa ini.</p>
+        <h2>${escapeHtml(group.code)} - ${escapeHtml(group.name)}</h2>
+        <p>${escapeHtml(group.portfolioCode)} | ${group.docs.length} dokumen terkait layanan/jasa ini.</p>
       </div>
     </div>
     <div class="table-frame">
@@ -520,9 +730,11 @@ function renderServiceDocuments(serviceName) {
           </tr>
         </thead>
         <tbody>
-          ${group.docs
-            .map(
-              (doc) => `
+          ${
+            group.docs.length
+              ? group.docs
+                  .map(
+                    (doc) => `
                 <tr>
                   <td>
                     <div class="document-title">${escapeHtml(doc.title)}</div>
@@ -539,8 +751,10 @@ function renderServiceDocuments(serviceName) {
                   )}">Buka Detail</button></td>
                 </tr>
               `
-            )
-            .join("")}
+                  )
+                  .join("")
+              : emptyRow(6, "Belum ada dokumen yang terkait dengan layanan ini.")
+          }
         </tbody>
       </table>
     </div>

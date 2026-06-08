@@ -462,6 +462,59 @@ tbody tr:hover td {
 
 .service-grid {
   display: grid;
+  gap: 18px;
+}
+
+.portfolio-block {
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.portfolio-block.green {
+  border-top: 4px solid #08a56f;
+}
+
+.portfolio-block.orange {
+  border-top: 4px solid #ff7a00;
+}
+
+.portfolio-heading {
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.portfolio-heading > span {
+  min-width: 104px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: #08a56f;
+  color: white;
+  font-size: 18px;
+  font-weight: 850;
+  text-align: center;
+}
+
+.portfolio-block.orange .portfolio-heading > span {
+  background: #ff7a00;
+}
+
+.portfolio-heading h2 {
+  margin: 0;
+  font-size: 22px;
+}
+
+.portfolio-heading p {
+  margin: 3px 0 0;
+  color: var(--muted);
+}
+
+.portfolio-service-grid {
+  display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 14px;
 }
@@ -477,6 +530,10 @@ tbody tr:hover td {
     border-color 0.18s ease,
     box-shadow 0.18s ease,
     transform 0.18s ease;
+}
+
+.service-card.orange {
+  border-top-color: #ff7a00;
 }
 
 .service-card:not(.empty-service) {
@@ -496,10 +553,30 @@ tbody tr:hover td {
   font-size: 16px;
 }
 
+.service-card small {
+  display: inline-flex;
+  margin-bottom: 10px;
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: var(--surface-soft);
+  color: var(--teal-dark);
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.service-card.orange small {
+  background: #fff0df;
+  color: #aa4f00;
+}
+
 .service-card span {
   color: var(--teal-dark);
   font-size: 28px;
   font-weight: 800;
+}
+
+.service-card.orange span {
+  color: #b85400;
 }
 
 .service-card p {
@@ -836,7 +913,7 @@ tbody tr:hover td {
     grid-column: 1 / -1;
   }
 
-  .service-grid {
+  .portfolio-service-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -869,7 +946,7 @@ tbody tr:hover td {
 
   .metrics-grid,
   .filter-bar,
-  .service-grid,
+  .portfolio-service-grid,
   .meta-grid,
   .detail-columns,
   .form-grid {
