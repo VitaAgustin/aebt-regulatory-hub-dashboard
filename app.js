@@ -26,6 +26,7 @@ const state = {
   session: null,
   editingId: null,
   detailRenderToken: 0,
+  selectedServiceKey: null,
   signedUrls: new Map(),
   documentsPromise: null,
   supabasePromise: null
@@ -151,6 +152,8 @@ function bindEvents() {
 
   $("#documents-body").addEventListener("click", handleTableAction);
   $("#recent-documents-body").addEventListener("click", handleTableAction);
+  $("#service-mapping-grid").addEventListener("click", handleServiceCardAction);
+  $("#service-documents-panel").addEventListener("click", handleServiceDocumentAction);
   $("#admin-documents-body").addEventListener("click", handleAdminTableAction);
 }
 
@@ -242,10 +245,10 @@ function writeDocumentCache(documents) {
 function renderDocumentLoadingState() {
   $("#documents-count").textContent = "Memuat...";
   $("#recent-documents-body").innerHTML = emptyRow(
-    6,
+    5,
     "Memuat dokumen dari Supabase..."
   );
-  $("#documents-body").innerHTML = emptyRow(7, "Memuat dokumen dari Supabase...");
+  $("#documents-body").innerHTML = emptyRow(6, "Memuat dokumen dari Supabase...");
   $("#admin-documents-body").innerHTML = emptyRow(
     5,
     "Memuat dokumen dari Supabase..."
@@ -300,6 +303,7 @@ function route() {
 
 function renderMetrics() {
   const docs = safeDocuments();
+  const serviceGroups = getServiceGroups(docs);
   $("#metric-total").textContent = docs.length;
   $("#metric-regulations").textContent = docs.filter(
     (doc) => doc.document_type === "regulasi"
@@ -307,12 +311,10 @@ function renderMetrics() {
   $("#metric-sops").textContent = docs.filter(
     (doc) => doc.document_type === "sop"
   ).length;
-  $("#metric-priority").textContent = docs.filter(
-    (doc) => Number(doc.priority_score || 0) >= 16
-  ).length;
   $("#metric-review").textContent = docs.filter(
     (doc) => doc.status === "Perlu Review"
   ).length;
+  $("#metric-services").textContent = serviceGroups.length;
 }
 
 function loadRecentDocuments() {
@@ -320,7 +322,7 @@ function loadRecentDocuments() {
   const rows = safeDocuments().slice(0, 5);
 
   if (!rows.length) {
-    body.innerHTML = emptyRow(6, "Belum ada dokumen.");
+    body.innerHTML = emptyRow(5, "Belum ada dokumen.");
     return;
   }
 
@@ -335,7 +337,6 @@ function loadRecentDocuments() {
           <td>${typeBadge(doc.document_type)}</td>
           <td>${escapeHtml(doc.category || "-")}</td>
           <td>${statusBadge(doc.status)}</td>
-          <td>${priorityMarkup(doc.priority_score)}</td>
           <td><button class="button secondary small" data-detail-id="${doc.id}">Detail</button></td>
         </tr>
       `
@@ -391,7 +392,7 @@ function renderDocumentTable() {
   $("#documents-count").textContent = `${docs.length} dokumen`;
 
   if (!docs.length) {
-    body.innerHTML = emptyRow(7, "Tidak ada dokumen yang sesuai filter.");
+    body.innerHTML = emptyRow(6, "Tidak ada dokumen yang sesuai filter.");
     return;
   }
 
@@ -408,7 +409,6 @@ function renderDocumentTable() {
           <td>${escapeHtml(doc.category || "-")}</td>
           <td>${statusBadge(doc.status)}</td>
           <td>${escapeHtml(doc.related_services || "-")}</td>
-          <td>${priorityMarkup(doc.priority_score)}</td>
           <td>${formatDate(doc.last_checked_at)}</td>
           <td><button class="button secondary small" data-detail-id="${doc.id}">Detail</button></td>
         </tr>
@@ -417,45 +417,147 @@ function renderDocumentTable() {
     .join("");
 }
 
-function renderServiceMapping() {
-  const services = new Map();
+function normalizeServiceName(service) {
+  return String(service || "").replace(/\s+/g, " ").trim();
+}
 
-  safeDocuments().forEach((doc) => {
-    splitServices(doc.related_services).forEach((service) => {
-      const key = service.toLowerCase();
-      const current = services.get(key) || { name: service, docs: [] };
+function getServiceGroups(documents) {
+  const groups = new Map();
+
+  (Array.isArray(documents) ? documents : []).forEach((doc) => {
+    splitServices(doc.related_services).forEach((rawService) => {
+      const name = normalizeServiceName(rawService);
+      if (!name) return;
+
+      const key = name.toLocaleLowerCase("id-ID");
+      const current = groups.get(key) || { key, name, docs: [] };
       current.docs.push(doc);
-      services.set(key, current);
+      groups.set(key, current);
     });
   });
 
-  const items = [...services.values()].sort(
+  return [...groups.values()].sort(
     (a, b) => b.docs.length - a.docs.length || a.name.localeCompare(b.name, "id")
   );
+}
+
+function renderServiceMapping() {
+  const items = getServiceGroups(safeDocuments());
   const container = $("#service-mapping-grid");
+  const panel = $("#service-documents-panel");
 
   if (!items.length) {
     container.innerHTML =
-      '<div class="service-card"><strong>Belum ada service mapping</strong><p>Isi field layanan terkait pada dokumen.</p></div>';
+      '<div class="service-card empty-service"><strong>Belum ada service mapping</strong><p>Isi field layanan terkait pada dokumen dengan koma, misalnya Kajian EBT, TKDN, Inspeksi Teknis.</p></div>';
+    state.selectedServiceKey = null;
+    panel.classList.add("hidden");
+    panel.innerHTML = "";
     return;
+  }
+
+  if (state.selectedServiceKey && !items.some((item) => item.key === state.selectedServiceKey)) {
+    state.selectedServiceKey = null;
   }
 
   container.innerHTML = items
     .map(
       (item) => `
-        <article class="service-card">
+        <article class="service-card ${
+          state.selectedServiceKey === item.key ? "active" : ""
+        }" data-service-key="${escapeAttribute(item.key)}">
           <strong>${escapeHtml(item.name)}</strong>
-          <span>${item.docs.length}</span>
-          <p>${escapeHtml(
-            item.docs
-              .slice(0, 3)
-              .map((doc) => doc.title)
-              .join(" | ")
-          )}</p>
+          <span>${item.docs.length} dokumen</span>
+          <p>Regulasi/SOP yang berkaitan dengan ${escapeHtml(item.name)}.</p>
+          <button class="button secondary small" type="button" data-service-key="${escapeAttribute(
+            item.key
+          )}">Lihat dokumen</button>
         </article>
       `
     )
     .join("");
+
+  if (state.selectedServiceKey) renderServiceDocuments(state.selectedServiceKey);
+  else {
+    panel.classList.add("hidden");
+    panel.innerHTML = "";
+  }
+}
+
+function renderServiceDocuments(serviceName) {
+  const panel = $("#service-documents-panel");
+  const normalized = normalizeServiceName(serviceName);
+  const key = normalized.toLocaleLowerCase("id-ID");
+  const group = getServiceGroups(safeDocuments()).find(
+    (item) => item.key === key || item.name.toLocaleLowerCase("id-ID") === key
+  );
+
+  if (!group) {
+    state.selectedServiceKey = null;
+    panel.classList.add("hidden");
+    panel.innerHTML = "";
+    return;
+  }
+
+  state.selectedServiceKey = group.key;
+  panel.classList.remove("hidden");
+  panel.innerHTML = `
+    <div class="section-heading">
+      <div>
+        <h2>${escapeHtml(group.name)}</h2>
+        <p>${group.docs.length} dokumen terkait layanan/jasa ini.</p>
+      </div>
+    </div>
+    <div class="table-frame">
+      <table>
+        <thead>
+          <tr>
+            <th>Judul dokumen</th>
+            <th>Tipe</th>
+            <th>Kategori</th>
+            <th>Status</th>
+            <th>Tahun</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          ${group.docs
+            .map(
+              (doc) => `
+                <tr>
+                  <td>
+                    <div class="document-title">${escapeHtml(doc.title)}</div>
+                    <div class="document-meta">${escapeHtml(
+                      doc.regulation_number || doc.file_name || "-"
+                    )}</div>
+                  </td>
+                  <td>${typeBadge(doc.document_type)}</td>
+                  <td>${escapeHtml(doc.category || "-")}</td>
+                  <td>${statusBadge(doc.status)}</td>
+                  <td>${escapeHtml(doc.year || "-")}</td>
+                  <td><button class="button secondary small" type="button" data-detail-id="${escapeAttribute(
+                    doc.id
+                  )}">Buka Detail</button></td>
+                </tr>
+              `
+            )
+            .join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function handleServiceCardAction(event) {
+  const target = event.target.closest("[data-service-key]");
+  if (!target) return;
+  renderServiceDocuments(target.dataset.serviceKey);
+  renderServiceMapping();
+  $("#service-documents-panel").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function handleServiceDocumentAction(event) {
+  const button = event.target.closest("[data-detail-id]");
+  if (button) openDocumentDetail(button.dataset.detailId);
 }
 
 async function renderDocumentDetail(id) {
@@ -509,8 +611,6 @@ async function renderDocumentDetail(id) {
           ${metaItem("Kategori", doc.category || "-")}
           ${metaItem("Sub-kategori", doc.sub_category || "-")}
           ${metaItem("Status", doc.status || "-")}
-          ${metaItem("Relevansi SBU", doc.sbu_relevance || "-")}
-          ${metaItem("Priority score", doc.priority_score ? `${doc.priority_score} / 25` : "-")}
           ${metaItem("Terakhir dicek", formatDate(doc.last_checked_at))}
         </div>
       </header>
@@ -799,7 +899,6 @@ async function handleDocumentSubmit(event) {
 
 function buildDocumentPayload(form) {
   const year = numberOrNull(form.get("year"));
-  const priority = numberOrNull(form.get("priority_score"));
 
   return {
     document_type: cleanText(form.get("document_type")) || "regulasi",
@@ -814,11 +913,9 @@ function buildDocumentPayload(form) {
     impacted_party: cleanText(form.get("impacted_party")),
     status: cleanText(form.get("status")) || "Berlaku",
     related_services: cleanText(form.get("related_services")),
-    sbu_relevance: cleanText(form.get("sbu_relevance")),
     service_opportunity: cleanText(form.get("service_opportunity")),
     compliance_risk: cleanText(form.get("compliance_risk")),
     action_point: cleanText(form.get("action_point")),
-    priority_score: priority,
     source_url: cleanText(form.get("source_url")),
     last_checked_at: cleanText(form.get("last_checked_at")),
     pic_update: cleanText(form.get("pic_update")) || state.session.user.email,
@@ -1003,7 +1100,13 @@ async function loadAdminLogs() {
 
 function handleTableAction(event) {
   const button = event.target.closest("[data-detail-id]");
-  if (button) location.hash = `#document/${button.dataset.detailId}`;
+  if (button) openDocumentDetail(button.dataset.detailId);
+}
+
+function openDocumentDetail(documentId) {
+  const id = String(documentId || "").trim();
+  if (!id) return;
+  location.hash = `#document/${encodeURIComponent(id)}`;
 }
 
 function renderEmptyApplication(message = "Hubungkan aplikasi ke Supabase untuk memuat data.") {
@@ -1011,16 +1114,16 @@ function renderEmptyApplication(message = "Hubungkan aplikasi ke Supabase untuk 
   state.documentsLoaded = true;
   state.documentsError = null;
   renderAll();
-  $("#recent-documents-body").innerHTML = emptyRow(6, message);
-  $("#documents-body").innerHTML = emptyRow(7, message);
+  $("#recent-documents-body").innerHTML = emptyRow(5, message);
+  $("#documents-body").innerHTML = emptyRow(6, message);
 }
 
 function renderDocumentFetchError(error) {
   state.documents = [];
   renderAll();
   const message = readableError(error);
-  $("#recent-documents-body").innerHTML = emptyRow(6, message);
-  $("#documents-body").innerHTML = emptyRow(7, message);
+  $("#recent-documents-body").innerHTML = emptyRow(5, message);
+  $("#documents-body").innerHTML = emptyRow(6, message);
 }
 
 function ensureConfigured() {
@@ -1140,19 +1243,6 @@ function statusBadge(status) {
         ? "revoked"
         : "";
   return `<span class="badge ${className}">${escapeHtml(status || "-")}</span>`;
-}
-
-function priorityMarkup(score) {
-  if (!score) return '<span class="muted">Belum dinilai</span>';
-  const label =
-    score >= 21
-      ? "Sangat Tinggi"
-      : score >= 16
-        ? "Tinggi"
-        : score >= 11
-          ? "Sedang"
-          : "Rendah";
-  return `<span class="priority ${score >= 16 ? "high" : ""}">${escapeHtml(label)} (${score})</span>`;
 }
 
 function metaItem(label, value) {

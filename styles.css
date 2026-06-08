@@ -450,14 +450,6 @@ tbody tr:hover td {
   color: var(--red);
 }
 
-.priority {
-  font-weight: 750;
-}
-
-.priority.high {
-  color: var(--red);
-}
-
 .muted {
   color: var(--muted);
 }
@@ -477,9 +469,25 @@ tbody tr:hover td {
 .service-card {
   padding: 18px;
   border: 1px solid var(--line);
+  border-top: 3px solid var(--teal);
   border-radius: var(--radius);
   background: var(--surface);
   box-shadow: var(--shadow);
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.18s ease;
+}
+
+.service-card:not(.empty-service) {
+  cursor: pointer;
+}
+
+.service-card:not(.empty-service):hover,
+.service-card.active {
+  border-color: rgba(8, 127, 114, 0.45);
+  box-shadow: 0 12px 28px rgba(20, 35, 31, 0.12);
+  transform: translateY(-2px);
 }
 
 .service-card strong {
@@ -498,6 +506,14 @@ tbody tr:hover td {
   margin: 8px 0 0;
   color: var(--muted);
   font-size: 13px;
+}
+
+.service-card .button {
+  margin-top: 14px;
+}
+
+.service-documents-panel {
+  margin-top: 22px;
 }
 
 .detail-toolbar {

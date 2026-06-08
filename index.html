@@ -66,12 +66,12 @@
             <strong id="metric-sops">0</strong>
           </article>
           <article class="metric-card accent">
-            <span>Prioritas tinggi</span>
-            <strong id="metric-priority">0</strong>
-          </article>
-          <article class="metric-card warning">
             <span>Perlu review</span>
             <strong id="metric-review">0</strong>
+          </article>
+          <article class="metric-card warning">
+            <span>Total layanan/jasa terkait</span>
+            <strong id="metric-services">0</strong>
           </article>
         </div>
 
@@ -91,7 +91,6 @@
                   <th>Tipe</th>
                   <th>Kategori</th>
                   <th>Status</th>
-                  <th>Prioritas</th>
                   <th></th>
                 </tr>
               </thead>
@@ -158,7 +157,6 @@
                 <th>Kategori</th>
                 <th>Status</th>
                 <th>Layanan terkait</th>
-                <th>Prioritas</th>
                 <th>Terakhir dicek</th>
                 <th></th>
               </tr>
@@ -180,6 +178,7 @@
           </div>
         </div>
         <div id="service-mapping-grid" class="service-grid"></div>
+        <section id="service-documents-panel" class="service-documents-panel hidden"></section>
       </section>
 
       <section id="view-detail" class="view page-shell hidden" data-view="detail">
@@ -327,22 +326,8 @@
                     <span>Layanan terkait</span>
                     <textarea
                       name="related_services"
-                      placeholder="Pisahkan beberapa layanan dengan koma"
+                      placeholder="Kajian EBT, TKDN, Inspeksi Teknis"
                     ></textarea>
-                  </label>
-                  <label>
-                    <span>Relevansi SBU</span>
-                    <select name="sbu_relevance">
-                      <option value="">Belum dinilai</option>
-                      <option value="Sangat Tinggi">Sangat Tinggi</option>
-                      <option value="Tinggi">Tinggi</option>
-                      <option value="Sedang">Sedang</option>
-                      <option value="Rendah">Rendah</option>
-                    </select>
-                  </label>
-                  <label>
-                    <span>Priority score</span>
-                    <input name="priority_score" type="number" min="1" max="25" />
                   </label>
                   <label>
                     <span>Peluang layanan</span>
