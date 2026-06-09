@@ -129,7 +129,7 @@ magic-link flow.
 2. Pastikan publishable/anon key sudah dimasukkan ke `app.js`.
 3. Buka menu **Admin**.
 4. Login memakai admin user Supabase Auth.
-5. Isi judul, tipe dokumen, kategori, dan metadata lain.
+5. Isi judul, tipe dokumen, ringkasan, layanan terkait, dan metadata lain.
 6. Pilih file PDF.
 7. Klik **Simpan dokumen**.
 8. Buka Supabase **Storage > regulatory-files** dan pastikan file muncul.
