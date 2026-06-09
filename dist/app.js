@@ -235,6 +235,14 @@ function routeFromPathname() {
 
 function bindEvents() {
   window.addEventListener("hashchange", route);
+  window.addEventListener("resize", () => {
+    if (window.innerWidth > 1080) setSidebarOpen(false);
+  });
+
+  $("#sidebar-toggle").addEventListener("click", () => {
+    setSidebarOpen(!document.body.classList.contains("sidebar-open"));
+  });
+  $("#sidebar-backdrop").addEventListener("click", () => setSidebarOpen(false));
 
   $("#document-filters").addEventListener("input", renderDocumentTable);
   $("#document-filters").addEventListener("change", renderDocumentTable);
@@ -265,6 +273,12 @@ function bindEvents() {
     "click",
     handleCustomServiceCategoryAction
   );
+}
+
+function setSidebarOpen(open) {
+  document.body.classList.toggle("sidebar-open", open);
+  $("#sidebar-toggle")?.setAttribute("aria-expanded", String(open));
+  $("#sidebar-backdrop")?.classList.toggle("hidden", !open);
 }
 
 async function loadDocuments({ preserveExisting = state.documents.length > 0 } = {}) {
@@ -416,6 +430,15 @@ function route() {
   const routeValue = location.hash.replace(/^#/, "") || "home";
   const [routeName, routeId] = routeValue.split("/");
   const normalizedRoute = routeName === "sop" ? "documents" : routeName;
+  const routeContext = {
+    home: ["Regulatory Intelligence", "Dashboard Home"],
+    documents: ["Document Repository", "Database Regulasi"],
+    sop: ["Document Library", "SOP Center"],
+    services: ["Business Relevance", "Service Mapping"],
+    admin: ["Restricted Access", "Admin Management"],
+    document: ["Document Repository", "Detail Dokumen"]
+  };
+  const [eyebrow, title] = routeContext[routeName] || routeContext.home;
 
   $$(".view").forEach((view) => view.classList.add("hidden"));
   $(`[data-view="${normalizedRoute === "document" ? "detail" : normalizedRoute}"]`)
@@ -428,6 +451,9 @@ function route() {
       target === routeName || (routeName === "document" && target === "documents")
     );
   });
+  $("#topbar-eyebrow").textContent = eyebrow;
+  $("#topbar-title").textContent = title;
+  setSidebarOpen(false);
 
   if (routeName === "sop") {
     $("#documents-title").textContent = "SOP Center";
@@ -731,7 +757,7 @@ function renderServiceMapping() {
     state.selectedSubServiceName = null;
   }
 
-  container.innerHTML = catalog.map((category) => {
+  container.innerHTML = catalog.map((category, index) => {
     const documents = getDocumentsByServiceCategory(category.category);
     const regulationCount = documents.filter(
       (doc) => doc.document_type === "regulasi"
@@ -739,9 +765,15 @@ function renderServiceMapping() {
     const sopCount = documents.filter((doc) => doc.document_type === "sop").length;
 
     return `
-      <article class="service-card category-card ${
+      <article class="service-card category-card accent-${index % 4} ${
         state.selectedServiceCategory === category.category ? "active" : ""
       }" data-service-category="${escapeAttribute(category.category)}">
+        <span class="service-card-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <path d="M12 3 20 7v5c0 4.5-2.7 7.6-8 9-5.3-1.4-8-4.5-8-9V7z" />
+            <path d="M8.5 12h7M12 8.5v7" />
+          </svg>
+        </span>
         <small>${category.services.length} sub-layanan</small>
         <strong>${escapeHtml(category.category)}</strong>
         <div class="service-stats">
@@ -754,7 +786,7 @@ function renderServiceMapping() {
         )}.</p>
         <button class="button secondary small" type="button" data-service-category="${escapeAttribute(
           category.category
-        )}">Lihat Dokumen</button>
+        )}">Lihat Layanan</button>
       </article>
     `;
   }).join("");
@@ -987,52 +1019,60 @@ async function renderDocumentDetail(id) {
         </div>
       </header>
 
-      <div class="detail-columns">
-        <section class="detail-section">
-          <h2>Substansi regulasi</h2>
-          ${detailField("Ringkasan", doc.summary)}
-          ${detailField("Kewajiban utama", doc.key_obligation)}
-          ${detailField("Pihak terdampak", doc.impacted_party)}
-        </section>
-        <section class="detail-section">
-          <h2>Service mapping</h2>
-          ${detailField(
-            "Layanan terkait",
-            renderServiceTags(doc.related_services),
-            true
-          )}
-          ${detailField("Peluang layanan", doc.service_opportunity)}
-          ${detailField("Risiko compliance", doc.compliance_risk)}
-          ${detailField("Action point", doc.action_point)}
-        </section>
-      </div>
-
-      <section class="detail-section pdf-section">
-        <div class="section-heading">
-          <div>
-            <h2>Preview PDF</h2>
-            <p>${escapeHtml(storagePath ? doc.file_name || "Dokumen PDF" : "File belum tersedia")}</p>
+      <div class="document-detail-layout">
+        <div class="document-detail-info">
+          <div class="detail-columns">
+            <section class="detail-section">
+              <h2>Substansi regulasi</h2>
+              ${detailField("Ringkasan", doc.summary)}
+              ${detailField("Kewajiban utama", doc.key_obligation)}
+              ${detailField("Pihak terdampak", doc.impacted_party)}
+            </section>
+            <section class="detail-section">
+              <h2>Service mapping</h2>
+              ${detailField(
+                "Layanan terkait",
+                renderServiceTags(doc.related_services),
+                true
+              )}
+              ${detailField("Peluang layanan", doc.service_opportunity)}
+              ${detailField("Risiko compliance", doc.compliance_risk)}
+              ${detailField("Action point", doc.action_point)}
+            </section>
           </div>
-        </div>
-        <div id="pdf-preview" class="pdf-placeholder">${
-          storagePath ? "Menyiapkan signed URL..." : "File belum tersedia"
-        }</div>
-      </section>
 
-      <section class="detail-section pdf-section">
-        <h2>Sumber dan catatan</h2>
-        ${detailField(
-          "Sumber resmi",
-          doc.source_url
-            ? `<a href="${escapeAttribute(doc.source_url)}" target="_blank" rel="noopener">${escapeHtml(
-                doc.source_url
-              )}</a>`
-            : "-",
-          true
-        )}
-        ${detailField("PIC update", doc.pic_update)}
-        ${detailField("Catatan", doc.notes)}
-      </section>
+          <section class="detail-section pdf-section">
+            <h2>Sumber dan catatan</h2>
+            ${detailField(
+              "Sumber resmi",
+              doc.source_url
+                ? `<a href="${escapeAttribute(doc.source_url)}" target="_blank" rel="noopener">${escapeHtml(
+                    doc.source_url
+                  )}</a>`
+                : "-",
+              true
+            )}
+            ${detailField("PIC update", doc.pic_update)}
+            ${detailField("Catatan", doc.notes)}
+          </section>
+        </div>
+
+        <aside class="document-pdf-panel">
+          <section class="detail-section pdf-section">
+            <div class="section-heading">
+              <div>
+                <h2>Preview PDF</h2>
+                <p>${escapeHtml(
+                  storagePath ? doc.file_name || "Dokumen PDF" : "File belum tersedia"
+                )}</p>
+              </div>
+            </div>
+            <div id="pdf-preview" class="pdf-placeholder">${
+              storagePath ? "Menyiapkan signed URL..." : "File belum tersedia"
+            }</div>
+          </section>
+        </aside>
+      </div>
     </article>
   `;
 
@@ -1172,6 +1212,11 @@ function updateAdminState() {
     const email = state.session.user.email || "Admin";
     $("#admin-user-email").textContent = email;
     $("#admin-session-badge").textContent = "Authenticated";
+    $("#sidebar-account-name").textContent = "Admin AEBT";
+    $("#sidebar-account-state").textContent = email;
+  } else {
+    $("#sidebar-account-name").textContent = "Akses publik";
+    $("#sidebar-account-state").textContent = "Regulatory workspace";
   }
 }
 

@@ -9,12 +9,18 @@
     />
     <link rel="preconnect" href="https://pbfzjtipyqtsamgqemvx.supabase.co" />
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
     <title>AEBT Regulatory Knowledge Hub</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <header class="site-header">
-      <div class="header-inner">
+    <div class="dashboard-layout">
+      <aside id="app-sidebar" class="app-sidebar" aria-label="Navigasi aplikasi">
         <a class="brand" href="#home" aria-label="Buka halaman Home">
           <span class="brand-mark">AE</span>
           <span>
@@ -23,55 +29,162 @@
           </span>
         </a>
         <nav class="main-nav" aria-label="Navigasi utama">
-          <a href="#home" data-nav="home">Home</a>
-          <a href="#documents" data-nav="documents">Database Regulasi</a>
-          <a href="#sop" data-nav="sop">SOP Center</a>
-          <a href="#services" data-nav="services">Service Mapping</a>
-          <a href="#admin" data-nav="admin">Admin</a>
+          <a href="#home" data-nav="home">
+            <span class="nav-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M3 11.5 12 4l9 7.5M5.5 10v9.5h13V10M9.5 19.5v-6h5v6" /></svg>
+            </span>
+            <span>Home</span>
+          </a>
+          <a href="#documents" data-nav="documents">
+            <span class="nav-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M5 4.5h14v15H5zM8 8h8M8 12h8M8 16h5" /></svg>
+            </span>
+            <span>Database Regulasi</span>
+          </a>
+          <a href="#sop" data-nav="sop">
+            <span class="nav-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M6 3.5h8l4 4v13H6zM14 3.5v4h4M9 12h6M9 16h6" /></svg>
+            </span>
+            <span>SOP Center</span>
+          </a>
+          <a href="#services" data-nav="services">
+            <span class="nav-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><circle cx="7" cy="7" r="2.5" /><circle cx="17" cy="7" r="2.5" /><circle cx="7" cy="17" r="2.5" /><circle cx="17" cy="17" r="2.5" /><path d="M9.5 7h5M7 9.5v5M17 9.5v5M9.5 17h5" /></svg>
+            </span>
+            <span>Service Mapping</span>
+          </a>
+          <a href="#admin" data-nav="admin">
+            <span class="nav-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5" /><path d="M5.5 20c.5-4 2.7-6 6.5-6s6 2 6.5 6" /></svg>
+            </span>
+            <span>Admin</span>
+          </a>
         </nav>
-      </div>
-    </header>
+        <div class="sidebar-account">
+          <span class="account-avatar" aria-hidden="true">AE</span>
+          <span>
+            <strong id="sidebar-account-name">Akses publik</strong>
+            <small id="sidebar-account-state">Regulatory workspace</small>
+          </span>
+        </div>
+      </aside>
 
-    <div id="config-alert" class="config-alert hidden" role="alert">
-      <strong>Konfigurasi Supabase belum lengkap.</strong>
-      Isi <code>SUPABASE_URL</code> dan <code>SUPABASE_ANON_KEY</code> di bagian
-      paling atas <code>app.js</code>.
-    </div>
+      <button
+        id="sidebar-backdrop"
+        class="sidebar-backdrop hidden"
+        type="button"
+        aria-label="Tutup navigasi"
+      ></button>
 
-    <main>
+      <div class="app-workspace">
+        <header class="topbar">
+          <button
+            id="sidebar-toggle"
+            class="icon-button sidebar-toggle"
+            type="button"
+            aria-label="Buka navigasi"
+            aria-controls="app-sidebar"
+            aria-expanded="false"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M4 7h16M4 12h16M4 17h16" />
+            </svg>
+          </button>
+          <div class="topbar-context">
+            <span id="topbar-eyebrow">Regulatory Intelligence</span>
+            <strong id="topbar-title">Dashboard Home</strong>
+          </div>
+          <div class="topbar-status">
+            <span class="status-dot" aria-hidden="true"></span>
+            <span>Knowledge Hub</span>
+          </div>
+        </header>
+
+        <div id="config-alert" class="config-alert hidden" role="alert">
+          <strong>Konfigurasi Supabase belum lengkap.</strong>
+          Isi <code>SUPABASE_URL</code> dan <code>SUPABASE_ANON_KEY</code> di
+          bagian paling atas <code>app.js</code>.
+        </div>
+
+        <main class="app-main">
       <section id="view-home" class="view page-shell" data-view="home">
-        <div class="page-heading">
-          <div>
+        <div class="page-heading home-hero">
+          <div class="hero-copy">
             <p class="eyebrow">Regulatory intelligence</p>
             <h1>AEBT Regulatory Knowledge Hub</h1>
             <p class="page-description">
               Pusat data regulasi, SOP, file PDF, dan pemetaan layanan untuk
               mendukung pekerjaan kajian dan compliance SBU AEBT.
             </p>
+            <div class="hero-actions">
+              <a class="button primary" href="#documents">Lihat dokumen</a>
+              <a class="button secondary" href="#services">Service Mapping</a>
+            </div>
           </div>
-          <a class="button primary" href="#documents">Lihat dokumen</a>
+          <div class="hero-visual" aria-hidden="true">
+            <div class="visual-sun"></div>
+            <div class="visual-turbine turbine-one">
+              <i></i><b></b><b></b><b></b>
+            </div>
+            <div class="visual-turbine turbine-two">
+              <i></i><b></b><b></b><b></b>
+            </div>
+            <div class="visual-dashboard">
+              <span class="visual-dashboard-bar"></span>
+              <span class="visual-dashboard-row"></span>
+              <span class="visual-dashboard-row short"></span>
+              <span class="visual-dashboard-cards"></span>
+            </div>
+            <div class="visual-folder"></div>
+            <div class="visual-shield">
+              <svg viewBox="0 0 24 24">
+                <path d="M12 3 19 6v5c0 4.7-2.7 8-7 10-4.3-2-7-5.3-7-10V6z" />
+                <path d="m8.5 12 2.2 2.2 4.8-5" />
+              </svg>
+            </div>
+          </div>
         </div>
 
         <div class="metrics-grid" aria-label="Ringkasan dokumen">
-          <article class="metric-card">
+          <article class="metric-card metric-blue">
+            <span class="metric-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M12 3 19 6v5c0 4.7-2.7 8-7 10-4.3-2-7-5.3-7-10V6zM9 12l2 2 4-5" /></svg>
+            </span>
             <span>Total dokumen</span>
             <strong id="metric-total">0</strong>
+            <small>Dokumen</small>
           </article>
-          <article class="metric-card">
+          <article class="metric-card metric-green">
+            <span class="metric-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M6 3.5h9l3 3v14H6zM9 11h6M9 15h6M15 3.5v3h3" /></svg>
+            </span>
             <span>Regulasi</span>
             <strong id="metric-regulations">0</strong>
+            <small>Dokumen</small>
           </article>
-          <article class="metric-card">
+          <article class="metric-card metric-amber">
+            <span class="metric-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M5 4.5h14v15H5zM8.5 8.5h7M8.5 12h7M8.5 15.5h4" /></svg>
+            </span>
             <span>SOP</span>
             <strong id="metric-sops">0</strong>
+            <small>Dokumen</small>
           </article>
-          <article class="metric-card accent">
+          <article class="metric-card metric-purple">
+            <span class="metric-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" /><path d="M12 7.5v5l3 2" /></svg>
+            </span>
             <span>Perlu review</span>
             <strong id="metric-review">0</strong>
+            <small>Dokumen</small>
           </article>
-          <article class="metric-card warning">
+          <article class="metric-card metric-teal">
+            <span class="metric-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><rect x="4" y="4" width="6" height="6" rx="1" /><rect x="14" y="4" width="6" height="6" rx="1" /><rect x="4" y="14" width="6" height="6" rx="1" /><rect x="14" y="14" width="6" height="6" rx="1" /></svg>
+            </span>
             <span>Total kategori layanan</span>
             <strong id="metric-services">0</strong>
+            <small>Kategori</small>
           </article>
         </div>
 
@@ -239,7 +352,7 @@
             </button>
           </div>
 
-          <section class="custom-service-admin content-section">
+          <section class="custom-service-admin content-section admin-panel-card">
             <div class="section-heading">
               <div>
                 <h2>Tambah kategori jasa</h2>
@@ -286,7 +399,7 @@
             ></div>
           </section>
 
-          <section class="editor-section">
+          <section class="editor-section admin-panel-card">
             <div class="section-heading">
               <div>
                 <h2 id="editor-title">Tambah dokumen</h2>
@@ -308,7 +421,7 @@
               <input name="existing_file_path" type="hidden" />
               <input name="existing_file_name" type="hidden" />
 
-              <fieldset>
+              <fieldset class="form-card form-card-identity">
                 <legend>Identitas dokumen</legend>
                 <div class="form-grid">
                   <label>
@@ -354,7 +467,7 @@
                 </div>
               </fieldset>
 
-              <fieldset>
+              <fieldset class="form-card form-card-substance">
                 <legend>Substansi dan service mapping</legend>
                 <div class="form-grid">
                   <label class="span-2">
@@ -398,7 +511,7 @@
                 </div>
               </fieldset>
 
-              <fieldset>
+              <fieldset class="form-card form-card-file">
                 <legend>Sumber, file, dan pemutakhiran</legend>
                 <div class="form-grid">
                   <label>
@@ -472,7 +585,9 @@
           </section>
         </div>
       </section>
-    </main>
+        </main>
+      </div>
+    </div>
 
     <div id="loading-overlay" class="loading-overlay hidden" aria-live="polite">
       <div class="spinner"></div>
