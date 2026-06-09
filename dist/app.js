@@ -5,7 +5,8 @@ const SUPABASE_URL = "https://pbfzjtipyqtsamgqemvx.supabase.co/rest/v1/";
 const SUPABASE_ANON_KEY = "sb_publishable_X8aX5wtGRpYOCEaOtok1Ug_77MQdP9K";
 const STORAGE_BUCKET = "regulatory-files";
 const DOCUMENT_CACHE_KEY = "aebt-documents-v1";
-const CUSTOM_SERVICE_TABLE = "custom_service_categories";
+const SERVICE_CATEGORY_TABLE = "service_categories";
+const SERVICE_ITEM_TABLE = "service_items";
 const SUPABASE_CLIENT_CDN =
   "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.107.0/dist/umd/supabase.min.js";
 const SUPABASE_CLIENT_URL = SUPABASE_URL.trim()
@@ -18,7 +19,7 @@ const configured =
   SUPABASE_ANON_KEY.length > 30 &&
   !SUPABASE_ANON_KEY.includes("YOUR_SUPABASE");
 
-const SERVICE_CATALOG = [
+const SERVICE_CATALOG_FALLBACK = [
   {
     category: "Asset Integrity Management (AIM)",
     services: [
@@ -107,9 +108,10 @@ const state = {
   documents: [],
   documentsLoaded: false,
   documentsError: null,
-  customServiceCategories: [],
-  customServiceLoaded: false,
-  customServiceError: null,
+  serviceCategories: [],
+  serviceItems: [],
+  serviceCatalogLoaded: false,
+  serviceCatalogError: null,
   session: null,
   editingId: null,
   pendingEditId: null,
@@ -119,7 +121,7 @@ const state = {
   legacyRelatedServices: [],
   signedUrls: new Map(),
   documentsPromise: null,
-  customServicePromise: null,
+  serviceCatalogPromise: null,
   supabasePromise: null
 };
 
@@ -148,14 +150,14 @@ async function initialize() {
 
   state.supabasePromise = loadSupabaseClient();
   const documentsPromise = loadDocuments({ preserveExisting: hasCachedDocuments });
-  const customServicesPromise = state.supabasePromise.then(() =>
-    loadCustomServiceCategories()
+  const serviceCatalogPromise = state.supabasePromise.then(() =>
+    loadServiceCatalog()
   );
   const authPromise = state.supabasePromise.then(initializeAuth);
   const [authResult, documentsResult] = await Promise.allSettled([
     authPromise,
     documentsPromise,
-    customServicesPromise
+    serviceCatalogPromise
   ]);
 
   if (authResult.status === "rejected") {
@@ -199,7 +201,7 @@ async function initializeAuth() {
     state.session = nextSession;
     updateAdminState();
     if (nextSession) loadAdminLogs();
-    if (db) loadCustomServiceCategories({ force: true }).catch(() => {});
+    if (db) loadServiceCatalog({ force: true }).catch(() => {});
   });
 
   try {
@@ -254,10 +256,8 @@ function bindEvents() {
   $("#admin-logout").addEventListener("click", handleLogout);
   $("#document-form").addEventListener("submit", handleDocumentSubmit);
   $("#cancel-edit").addEventListener("click", resetEditor);
-  $("#custom-service-category-form").addEventListener(
-    "submit",
-    handleCustomServiceCategorySubmit
-  );
+  $("#service-category-form").addEventListener("submit", handleServiceCategorySubmit);
+  $("#service-item-form").addEventListener("submit", handleServiceItemSubmit);
   $("#related-services-selector").addEventListener(
     "change",
     syncSelectedServicesSummary
@@ -269,10 +269,7 @@ function bindEvents() {
   $("#service-mapping-grid").addEventListener("click", handleServiceCardAction);
   $("#service-documents-panel").addEventListener("click", handleServiceDocumentAction);
   $("#admin-documents-body").addEventListener("click", handleAdminTableAction);
-  $("#custom-service-category-list").addEventListener(
-    "click",
-    handleCustomServiceCategoryAction
-  );
+  $("#service-catalog-list").addEventListener("click", handleServiceCatalogAction);
 }
 
 function setSidebarOpen(open) {
@@ -316,41 +313,55 @@ async function loadDocuments({ preserveExisting = state.documents.length > 0 } =
   return state.documentsPromise;
 }
 
-async function loadCustomServiceCategories({ force = false } = {}) {
-  if (state.customServicePromise) {
-    if (!force) return state.customServicePromise;
-    await state.customServicePromise.catch(() => {});
+async function loadServiceCatalog({ force = false } = {}) {
+  if (state.serviceCatalogPromise) {
+    if (!force) return state.serviceCatalogPromise;
+    await state.serviceCatalogPromise.catch(() => {});
   }
 
-  state.customServicePromise = (async () => {
+  state.serviceCatalogPromise = (async () => {
     try {
-      const { data, error } = await db
-        .from(CUSTOM_SERVICE_TABLE)
-        .select("id,name,description,services,is_active,created_at,updated_at")
-        .order("name", { ascending: true });
+      const [categoryResult, itemResult] = await Promise.all([
+        db
+          .from(SERVICE_CATEGORY_TABLE)
+          .select("id,name,description,is_active,created_at,updated_at")
+          .order("name", { ascending: true }),
+        db
+          .from(SERVICE_ITEM_TABLE)
+          .select(
+            "id,category_id,name,description,is_active,created_at,updated_at"
+          )
+          .order("name", { ascending: true })
+      ]);
 
-      if (error) throw error;
+      if (categoryResult.error) throw categoryResult.error;
+      if (itemResult.error) throw itemResult.error;
 
-      state.customServiceCategories = Array.isArray(data) ? data : [];
-      state.customServiceLoaded = true;
-      state.customServiceError = null;
+      state.serviceCategories = Array.isArray(categoryResult.data)
+        ? categoryResult.data
+        : [];
+      state.serviceItems = Array.isArray(itemResult.data) ? itemResult.data : [];
+      state.serviceCatalogLoaded = true;
+      state.serviceCatalogError = null;
     } catch (error) {
-      state.customServiceCategories = [];
-      state.customServiceLoaded = false;
-      state.customServiceError = new Error(
-        `Kategori jasa tambahan belum siap: ${readableError(error)}`
+      state.serviceCategories = [];
+      state.serviceItems = [];
+      state.serviceCatalogLoaded = false;
+      state.serviceCatalogError = new Error(
+        `Katalog layanan belum siap: ${readableError(error)}`
       );
     } finally {
-      state.customServicePromise = null;
+      state.serviceCatalogPromise = null;
       renderAll();
       renderServiceCheckboxes();
-      renderCustomServiceCategoryManager();
+      renderServiceCatalogManager();
+      populateServiceCategorySelect();
     }
 
-    return state.customServiceCategories;
+    return getMergedServiceCatalog();
   })();
 
-  return state.customServicePromise;
+  return state.serviceCatalogPromise;
 }
 
 async function fetchDocumentsFromRest() {
@@ -423,7 +434,8 @@ function renderAll() {
   renderDocumentTable();
   renderServiceMapping();
   renderAdminDocuments();
-  renderCustomServiceCategoryManager();
+  renderServiceCatalogManager();
+  populateServiceCategorySelect();
 }
 
 function route() {
@@ -618,37 +630,33 @@ function formatServiceValue(categoryName, serviceName) {
 }
 
 function getMergedServiceCatalog({ includeInactive = false } = {}) {
-  const builtInCategories = SERVICE_CATALOG.map((category) => ({
-    ...category,
-    description: "",
-    isCustom: false,
-    is_active: true
-  }));
+  if (!state.serviceCatalogLoaded) {
+    return SERVICE_CATALOG_FALLBACK.map((category) => ({
+      ...category,
+      description: "",
+      id: null,
+      isFallback: true,
+      is_active: true
+    }));
+  }
 
-  const customCategories = (Array.isArray(state.customServiceCategories)
-    ? state.customServiceCategories
-    : []
-  )
+  return state.serviceCategories
     .filter((category) => includeInactive || category.is_active)
     .map((category) => ({
       id: category.id,
       category: normalizeServiceName(category.name),
       description: category.description || "",
-      services: sanitizeServiceList(category.services),
-      isCustom: true,
+      services: state.serviceItems
+        .filter(
+          (item) =>
+            item.category_id === category.id && (includeInactive || item.is_active)
+        )
+        .map((item) => normalizeServiceName(item.name))
+        .filter(Boolean),
+      isFallback: false,
       is_active: Boolean(category.is_active)
     }))
-    .filter((category) => category.category && category.services.length);
-
-  const seen = new Set(builtInCategories.map((category) => normalizeText(category.category)));
-  const uniqueCustomCategories = customCategories.filter((category) => {
-    const key = normalizeText(category.category);
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
-
-  return [...builtInCategories, ...uniqueCustomCategories];
+    .filter((category) => category.category);
 }
 
 function getServiceEntries() {
@@ -1325,33 +1333,31 @@ function syncSelectedServicesSummary() {
   summary.innerHTML = `${escapeHtml(selectedLine)}${legacyLine}`;
 }
 
-function renderCustomServiceCategoryManager() {
-  const container = $("#custom-service-category-list");
+function renderServiceCatalogManager() {
+  const container = $("#service-catalog-list");
   if (!container) return;
 
-  if (state.customServiceError) {
+  if (state.serviceCatalogError) {
     container.innerHTML = `
       <div class="manager-alert">
-        <strong>Fitur kategori tambahan belum siap.</strong>
-        <p>${escapeHtml(readableError(state.customServiceError))}</p>
-        <p>Jalankan file supabase-custom-service-categories.sql di SQL Editor Supabase.</p>
+        <strong>Kelola Layanan belum siap.</strong>
+        <p>${escapeHtml(readableError(state.serviceCatalogError))}</p>
+        <p>Jalankan file supabase-service-catalog.sql di SQL Editor Supabase.</p>
       </div>
     `;
     return;
   }
 
-  if (!state.customServiceLoaded) {
+  if (!state.serviceCatalogLoaded) {
     container.innerHTML =
-      '<div class="empty-state">Memuat kategori jasa tambahan...</div>';
+      '<div class="empty-state">Memuat katalog layanan...</div>';
     return;
   }
 
-  const categories = getMergedServiceCatalog({ includeInactive: true }).filter(
-    (category) => category.isCustom
-  );
+  const categories = getMergedServiceCatalog({ includeInactive: true });
   if (!categories.length) {
     container.innerHTML =
-      '<div class="empty-state">Belum ada kategori jasa tambahan.</div>';
+      '<div class="empty-state">Belum ada kategori layanan.</div>';
     return;
   }
 
@@ -1359,25 +1365,31 @@ function renderCustomServiceCategoryManager() {
     .map(
       (category) => `
         <article class="custom-service-card ${category.is_active ? "" : "inactive"}">
-          <div>
-            <div class="manager-title-row">
-              <strong>${escapeHtml(category.category)}</strong>
-              ${activeStatusBadge(category.is_active)}
+          <header>
+            <div>
+              <h3>${escapeHtml(category.category)}</h3>
+              <p>${escapeHtml(category.description || "Tanpa deskripsi.")}</p>
             </div>
-            <p>${escapeHtml(category.description || "Tanpa deskripsi.")}</p>
+            ${activeStatusBadge(category.is_active)}
+          </header>
+          <div>
             <div class="tag-list">
-              ${category.services
-                .map(
-                  (service) =>
-                    `<span class="service-tag">${escapeHtml(service)}</span>`
-                )
-                .join("")}
+              ${
+                category.services.length
+                  ? category.services
+                      .map(
+                        (service) =>
+                          `<span class="service-tag">${escapeHtml(service)}</span>`
+                      )
+                      .join("")
+                  : '<span class="muted">Belum ada sub-layanan.</span>'
+              }
             </div>
           </div>
           <div class="table-actions">
             ${
               category.is_active
-                ? `<button class="button danger small" type="button" data-deactivate-custom-service="${escapeAttribute(
+                ? `<button class="button danger small" type="button" data-deactivate-service-category="${escapeAttribute(
                     category.id
                   )}">Nonaktifkan</button>`
                 : '<span class="muted">Nonaktif</span>'
@@ -1390,12 +1402,35 @@ function renderCustomServiceCategoryManager() {
 }
 
 function activeStatusBadge(isActive) {
-  return `<span class="active-status ${isActive ? "active" : "inactive"}">${
+  return `<span class="${isActive ? "status-active" : "status-inactive"}">${
     isActive ? "Aktif" : "Nonaktif"
   }</span>`;
 }
 
-async function handleCustomServiceCategorySubmit(event) {
+function populateServiceCategorySelect() {
+  const select = $("#service-item-category");
+  if (!select) return;
+
+  const previousValue = select.value;
+  const categories = state.serviceCategories.filter((category) => category.is_active);
+  select.innerHTML = `
+    <option value="">Pilih kategori layanan</option>
+    ${categories
+      .map(
+        (category) =>
+          `<option value="${escapeAttribute(category.id)}">${escapeHtml(
+            category.name
+          )}</option>`
+      )
+      .join("")}
+  `;
+  if (categories.some((category) => category.id === previousValue)) {
+    select.value = previousValue;
+  }
+  select.disabled = !categories.length;
+}
+
+async function handleServiceCategorySubmit(event) {
   event.preventDefault();
   if (!requireAdmin()) return;
 
@@ -1403,39 +1438,39 @@ async function handleCustomServiceCategorySubmit(event) {
   const data = new FormData(form);
   const payload = {
     name: cleanText(data.get("name")),
-    description: cleanText(data.get("description")),
-    services: sanitizeServiceList(String(data.get("services") || ""))
+    description: cleanText(data.get("description"))
   };
 
-  if (!payload.name || !payload.services.length) {
-    showToast("Nama kategori dan minimal satu sub-layanan wajib diisi.", true);
+  if (!payload.name) {
+    showToast("Nama kategori layanan wajib diisi.", true);
     return;
   }
-  const duplicateCategory = getMergedServiceCatalog({ includeInactive: true }).some(
-    (category) => normalizeText(category.category) === normalizeText(payload.name)
+  const duplicateCategory = state.serviceCategories.some(
+    (category) => normalizeText(category.name) === normalizeText(payload.name)
   );
   if (duplicateCategory) {
-    showToast("Kategori jasa dengan nama tersebut sudah ada.", true);
+    showToast("Kategori layanan dengan nama tersebut sudah ada.", true);
     return;
   }
 
-  setCustomServiceBusy(true, "Menyimpan kategori jasa...");
+  setServiceCatalogBusy(true, "Menyimpan kategori layanan...");
   try {
-    await createCustomServiceCategory(payload);
+    const category = await createServiceCategory(payload);
     form.reset();
-    await loadCustomServiceCategories({ force: true });
-    showToast(`Kategori jasa "${payload.name}" berhasil ditambahkan.`);
+    await loadServiceCatalog({ force: true });
+    $("#service-item-category").value = category.id;
+    showToast(`Kategori layanan "${payload.name}" berhasil ditambahkan.`);
   } catch (error) {
     showToast(readableError(error), true);
   } finally {
-    setCustomServiceBusy(false);
+    setServiceCatalogBusy(false);
   }
 }
 
-async function createCustomServiceCategory(payload) {
+async function createServiceCategory(payload) {
   if (!requireAdmin()) throw new Error("Login admin diperlukan.");
   const { data, error } = await db
-    .from(CUSTOM_SERVICE_TABLE)
+    .from(SERVICE_CATEGORY_TABLE)
     .insert({ ...payload, is_active: true })
     .select()
     .single();
@@ -1443,61 +1478,130 @@ async function createCustomServiceCategory(payload) {
 
   await insertLog(
     null,
-    "Tambah kategori jasa",
-    `Menambahkan kategori jasa: ${data.name}`,
+    "Tambah kategori layanan",
+    `Menambahkan kategori layanan: ${data.name}`,
     { pic_update: state.session.user.email }
   );
   return data;
 }
 
-function handleCustomServiceCategoryAction(event) {
-  const button = event.target.closest("[data-deactivate-custom-service]");
-  if (!button) return;
-  deactivateCustomServiceCategory(button.dataset.deactivateCustomService);
+async function handleServiceItemSubmit(event) {
+  event.preventDefault();
+  if (!requireAdmin()) return;
+
+  const form = event.currentTarget;
+  const data = new FormData(form);
+  const payload = {
+    category_id: cleanText(data.get("category_id")),
+    name: cleanText(data.get("name")),
+    description: cleanText(data.get("description"))
+  };
+  const category = state.serviceCategories.find(
+    (item) => item.id === payload.category_id && item.is_active
+  );
+
+  if (!category || !payload.name) {
+    showToast("Pilih kategori dan isi nama sub-layanan.", true);
+    return;
+  }
+  const duplicateItem = state.serviceItems.some(
+    (item) =>
+      item.category_id === payload.category_id &&
+      normalizeText(item.name) === normalizeText(payload.name)
+  );
+  if (duplicateItem) {
+    showToast("Sub-layanan tersebut sudah ada di kategori yang dipilih.", true);
+    return;
+  }
+
+  setServiceCatalogBusy(true, "Menyimpan sub-layanan...");
+  try {
+    await createServiceItem(payload, category);
+    form.reset();
+    await loadServiceCatalog({ force: true });
+    showToast(
+      `Sub-layanan "${payload.name}" berhasil ditambahkan ke ${category.name}.`
+    );
+  } catch (error) {
+    showToast(readableError(error), true);
+  } finally {
+    setServiceCatalogBusy(false);
+  }
 }
 
-async function deactivateCustomServiceCategory(id) {
+async function createServiceItem(payload, category) {
+  if (!requireAdmin()) throw new Error("Login admin diperlukan.");
+  const { data, error } = await db
+    .from(SERVICE_ITEM_TABLE)
+    .insert({ ...payload, is_active: true })
+    .select()
+    .single();
+  if (error) throw error;
+
+  await insertLog(
+    null,
+    "Tambah sub-layanan",
+    `Menambahkan sub-layanan ${data.name} ke kategori ${category.name}`,
+    { pic_update: state.session.user.email }
+  );
+  return data;
+}
+
+function handleServiceCatalogAction(event) {
+  const button = event.target.closest("[data-deactivate-service-category]");
+  if (!button) return;
+  deactivateServiceCategory(button.dataset.deactivateServiceCategory);
+}
+
+async function deactivateServiceCategory(id) {
   if (!requireAdmin()) return;
-  const category = state.customServiceCategories.find((item) => item.id === id);
+  const category = state.serviceCategories.find((item) => item.id === id);
   if (!category) return;
 
   const confirmed = window.confirm(
-    `Nonaktifkan kategori jasa "${category.name}"? Kategori tidak akan tampil untuk publik.`
+    `Nonaktifkan kategori layanan "${category.name}"? Kategori tidak akan tampil untuk publik.`
   );
   if (!confirmed) return;
 
-  setCustomServiceBusy(true, "Menonaktifkan kategori jasa...");
+  setServiceCatalogBusy(true, "Menonaktifkan kategori layanan...");
   try {
     const { error } = await db
-      .from(CUSTOM_SERVICE_TABLE)
+      .from(SERVICE_CATEGORY_TABLE)
       .update({ is_active: false })
       .eq("id", id);
     if (error) throw error;
 
     await insertLog(
       null,
-      "Nonaktifkan kategori jasa",
-      `Menonaktifkan kategori jasa: ${category.name}`,
+      "Nonaktifkan kategori layanan",
+      `Menonaktifkan kategori layanan: ${category.name}`,
       { pic_update: state.session.user.email }
     );
-    await loadCustomServiceCategories({ force: true });
-    showToast("Kategori jasa dinonaktifkan.");
+    await loadServiceCatalog({ force: true });
+    showToast("Kategori layanan dinonaktifkan.");
   } catch (error) {
     showToast(readableError(error), true);
   } finally {
-    setCustomServiceBusy(false);
+    setServiceCatalogBusy(false);
   }
 }
 
-function setCustomServiceBusy(active, message = "") {
-  const form = $("#custom-service-category-form");
-  if (form) {
-    $$("button, input, textarea", form).forEach((field) => {
-      field.disabled = active;
-    });
-  }
-  const status = $("#custom-service-status");
-  if (status) status.textContent = active ? message : "";
+function setServiceCatalogBusy(active, message = "") {
+  ["#service-category-form", "#service-item-form"].forEach((selector) => {
+    const form = $(selector);
+    if (form) {
+      $$("button, input, select, textarea", form).forEach((field) => {
+        field.disabled = active;
+      });
+    }
+  });
+  ["#service-category-status", "#service-item-status"].forEach((selector) => {
+    const status = $(selector);
+    if (status) {
+      status.textContent = active ? message : "";
+    }
+  });
+  if (!active) populateServiceCategorySelect();
 }
 
 function documentRowActions(documentId, detailLabel = "Detail") {
@@ -1850,9 +1954,10 @@ function renderEmptyApplication(message = "Hubungkan aplikasi ke Supabase untuk 
   state.documents = [];
   state.documentsLoaded = true;
   state.documentsError = null;
-  state.customServiceCategories = [];
-  state.customServiceLoaded = true;
-  state.customServiceError = null;
+  state.serviceCategories = [];
+  state.serviceItems = [];
+  state.serviceCatalogLoaded = false;
+  state.serviceCatalogError = null;
   renderAll();
   $("#recent-documents-body").innerHTML = emptyRow(5, message);
   $("#documents-body").innerHTML = emptyRow(6, message);

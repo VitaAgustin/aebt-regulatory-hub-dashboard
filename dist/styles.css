@@ -1533,6 +1533,38 @@ td .empty-state {
   gap: 15px;
 }
 
+.service-manager-forms {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.service-manager-form {
+  min-width: 0;
+  padding: 18px;
+  display: grid;
+  align-content: start;
+  gap: 14px;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: var(--surface-soft);
+}
+
+.service-manager-form-heading h3 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.service-manager-form-heading p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.service-manager-form textarea {
+  min-height: 76px;
+}
+
 .document-form {
   display: grid;
   gap: 18px;
@@ -1954,6 +1986,7 @@ td .empty-state {
   .metrics-grid,
   .service-grid,
   .sub-service-grid,
+  .service-manager-forms,
   .custom-service-list {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -2083,6 +2116,7 @@ td .empty-state {
   .sub-service-grid,
   .filter-bar,
   .custom-service-form,
+  .service-manager-forms,
   .form-grid,
   .custom-service-list {
     grid-template-columns: 1fr;

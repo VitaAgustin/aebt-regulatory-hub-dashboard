@@ -355,46 +355,81 @@
           <section class="custom-service-admin content-section admin-panel-card">
             <div class="section-heading">
               <div>
-                <h2>Tambah kategori jasa</h2>
+                <h2>Kelola Layanan</h2>
                 <p>
-                  Kategori tambahan hanya dapat dibuat oleh admin dan akan
-                  tampil di Service Mapping serta field Layanan Terkait.
+                  Tambahkan kategori atau sub-layanan baru. Perubahan langsung
+                  tampil di Service Mapping dan field Layanan Terkait.
                 </p>
               </div>
             </div>
-            <form id="custom-service-category-form" class="custom-service-form">
-              <label>
-                <span>Nama kategori jasa *</span>
-                <input
-                  name="name"
-                  placeholder="Contoh: Environmental Services"
-                  required
-                />
-              </label>
-              <label>
-                <span>Deskripsi</span>
-                <textarea
-                  name="description"
-                  placeholder="Ringkasan kategori jasa"
-                ></textarea>
-              </label>
-              <label class="span-2">
-                <span>Sub-layanan *</span>
-                <textarea
-                  name="services"
-                  placeholder="Tulis satu sub-layanan per baris"
-                  required
-                ></textarea>
-              </label>
-              <div class="form-actions span-2">
-                <span id="custom-service-status" class="muted"></span>
-                <button class="button primary" type="submit">
-                  Simpan kategori jasa
-                </button>
-              </div>
-            </form>
+            <div class="service-manager-forms">
+              <form
+                id="service-category-form"
+                class="service-manager-form"
+              >
+                <div class="service-manager-form-heading">
+                  <h3>Tambah Kategori Layanan Baru</h3>
+                  <p>Buat kelompok layanan utama yang belum tersedia.</p>
+                </div>
+                <label>
+                  <span>Nama kategori layanan *</span>
+                  <input
+                    name="name"
+                    placeholder="Contoh: Environmental Services"
+                    required
+                  />
+                </label>
+                <label>
+                  <span>Deskripsi</span>
+                  <textarea
+                    name="description"
+                    placeholder="Ringkasan kategori layanan"
+                  ></textarea>
+                </label>
+                <div class="form-actions">
+                  <span id="service-category-status" class="muted"></span>
+                  <button class="button primary" type="submit">
+                    Simpan kategori
+                  </button>
+                </div>
+              </form>
+
+              <form id="service-item-form" class="service-manager-form">
+                <div class="service-manager-form-heading">
+                  <h3>Tambah Sub-layanan</h3>
+                  <p>Pilih kategori lama lalu tambahkan satu sub-layanan.</p>
+                </div>
+                <label>
+                  <span>Kategori layanan *</span>
+                  <select id="service-item-category" name="category_id" required>
+                    <option value="">Pilih kategori layanan</option>
+                  </select>
+                </label>
+                <label>
+                  <span>Nama sub-layanan *</span>
+                  <input
+                    name="name"
+                    placeholder="Contoh: Environmental Audit"
+                    required
+                  />
+                </label>
+                <label>
+                  <span>Deskripsi</span>
+                  <textarea
+                    name="description"
+                    placeholder="Ringkasan sub-layanan"
+                  ></textarea>
+                </label>
+                <div class="form-actions">
+                  <span id="service-item-status" class="muted"></span>
+                  <button class="button primary" type="submit">
+                    Simpan sub-layanan
+                  </button>
+                </div>
+              </form>
+            </div>
             <div
-              id="custom-service-category-list"
+              id="service-catalog-list"
               class="custom-service-list"
             ></div>
           </section>

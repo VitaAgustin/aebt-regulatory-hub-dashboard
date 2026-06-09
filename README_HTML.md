@@ -38,8 +38,8 @@ Jangan pernah memasukkan `service_role`, secret key, atau database password ke
 3. Buat query baru.
 4. Salin seluruh isi `supabase-html-schema.sql`.
 5. Klik **Run**.
-6. Jika ingin admin bisa menambah kategori jasa baru dari web, jalankan juga
-   `supabase-custom-service-categories.sql`.
+6. Jalankan juga `supabase-service-catalog.sql` agar fitur Kelola Layanan
+   menggunakan tabel `service_categories` dan `service_items`.
 
 Script tersebut:
 
@@ -54,10 +54,11 @@ Script tersebut:
 - mengizinkan public membuat signed URL untuk file;
 - mengizinkan authenticated user upload, update, dan delete file.
 
-File `supabase-custom-service-categories.sql` membuat tabel
-`custom_service_categories`. Public user hanya bisa membaca kategori aktif,
-sedangkan admin yang login dengan Supabase Auth bisa menambahkan dan
-menonaktifkan kategori jasa tambahan.
+File `supabase-service-catalog.sql` membuat tabel `service_categories` dan
+`service_items`, mengisi katalog layanan awal, mencegah nama duplikat,
+mengaktifkan RLS, serta meminta PostgREST memuat ulang schema cache. Public user
+hanya bisa membaca kategori dan sub-layanan aktif, sedangkan admin yang login
+dengan Supabase Auth bisa menambah atau memperbarui data layanan.
 
 Jika data dari versi Next.js sudah ada, `create table if not exists` tidak
 menghapus data tersebut.
@@ -77,22 +78,22 @@ dianggap sebagai admin. Karena itu public sign-up harus dinonaktifkan.
 
 Admin kemudian login dari menu **Admin** pada aplikasi.
 
-## 4. Menambah Kategori Jasa
+## 4. Kelola Layanan
 
-1. Jalankan `supabase-custom-service-categories.sql` dari SQL Editor Supabase.
+1. Jalankan `supabase-service-catalog.sql` dari SQL Editor Supabase.
 2. Login melalui menu **Admin**.
-3. Pada panel **Tambah kategori jasa**, isi nama kategori.
-4. Isi sub-layanan, satu sub-layanan per baris.
-5. Klik **Simpan kategori jasa**.
+3. Untuk kategori baru, isi form **Tambah Kategori Layanan Baru**.
+4. Untuk menambah sub-layanan, pilih kategori pada form **Tambah Sub-layanan**.
+5. Isi nama sub-layanan lalu klik **Simpan sub-layanan**.
 
-Kategori tambahan akan muncul di:
+Kategori dan sub-layanan baru langsung muncul di:
 
 - checklist **Layanan terkait** pada form tambah/edit dokumen;
 - kartu **Service Mapping**;
 - hitungan **Total kategori layanan** di Home.
 
-Kategori bawaan di `app.js` tetap ada. Kategori tambahan dari admin disimpan di
-Supabase agar bisa ditambah tanpa mengubah kode.
+Katalog utama disimpan di Supabase. Katalog di `app.js` hanya menjadi fallback
+agar halaman publik tetap dapat dibuka sebelum migration dijalankan.
 
 ## 5. Menjalankan Web
 
