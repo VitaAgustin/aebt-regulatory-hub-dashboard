@@ -44,6 +44,8 @@ Jangan pernah memasukkan `service_role`, secret key, atau database password ke
    kolom `documents.document_type` menerima nilai `standar`.
 8. Jalankan `supabase-add-external-file-url.sql` agar dokumen dapat memakai
    PDF Supabase, link Google Drive/eksternal, atau disimpan tanpa file.
+9. Jalankan `supabase-add-portfolio-to-service-mapping.sql` untuk membuat
+   katalog Portofolio SBU dan kolom `documents.related_portfolios`.
 
 Script tersebut:
 
@@ -74,6 +76,11 @@ diizinkan menjadi `regulasi`, `sop`, dan `standar`.
 Migration `supabase-add-external-file-url.sql` menambahkan kolom
 `external_file_url` dan `file_source`. Dokumen lama yang memiliki `file_path`
 ditandai sebagai `supabase`; dokumen lama tanpa file ditandai sebagai `none`.
+
+Migration `supabase-add-portfolio-to-service-mapping.sql` membuat tabel
+`portfolio_categories` dan `portfolio_items`, menambahkan kolom
+`documents.related_portfolios`, mengaktifkan RLS, serta mengisi data awal
+portofolio EBT 041 dan IAPPM 042.
 
 ## 3. Membuat Admin User
 
@@ -186,6 +193,28 @@ Setelah login:
 - tombol **Hapus** menghapus metadata, membuat update log, dan mencoba
   menghapus file Storage;
 - setiap operasi akan ditolak oleh RLS jika session Auth tidak aktif.
+
+## 9. Portofolio SBU
+
+Menu **Service Mapping** memiliki dua tab tanpa menambah menu sidebar:
+
+- **Layanan SBU** memakai katalog layanan dan kolom `related_services`;
+- **Portofolio SBU** memakai tabel `portfolio_categories`,
+  `portfolio_items`, dan kolom `related_portfolios`.
+
+Untuk mengaitkan dokumen dengan portofolio:
+
+1. Jalankan `supabase-add-portfolio-to-service-mapping.sql`.
+2. Login melalui menu **Admin**.
+3. Tambah dokumen baru atau klik **Edit** pada dokumen lama.
+4. Buka bagian **Portofolio Terkait**.
+5. Centang satu atau beberapa sub-portofolio, lalu simpan.
+6. Buka **Service Mapping > Portofolio SBU**.
+7. Pilih kategori, sub-portofolio, lalu buka dokumen terkait.
+
+Pilihan disimpan sebagai string kompatibel dengan data lama, misalnya
+`EBT 041 - AEB - 1B, IAPPM 042 - AEB - 2F`. Kolom `related_services`
+tidak berubah dan tidak dicampur dengan data portofolio.
 
 ## Catatan Keamanan
 

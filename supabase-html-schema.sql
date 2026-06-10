@@ -19,6 +19,7 @@ create table if not exists public.documents (
   status text default 'Berlaku'
     check (status in ('Berlaku', 'Dicabut', 'Diubah', 'Perlu Review')),
   related_services text,
+  related_portfolios text,
   sbu_relevance text
     check (sbu_relevance in ('Sangat Tinggi', 'Tinggi', 'Sedang', 'Rendah')),
   service_opportunity text,

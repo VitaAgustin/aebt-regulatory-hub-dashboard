@@ -1228,6 +1228,96 @@ td .empty-state {
   margin-top: auto;
 }
 
+.mapping-tabs {
+  width: fit-content;
+  max-width: 100%;
+  margin-bottom: 20px;
+  padding: 5px;
+  display: flex;
+  gap: 4px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #e8eef3;
+}
+
+.mapping-tab {
+  min-height: 40px;
+  padding: 9px 16px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    background 150ms ease,
+    color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.mapping-tab:hover {
+  color: var(--teal-dark);
+}
+
+.mapping-tab.active {
+  background: var(--surface);
+  color: var(--teal-dark);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+}
+
+.portfolio-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.portfolio-card {
+  min-height: 250px;
+}
+
+.portfolio-card:nth-child(2n) {
+  border-top-color: #fdba74;
+}
+
+.portfolio-code,
+.portfolio-item-code {
+  width: fit-content;
+  max-width: 100%;
+  padding: 5px 8px;
+  border-radius: 7px;
+  background: var(--teal-light);
+  color: var(--teal-dark);
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.portfolio-card:nth-child(2n) .portfolio-code {
+  background: var(--amber-light);
+  color: #b45309;
+}
+
+.portfolio-card > strong {
+  margin-top: 10px;
+  font-size: 17px;
+}
+
+.portfolio-item-card {
+  min-height: 128px;
+  justify-content: flex-start;
+}
+
+.portfolio-item-card > strong {
+  flex: 1 1 auto;
+}
+
+.portfolio-item-card > span:last-child {
+  margin-top: auto;
+}
+
+.portfolio-empty {
+  grid-column: 1 / -1;
+}
+
 .service-stats {
   margin-top: 14px;
   display: flex;
@@ -1870,6 +1960,46 @@ td .empty-state {
   font-size: 10px;
 }
 
+.portfolio-picker {
+  min-width: 0;
+}
+
+.portfolio-checkboxes {
+  margin-top: 2px;
+}
+
+.portfolio-accordion summary > span {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.portfolio-accordion summary > span strong {
+  color: var(--teal-dark);
+  font-size: 10px;
+}
+
+.portfolio-option span {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+  line-height: 1.4;
+}
+
+.portfolio-option span strong {
+  color: var(--teal-dark);
+  font-size: 9px;
+}
+
+.portfolio-selector-alert {
+  grid-column: 1 / -1;
+}
+
+.compact-empty {
+  min-height: 86px;
+  padding: 18px;
+}
+
 .custom-service-list {
   margin-top: 18px;
   display: grid;
@@ -2044,6 +2174,10 @@ td .empty-state {
   .service-grid,
   .sub-service-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .portfolio-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .meta-grid {
@@ -2279,6 +2413,17 @@ td .empty-state {
   .form-grid,
   .custom-service-list {
     grid-template-columns: 1fr;
+  }
+
+  .mapping-tabs {
+    width: 100%;
+  }
+
+  .mapping-tab {
+    flex: 1 1 0;
+    min-width: 0;
+    padding-right: 10px;
+    padding-left: 10px;
   }
 
   .metric-card {

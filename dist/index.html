@@ -304,8 +304,34 @@
             </p>
           </div>
         </div>
-        <div id="service-mapping-grid" class="service-grid"></div>
-        <section id="service-documents-panel" class="service-documents-panel hidden"></section>
+        <div class="mapping-tabs" role="tablist" aria-label="Jenis pemetaan SBU">
+          <button
+            class="mapping-tab active"
+            type="button"
+            role="tab"
+            aria-selected="true"
+            data-mapping-tab="services"
+          >
+            Layanan SBU
+          </button>
+          <button
+            class="mapping-tab"
+            type="button"
+            role="tab"
+            aria-selected="false"
+            data-mapping-tab="portfolios"
+          >
+            Portofolio SBU
+          </button>
+        </div>
+        <div id="service-mapping-view">
+          <div id="service-mapping-grid" class="service-grid"></div>
+          <section id="service-documents-panel" class="service-documents-panel hidden"></section>
+        </div>
+        <div id="portfolio-mapping-view" class="hidden">
+          <div id="portfolio-mapping-grid" class="service-grid portfolio-grid"></div>
+          <section id="portfolio-documents-panel" class="service-documents-panel hidden"></section>
+        </div>
       </section>
 
       <section id="view-detail" class="view page-shell hidden" data-view="detail">
@@ -534,6 +560,27 @@
                       Belum ada layanan dipilih.
                     </p>
                   </div>
+                </div>
+              </fieldset>
+
+              <fieldset class="form-card form-card-portfolio">
+                <legend>Portofolio Terkait</legend>
+                <div class="portfolio-picker">
+                  <p class="field-hint">
+                    Pilih satu atau beberapa sub-portofolio SBU yang berkaitan
+                    dengan dokumen ini.
+                  </p>
+                  <input name="related_portfolios" type="hidden" />
+                  <div
+                    id="related-portfolios-selector"
+                    class="service-checkboxes portfolio-checkboxes"
+                  ></div>
+                  <p
+                    id="related-portfolios-summary"
+                    class="selection-summary"
+                  >
+                    Belum ada portofolio dipilih.
+                  </p>
                 </div>
               </fieldset>
 

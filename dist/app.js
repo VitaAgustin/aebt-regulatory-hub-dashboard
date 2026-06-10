@@ -7,6 +7,8 @@ const STORAGE_BUCKET = "regulatory-files";
 const DOCUMENT_CACHE_KEY = "aebt-documents-v1";
 const SERVICE_CATEGORY_TABLE = "service_categories";
 const SERVICE_ITEM_TABLE = "service_items";
+const PORTFOLIO_CATEGORY_TABLE = "portfolio_categories";
+const PORTFOLIO_ITEM_TABLE = "portfolio_items";
 const SUPABASE_CLIENT_CDN =
   "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.107.0/dist/umd/supabase.min.js";
 const SUPABASE_CLIENT_URL = SUPABASE_URL.trim()
@@ -112,16 +114,25 @@ const state = {
   serviceItems: [],
   serviceCatalogLoaded: false,
   serviceCatalogError: null,
+  portfolioCategories: [],
+  portfolioItems: [],
+  portfolioCatalogLoaded: false,
+  portfolioCatalogError: null,
   session: null,
   editingId: null,
   pendingEditId: null,
   detailRenderToken: 0,
   selectedServiceCategory: null,
   selectedSubServiceName: null,
+  activeMappingTab: "services",
+  selectedPortfolioCategoryId: null,
+  selectedPortfolioItemCode: null,
   legacyRelatedServices: [],
+  legacyRelatedPortfolios: [],
   signedUrls: new Map(),
   documentsPromise: null,
   serviceCatalogPromise: null,
+  portfolioCatalogPromise: null,
   supabasePromise: null
 };
 
@@ -134,6 +145,7 @@ async function initialize() {
   bindEvents();
   syncFileSourceFields();
   renderServiceCheckboxes();
+  renderPortfolioCheckboxes();
   if (!location.hash) {
     const legacyRoute = routeFromPathname();
     history.replaceState(null, "", `/#${legacyRoute || "home"}`);
@@ -154,11 +166,15 @@ async function initialize() {
   const serviceCatalogPromise = state.supabasePromise.then(() =>
     loadServiceCatalog()
   );
+  const portfolioCatalogPromise = state.supabasePromise.then(() =>
+    loadPortfolioCatalog()
+  );
   const authPromise = state.supabasePromise.then(initializeAuth);
   const [authResult, documentsResult] = await Promise.allSettled([
     authPromise,
     documentsPromise,
-    serviceCatalogPromise
+    serviceCatalogPromise,
+    portfolioCatalogPromise
   ]);
 
   if (authResult.status === "rejected") {
@@ -202,7 +218,10 @@ async function initializeAuth() {
     state.session = nextSession;
     updateAdminState();
     if (nextSession) loadAdminLogs();
-    if (db) loadServiceCatalog({ force: true }).catch(() => {});
+    if (db) {
+      loadServiceCatalog({ force: true }).catch(() => {});
+      loadPortfolioCatalog({ force: true }).catch(() => {});
+    }
   });
 
   try {
@@ -269,12 +288,25 @@ function bindEvents() {
     "change",
     syncSelectedServicesSummary
   );
+  $("#related-portfolios-selector").addEventListener(
+    "change",
+    syncSelectedPortfoliosSummary
+  );
 
   $("#documents-body").addEventListener("click", handleTableAction);
   $("#recent-documents-body").addEventListener("click", handleTableAction);
   $("#document-detail").addEventListener("click", handleDetailAction);
   $("#service-mapping-grid").addEventListener("click", handleServiceCardAction);
   $("#service-documents-panel").addEventListener("click", handleServiceDocumentAction);
+  $(".mapping-tabs").addEventListener("click", handleMappingTabAction);
+  $("#portfolio-mapping-grid").addEventListener(
+    "click",
+    handlePortfolioCardAction
+  );
+  $("#portfolio-documents-panel").addEventListener(
+    "click",
+    handlePortfolioDocumentAction
+  );
   $("#admin-documents-body").addEventListener("click", handleAdminTableAction);
   $("#service-catalog-list").addEventListener("click", handleServiceCatalogAction);
 }
@@ -371,6 +403,58 @@ async function loadServiceCatalog({ force = false } = {}) {
   return state.serviceCatalogPromise;
 }
 
+async function loadPortfolioCatalog({ force = false } = {}) {
+  if (state.portfolioCatalogPromise) {
+    if (!force) return state.portfolioCatalogPromise;
+    await state.portfolioCatalogPromise.catch(() => {});
+  }
+
+  state.portfolioCatalogPromise = (async () => {
+    try {
+      const [categoryResult, itemResult] = await Promise.all([
+        db
+          .from(PORTFOLIO_CATEGORY_TABLE)
+          .select("id,code,name,description,is_active,created_at,updated_at")
+          .order("code", { ascending: true }),
+        db
+          .from(PORTFOLIO_ITEM_TABLE)
+          .select(
+            "id,category_id,code,name,description,is_active,created_at,updated_at"
+          )
+          .order("code", { ascending: true })
+      ]);
+
+      if (categoryResult.error) throw categoryResult.error;
+      if (itemResult.error) throw itemResult.error;
+
+      state.portfolioCategories = Array.isArray(categoryResult.data)
+        ? categoryResult.data
+        : [];
+      state.portfolioItems = Array.isArray(itemResult.data)
+        ? itemResult.data
+        : [];
+      state.portfolioCatalogLoaded = true;
+      state.portfolioCatalogError = null;
+    } catch (error) {
+      state.portfolioCategories = [];
+      state.portfolioItems = [];
+      state.portfolioCatalogLoaded = false;
+      state.portfolioCatalogError = new Error(
+        `Katalog portofolio belum siap: ${readableError(error)}`
+      );
+    } finally {
+      state.portfolioCatalogPromise = null;
+      renderPortfolioCheckboxes();
+      renderServiceMappingTabs();
+      renderPortfolioMapping();
+    }
+
+    return getPortfolioCatalog();
+  })();
+
+  return state.portfolioCatalogPromise;
+}
+
 async function fetchDocumentsFromRest() {
   const endpoint = new URL(`${SUPABASE_CLIENT_URL}/rest/v1/documents`);
   endpoint.searchParams.set("select", "*");
@@ -439,10 +523,13 @@ function renderAll() {
   loadRecentDocuments();
   populateCategoryFilter();
   renderDocumentTable();
+  renderServiceMappingTabs();
   renderServiceMapping();
+  renderPortfolioMapping();
   renderAdminDocuments();
   renderServiceCatalogManager();
   populateServiceCategorySelect();
+  renderPortfolioCheckboxes();
 }
 
 function route() {
@@ -792,6 +879,147 @@ function getDocumentsBySubService(subServiceName) {
   );
 }
 
+function getPortfolioCatalog({ includeInactive = false } = {}) {
+  if (!state.portfolioCatalogLoaded) return [];
+
+  return state.portfolioCategories
+    .filter((category) => includeInactive || category.is_active)
+    .map((category) => ({
+      id: category.id,
+      code: normalizeServiceName(category.code),
+      name: normalizeServiceName(category.name),
+      description: category.description || "",
+      is_active: Boolean(category.is_active),
+      items: state.portfolioItems
+        .filter(
+          (item) =>
+            item.category_id === category.id &&
+            (includeInactive || item.is_active)
+        )
+        .map((item) => ({
+          id: item.id,
+          category_id: item.category_id,
+          code: normalizeServiceName(item.code),
+          name: normalizeServiceName(item.name),
+          description: item.description || "",
+          is_active: Boolean(item.is_active)
+        }))
+        .filter((item) => item.code)
+    }))
+    .filter((category) => category.code);
+}
+
+function formatPortfolioValue(categoryCode, itemCode) {
+  return `${normalizeServiceName(categoryCode)} - ${normalizeServiceName(
+    itemCode
+  )}`;
+}
+
+function getPortfolioEntries() {
+  return getPortfolioCatalog().flatMap((category) =>
+    category.items.map((item) => ({
+      categoryId: category.id,
+      categoryCode: category.code,
+      categoryName: category.name,
+      itemId: item.id,
+      itemCode: item.code,
+      itemName: item.name,
+      itemCodeKey: normalizeText(item.code),
+      value: formatPortfolioValue(category.code, item.code),
+      valueKey: normalizeText(formatPortfolioValue(category.code, item.code))
+    }))
+  );
+}
+
+function findPortfolioCategory(categoryIdOrCode) {
+  const value = String(categoryIdOrCode || "").trim();
+  const key = normalizeText(value);
+  return getPortfolioCatalog().find(
+    (category) => category.id === value || normalizeText(category.code) === key
+  );
+}
+
+function findPortfolioItem(itemCode, categoryId = state.selectedPortfolioCategoryId) {
+  const itemKey = normalizeText(itemCode);
+  return getPortfolioEntries().find(
+    (entry) =>
+      entry.itemCodeKey === itemKey &&
+      (!categoryId || entry.categoryId === categoryId)
+  );
+}
+
+function documentMatchesPortfolioItem(doc, categoryCode, itemCode) {
+  if (!doc?.related_portfolios) return false;
+
+  const itemCodeKey = normalizeText(itemCode);
+  const valueKey = normalizeText(formatPortfolioValue(categoryCode, itemCode));
+  const relatedTerms = splitServices(doc.related_portfolios).map(normalizeText);
+
+  return relatedTerms.some(
+    (term) =>
+      term === valueKey ||
+      term === itemCodeKey ||
+      term.endsWith(` ${itemCodeKey}`)
+  );
+}
+
+function getDocumentsByPortfolioItem(itemCode) {
+  const entry = findPortfolioItem(itemCode);
+  if (!entry) return [];
+
+  return uniqueDocuments(
+    safeDocuments().filter((doc) =>
+      documentMatchesPortfolioItem(doc, entry.categoryCode, entry.itemCode)
+    )
+  );
+}
+
+function getDocumentsByPortfolioCategory(categoryId) {
+  const category = findPortfolioCategory(categoryId);
+  if (!category) return [];
+
+  return uniqueDocuments(
+    category.items.flatMap((item) => {
+      const entry = findPortfolioItem(item.code, category.id);
+      if (!entry) return [];
+      return safeDocuments().filter((doc) =>
+        documentMatchesPortfolioItem(
+          doc,
+          entry.categoryCode,
+          entry.itemCode
+        )
+      );
+    })
+  );
+}
+
+function renderServiceMappingTabs() {
+  const activeTab =
+    state.activeMappingTab === "portfolios" ? "portfolios" : "services";
+  state.activeMappingTab = activeTab;
+
+  $$(".mapping-tab").forEach((button) => {
+    const active = button.dataset.mappingTab === activeTab;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-selected", String(active));
+  });
+  $("#service-mapping-view")?.classList.toggle("hidden", activeTab !== "services");
+  $("#portfolio-mapping-view")?.classList.toggle(
+    "hidden",
+    activeTab !== "portfolios"
+  );
+}
+
+function handleMappingTabAction(event) {
+  const button = event.target.closest("[data-mapping-tab]");
+  if (!button) return;
+  state.activeMappingTab =
+    button.dataset.mappingTab === "portfolios" ? "portfolios" : "services";
+  renderServiceMappingTabs();
+  if (state.activeMappingTab === "portfolios") renderPortfolioMapping();
+  else renderServiceMapping();
+}
+
 function renderServiceMapping() {
   const container = $("#service-mapping-grid");
   const panel = $("#service-documents-panel");
@@ -861,6 +1089,259 @@ function renderServiceMapping() {
     panel.classList.add("hidden");
     panel.innerHTML = "";
   }
+}
+
+function renderPortfolioMapping() {
+  const container = $("#portfolio-mapping-grid");
+  const panel = $("#portfolio-documents-panel");
+  if (!container || !panel) return;
+
+  if (state.portfolioCatalogError) {
+    container.innerHTML = `
+      <div class="service-card empty-service portfolio-empty">
+        <strong>Portofolio SBU belum siap</strong>
+        <p>${escapeHtml(readableError(state.portfolioCatalogError))}</p>
+        <p>Jalankan supabase-add-portfolio-to-service-mapping.sql di Supabase SQL Editor.</p>
+      </div>
+    `;
+    panel.classList.add("hidden");
+    panel.innerHTML = "";
+    return;
+  }
+
+  if (!state.portfolioCatalogLoaded) {
+    container.innerHTML =
+      '<div class="service-card empty-service portfolio-empty"><strong>Memuat Portofolio SBU...</strong></div>';
+    panel.classList.add("hidden");
+    panel.innerHTML = "";
+    return;
+  }
+
+  const catalog = getPortfolioCatalog();
+  if (!catalog.length) {
+    container.innerHTML =
+      '<div class="service-card empty-service portfolio-empty"><strong>Belum ada data portofolio.</strong><p>Tambahkan data ke portfolio_categories dan portfolio_items.</p></div>';
+    panel.classList.add("hidden");
+    panel.innerHTML = "";
+    return;
+  }
+
+  if (
+    state.selectedPortfolioCategoryId &&
+    !findPortfolioCategory(state.selectedPortfolioCategoryId)
+  ) {
+    state.selectedPortfolioCategoryId = null;
+    state.selectedPortfolioItemCode = null;
+  }
+
+  container.innerHTML = catalog
+    .map((category, index) => {
+      const documents = getDocumentsByPortfolioCategory(category.id);
+      return `
+        <article class="service-card portfolio-card accent-${index % 4} ${
+          state.selectedPortfolioCategoryId === category.id ? "active" : ""
+        }" data-portfolio-category-id="${escapeAttribute(category.id)}">
+          <span class="portfolio-code">${escapeHtml(category.code)}</span>
+          <strong>${escapeHtml(category.name)}</strong>
+          <div class="service-stats">
+            <span>${category.items.length} sub-portofolio</span>
+            <em>${documents.length} dokumen</em>
+          </div>
+          <p>${escapeHtml(
+            category.description ||
+              `Portofolio ${category.code} SBU AEBT.`
+          )}</p>
+          <button
+            class="button secondary small"
+            type="button"
+            data-portfolio-category-id="${escapeAttribute(category.id)}"
+          >Lihat Detail</button>
+        </article>
+      `;
+    })
+    .join("");
+
+  if (state.selectedPortfolioCategoryId) {
+    renderPortfolioCategoryDetail(state.selectedPortfolioCategoryId);
+  } else {
+    panel.classList.add("hidden");
+    panel.innerHTML = "";
+  }
+}
+
+function renderPortfolioCategoryDetail(categoryId) {
+  const panel = $("#portfolio-documents-panel");
+  const category = findPortfolioCategory(categoryId);
+  if (!panel || !category) {
+    state.selectedPortfolioCategoryId = null;
+    state.selectedPortfolioItemCode = null;
+    panel?.classList.add("hidden");
+    if (panel) panel.innerHTML = "";
+    return;
+  }
+
+  state.selectedPortfolioCategoryId = category.id;
+  if (
+    state.selectedPortfolioItemCode &&
+    !category.items.some(
+      (item) =>
+        normalizeText(item.code) ===
+        normalizeText(state.selectedPortfolioItemCode)
+    )
+  ) {
+    state.selectedPortfolioItemCode = null;
+  }
+
+  const documents = getDocumentsByPortfolioCategory(category.id);
+  panel.classList.remove("hidden");
+  panel.innerHTML = `
+    <div class="section-heading">
+      <div>
+        <p class="eyebrow">${escapeHtml(category.code)}</p>
+        <h2>${escapeHtml(category.name)}</h2>
+        <p>${documents.length} dokumen terkait portofolio ini. Pilih sub-portofolio untuk melihat dokumen.</p>
+      </div>
+    </div>
+    <div class="sub-service-grid portfolio-item-grid">
+      ${category.items
+        .map((item) => {
+          const itemDocuments = getDocumentsByPortfolioItemWithCategory(
+            item.code,
+            category.id
+          );
+          return `
+            <button
+              class="sub-service-card portfolio-item-card ${
+                normalizeText(state.selectedPortfolioItemCode) ===
+                normalizeText(item.code)
+                  ? "active"
+                  : ""
+              }"
+              type="button"
+              data-portfolio-item-code="${escapeAttribute(item.code)}"
+              data-portfolio-category-id="${escapeAttribute(category.id)}"
+            >
+              <span class="portfolio-item-code">${escapeHtml(item.code)}</span>
+              <strong>${escapeHtml(item.name)}</strong>
+              <span>${itemDocuments.length} dokumen terkait</span>
+            </button>
+          `;
+        })
+        .join("")}
+    </div>
+    <div id="portfolio-item-documents" class="sub-service-documents">
+      <div class="empty-state">Pilih sub-portofolio untuk melihat dokumen terkait.</div>
+    </div>
+  `;
+
+  if (state.selectedPortfolioItemCode) {
+    renderPortfolioItemDocuments(state.selectedPortfolioItemCode);
+  }
+}
+
+function getDocumentsByPortfolioItemWithCategory(itemCode, categoryId) {
+  const entry = findPortfolioItem(itemCode, categoryId);
+  if (!entry) return [];
+  return uniqueDocuments(
+    safeDocuments().filter((doc) =>
+      documentMatchesPortfolioItem(doc, entry.categoryCode, entry.itemCode)
+    )
+  );
+}
+
+function renderPortfolioItemDocuments(itemCode) {
+  const container = $("#portfolio-item-documents");
+  if (!container) return;
+
+  const entry = findPortfolioItem(itemCode);
+  if (!entry) {
+    container.innerHTML =
+      '<div class="empty-state">Sub-portofolio tidak ditemukan.</div>';
+    return;
+  }
+
+  state.selectedPortfolioItemCode = entry.itemCode;
+  const documents = getDocumentsByPortfolioItem(entry.itemCode);
+  container.innerHTML = `
+    <div class="section-heading sub-service-heading">
+      <div>
+        <p class="eyebrow">${escapeHtml(entry.itemCode)}</p>
+        <h3>${escapeHtml(entry.itemName)}</h3>
+        <p>${documents.length} dokumen terkait sub-portofolio ini.</p>
+      </div>
+    </div>
+    <div class="table-frame">
+      <table>
+        <thead>
+          <tr>
+            <th>Judul dokumen</th>
+            <th>Tipe</th>
+            <th>Status</th>
+            <th>Tahun</th>
+            <th>Sumber file</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          ${
+            documents.length
+              ? documents
+                  .map(
+                    (doc) => `
+                <tr>
+                  <td>
+                    <div class="document-title">${escapeHtml(doc.title)}</div>
+                    <div class="document-meta">${escapeHtml(
+                      doc.regulation_number || "-"
+                    )}</div>
+                  </td>
+                  <td>${typeBadge(doc.document_type)}</td>
+                  <td>${statusBadge(doc.status)}</td>
+                  <td>${escapeHtml(doc.year || "-")}</td>
+                  <td>${fileSourceIndicator(doc)}</td>
+                  <td>${documentRowActions(doc.id, "Buka Detail")}</td>
+                </tr>
+              `
+                  )
+                  .join("")
+              : emptyRow(6, "Belum ada dokumen terkait sub-portofolio ini.")
+          }
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function handlePortfolioCardAction(event) {
+  const target = event.target.closest("[data-portfolio-category-id]");
+  if (!target) return;
+  state.selectedPortfolioCategoryId = target.dataset.portfolioCategoryId;
+  state.selectedPortfolioItemCode = null;
+  renderPortfolioMapping();
+  $("#portfolio-documents-panel")?.scrollIntoView({
+    behavior: "smooth",
+    block: "start"
+  });
+}
+
+function handlePortfolioDocumentAction(event) {
+  const itemButton = event.target.closest("[data-portfolio-item-code]");
+  const editButton = event.target.closest("[data-edit-id]");
+  const detailButton = event.target.closest("[data-detail-id]");
+
+  if (itemButton) {
+    state.selectedPortfolioCategoryId =
+      itemButton.dataset.portfolioCategoryId ||
+      state.selectedPortfolioCategoryId;
+    state.selectedPortfolioItemCode = itemButton.dataset.portfolioItemCode;
+    renderPortfolioCategoryDetail(state.selectedPortfolioCategoryId);
+    $("#portfolio-item-documents")?.scrollIntoView({
+      behavior: "smooth",
+      block: "start"
+    });
+  }
+  if (editButton) openDocumentEditor(editButton.dataset.editId);
+  if (detailButton) openDocumentDetail(detailButton.dataset.detailId);
 }
 
 function renderServiceCategoryDetail(categoryName) {
@@ -1099,10 +1580,15 @@ async function renderDocumentDetail(id) {
               ${detailField("Pihak terdampak", doc.impacted_party)}
             </section>
             <section class="detail-section">
-              <h2>Service mapping</h2>
+              <h2>Keterkaitan SBU</h2>
               ${detailField(
                 "Layanan terkait",
                 renderServiceTags(doc.related_services),
+                true
+              )}
+              ${detailField(
+                "Portofolio terkait",
+                renderServiceTags(doc.related_portfolios),
                 true
               )}
               ${detailField("Peluang layanan", doc.service_opportunity)}
@@ -1442,6 +1928,148 @@ function syncSelectedServicesSummary() {
       )}</span>`
     : "";
 
+  summary.innerHTML = `${escapeHtml(selectedLine)}${legacyLine}`;
+}
+
+function renderPortfolioCheckboxes() {
+  const container = $("#related-portfolios-selector");
+  if (!container) return;
+
+  if (state.portfolioCatalogError) {
+    container.innerHTML = `
+      <div class="manager-alert portfolio-selector-alert">
+        <strong>Portofolio SBU belum siap.</strong>
+        <p>Jalankan supabase-add-portfolio-to-service-mapping.sql di Supabase SQL Editor.</p>
+      </div>
+    `;
+    syncSelectedPortfoliosSummary();
+    return;
+  }
+
+  if (!state.portfolioCatalogLoaded) {
+    container.innerHTML =
+      '<div class="empty-state compact-empty">Memuat katalog portofolio...</div>';
+    syncSelectedPortfoliosSummary();
+    return;
+  }
+
+  const catalog = getPortfolioCatalog();
+  if (!catalog.length) {
+    container.innerHTML =
+      '<div class="empty-state compact-empty">Belum ada katalog portofolio.</div>';
+    syncSelectedPortfoliosSummary();
+    return;
+  }
+
+  container.innerHTML = catalog
+    .map(
+      (category, index) => `
+      <details class="service-accordion portfolio-accordion" ${
+        index === 0 ? "open" : ""
+      }>
+        <summary>
+          <span>
+            <strong>${escapeHtml(category.code)}</strong>
+            ${escapeHtml(category.name)}
+          </span>
+          <small>${category.items.length} sub-portofolio</small>
+        </summary>
+        <div class="service-option-list">
+          ${category.items
+            .map((item) => {
+              const value = formatPortfolioValue(category.code, item.code);
+              return `
+                <label class="service-option portfolio-option">
+                  <input
+                    type="checkbox"
+                    value="${escapeAttribute(value)}"
+                    data-portfolio-category-id="${escapeAttribute(category.id)}"
+                    data-portfolio-item-code="${escapeAttribute(item.code)}"
+                  />
+                  <span>
+                    <strong>${escapeHtml(item.code)}</strong>
+                    ${escapeHtml(item.name)}
+                  </span>
+                </label>
+              `;
+            })
+            .join("")}
+        </div>
+      </details>
+    `
+    )
+    .join("");
+
+  syncSelectedPortfoliosSummary();
+}
+
+function getSelectedPortfolios() {
+  const selected = $$(
+    '#related-portfolios-selector input[type="checkbox"]:checked'
+  ).map((input) => input.value);
+  const selectedKeys = new Set(selected.map(normalizeText));
+  const legacy = state.legacyRelatedPortfolios.filter(
+    (portfolio) => !selectedKeys.has(normalizeText(portfolio))
+  );
+  return [...selected, ...legacy];
+}
+
+function setSelectedPortfolios(relatedPortfoliosString) {
+  const terms = splitServices(relatedPortfoliosString);
+  const checkboxes = $$(
+    '#related-portfolios-selector input[type="checkbox"]'
+  );
+  const entries = getPortfolioEntries();
+  const matchedValues = new Set();
+  state.legacyRelatedPortfolios = [];
+
+  checkboxes.forEach((input) => {
+    input.checked = false;
+  });
+
+  terms.forEach((term) => {
+    const termKey = normalizeText(term);
+    const entry = entries.find(
+      (item) =>
+        termKey === item.valueKey ||
+        termKey === item.itemCodeKey ||
+        termKey.endsWith(` ${item.itemCodeKey}`)
+    );
+    if (entry) matchedValues.add(entry.valueKey);
+    else if (term) state.legacyRelatedPortfolios.push(term);
+  });
+
+  checkboxes.forEach((input) => {
+    input.checked = matchedValues.has(normalizeText(input.value));
+  });
+
+  syncSelectedPortfoliosSummary();
+}
+
+function syncSelectedPortfoliosSummary() {
+  const hiddenField = $('#document-form input[name="related_portfolios"]');
+  const summary = $("#related-portfolios-summary");
+  if (!hiddenField || !summary) return;
+
+  const selected = $$(
+    '#related-portfolios-selector input[type="checkbox"]:checked'
+  ).map((input) => input.value);
+  const allPortfolios = getSelectedPortfolios();
+  hiddenField.value = allPortfolios.join(", ");
+
+  if (!selected.length && !state.legacyRelatedPortfolios.length) {
+    summary.textContent = "Belum ada portofolio dipilih.";
+    return;
+  }
+
+  const selectedLine = selected.length
+    ? `${selected.length} portofolio dipilih: ${selected.join(", ")}`
+    : "Belum ada portofolio katalog yang dipilih.";
+  const legacyLine = state.legacyRelatedPortfolios.length
+    ? `<br><span>Data lama tetap disimpan: ${escapeHtml(
+        state.legacyRelatedPortfolios.join(", ")
+      )}</span>`
+    : "";
   summary.innerHTML = `${escapeHtml(selectedLine)}${legacyLine}`;
 }
 
@@ -1891,6 +2519,7 @@ function buildDocumentPayload(form) {
     summary: cleanText(form.get("summary")),
     status: cleanText(form.get("status")) || "Berlaku",
     related_services: cleanText(getSelectedServices().join(", ")),
+    related_portfolios: cleanText(getSelectedPortfolios().join(", ")),
     source_url: cleanText(form.get("source_url")),
     file_source: normalizeFileSource(form.get("file_source")),
     external_file_url: cleanText(form.get("external_file_url")),
@@ -1967,6 +2596,7 @@ function startEdit(id) {
   form.elements.external_file_url.value = doc.external_file_url || "";
   form.elements.file.required = false;
   setSelectedServices(doc.related_services);
+  setSelectedPortfolios(doc.related_portfolios);
   syncFileSourceFields();
 
   $("#editor-title").textContent = "Edit dokumen";
@@ -1986,7 +2616,9 @@ function resetEditor() {
   form.elements.file.required = false;
   form.elements.file_source.value = "none";
   state.legacyRelatedServices = [];
+  state.legacyRelatedPortfolios = [];
   setSelectedServices("");
+  setSelectedPortfolios("");
   syncFileSourceFields();
   $("#editor-title").textContent = "Tambah dokumen";
   $("#editor-description").textContent =
@@ -2123,6 +2755,12 @@ function renderEmptyApplication(message = "Hubungkan aplikasi ke Supabase untuk 
   state.serviceItems = [];
   state.serviceCatalogLoaded = false;
   state.serviceCatalogError = null;
+  state.portfolioCategories = [];
+  state.portfolioItems = [];
+  state.portfolioCatalogLoaded = false;
+  state.portfolioCatalogError = null;
+  state.selectedPortfolioCategoryId = null;
+  state.selectedPortfolioItemCode = null;
   renderAll();
   $("#recent-documents-body").innerHTML = emptyRow(5, message);
   $("#documents-body").innerHTML = emptyRow(6, message);
