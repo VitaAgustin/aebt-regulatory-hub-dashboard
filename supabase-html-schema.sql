@@ -6,7 +6,7 @@ create extension if not exists "pgcrypto";
 
 create table if not exists public.documents (
   id uuid primary key default gen_random_uuid(),
-  document_type text not null check (document_type in ('regulasi', 'sop')),
+  document_type text not null check (document_type in ('regulasi', 'sop', 'standar')),
   title text not null,
   regulation_number text,
   year integer,

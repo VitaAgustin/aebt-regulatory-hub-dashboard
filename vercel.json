@@ -18,6 +18,14 @@
       "destination": "/"
     },
     {
+      "source": "/standar",
+      "destination": "/"
+    },
+    {
+      "source": "/standards",
+      "destination": "/"
+    },
+    {
       "source": "/services",
       "destination": "/"
     },

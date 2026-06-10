@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="AEBT Regulatory Knowledge Hub untuk regulasi, SOP, service mapping, dan repository PDF."
+      content="AEBT Regulatory Knowledge Hub untuk regulasi, SOP, standar, service mapping, dan repository PDF."
     />
     <link rel="preconnect" href="https://pbfzjtipyqtsamgqemvx.supabase.co" />
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
@@ -46,6 +46,12 @@
               <svg viewBox="0 0 24 24"><path d="M6 3.5h8l4 4v13H6zM14 3.5v4h4M9 12h6M9 16h6" /></svg>
             </span>
             <span>SOP Center</span>
+          </a>
+          <a href="#standar" data-nav="standar">
+            <span class="nav-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M5 4.5h11l3 3v12H5zM16 4.5v3h3M8 11h8M8 15h8" /><path d="m8 7.5 1.2 1.2L11.5 6" /></svg>
+            </span>
+            <span>Data Standar</span>
           </a>
           <a href="#services" data-nav="services">
             <span class="nav-icon" aria-hidden="true">
@@ -170,6 +176,14 @@
             <strong id="metric-sops">0</strong>
             <small>Dokumen</small>
           </article>
+          <article class="metric-card metric-cyan">
+            <span class="metric-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M5 4.5h11l3 3v12H5zM16 4.5v3h3M8 11h8M8 15h8" /><path d="m8 7.5 1.2 1.2L11.5 6" /></svg>
+            </span>
+            <span>Standar</span>
+            <strong id="metric-standards">0</strong>
+            <small>Dokumen</small>
+          </article>
           <article class="metric-card metric-purple">
             <span class="metric-icon" aria-hidden="true">
               <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" /><path d="M12 7.5v5l3 2" /></svg>
@@ -216,11 +230,10 @@
       <section id="view-documents" class="view page-shell hidden" data-view="documents">
         <div class="page-heading compact">
           <div>
-            <p class="eyebrow">Repository publik</p>
+            <p id="documents-eyebrow" class="eyebrow">Document repository</p>
             <h1 id="documents-title">Database Regulasi</h1>
-            <p class="page-description">
-              Cari, filter, buka detail, preview, dan download dokumen dari
-              Supabase.
+            <p id="documents-description" class="page-description">
+              Kumpulan regulasi yang digunakan dalam kegiatan layanan AEBT.
             </p>
           </div>
           <span id="documents-count" class="count-label">0 dokumen</span>
@@ -241,6 +254,7 @@
               <option value="">Semua tipe</option>
               <option value="regulasi">Regulasi</option>
               <option value="sop">SOP</option>
+              <option value="standar">Standar</option>
             </select>
           </label>
           <label>
@@ -285,8 +299,8 @@
             <p class="eyebrow">Business relevance</p>
             <h1>Service Mapping</h1>
             <p class="page-description">
-              Pemetaan dokumen regulasi dan SOP ke kategori layanan dan
-              sub-layanan terkait.
+              Pemetaan dokumen regulasi, SOP, dan standar ke kategori layanan
+              dan sub-layanan terkait.
             </p>
           </div>
         </div>
@@ -464,7 +478,12 @@
                     <select name="document_type" required>
                       <option value="regulasi">Regulasi</option>
                       <option value="sop">SOP</option>
+                      <option value="standar">Standar</option>
                     </select>
+                    <small class="field-hint">
+                      Jika dokumen muncul di menu yang salah, ubah Tipe Dokumen
+                      melalui form edit.
+                    </small>
                   </label>
                   <label class="span-2">
                     <span>Judul *</span>

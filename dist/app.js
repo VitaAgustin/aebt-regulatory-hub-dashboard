@@ -228,6 +228,7 @@ function routeFromPathname() {
   if (!path) return "home";
   if (path === "/documents") return "documents";
   if (path === "/sop") return "sop";
+  if (path === "/standar" || path === "/standards") return "standar";
   if (path === "/services" || path === "/service-mapping") return "services";
   if (path === "/admin" || path === "/admin/upload") return "admin";
 
@@ -249,7 +250,11 @@ function bindEvents() {
   $("#document-filters").addEventListener("input", renderDocumentTable);
   $("#document-filters").addEventListener("change", renderDocumentTable);
   $("#document-filters").addEventListener("reset", () => {
-    window.setTimeout(() => renderDocumentTable(), 0);
+    window.setTimeout(() => {
+      const routeName = location.hash.replace(/^#/, "").split("/")[0];
+      if (getDocumentLibraryType(routeName)) configureDocumentLibrary(routeName);
+      renderDocumentTable();
+    }, 0);
   });
 
   $("#admin-login-form").addEventListener("submit", handleLogin);
@@ -441,11 +446,14 @@ function renderAll() {
 function route() {
   const routeValue = location.hash.replace(/^#/, "") || "home";
   const [routeName, routeId] = routeValue.split("/");
-  const normalizedRoute = routeName === "sop" ? "documents" : routeName;
+  const normalizedRoute = ["sop", "standar"].includes(routeName)
+    ? "documents"
+    : routeName;
   const routeContext = {
     home: ["Regulatory Intelligence", "Dashboard Home"],
     documents: ["Document Repository", "Database Regulasi"],
     sop: ["Document Library", "SOP Center"],
+    standar: ["Standard Library", "Data Standar"],
     services: ["Business Relevance", "Service Mapping"],
     admin: ["Restricted Access", "Admin Management"],
     document: ["Document Repository", "Detail Dokumen"]
@@ -467,15 +475,8 @@ function route() {
   $("#topbar-title").textContent = title;
   setSidebarOpen(false);
 
-  if (routeName === "sop") {
-    $("#documents-title").textContent = "SOP Center";
-    $("#filter-type").value = "sop";
-    $("#filter-type").disabled = true;
-    renderDocumentTable();
-  } else if (routeName === "documents") {
-    $("#documents-title").textContent = "Database Regulasi";
-    if ($("#filter-type").disabled) $("#filter-type").value = "";
-    $("#filter-type").disabled = false;
+  if (getDocumentLibraryType(routeName)) {
+    configureDocumentLibrary(routeName);
     renderDocumentTable();
   } else if (routeName === "document" && routeId) {
     renderDocumentDetail(routeId);
@@ -487,6 +488,42 @@ function route() {
   window.scrollTo({ top: 0, behavior: "auto" });
 }
 
+function getDocumentLibraryType(routeName = location.hash.replace(/^#/, "").split("/")[0]) {
+  return {
+    documents: "regulasi",
+    sop: "sop",
+    standar: "standar"
+  }[routeName] || null;
+}
+
+function configureDocumentLibrary(routeName) {
+  const libraries = {
+    documents: {
+      eyebrow: "DOCUMENT REPOSITORY",
+      title: "Database Regulasi",
+      description: "Kumpulan regulasi yang digunakan dalam kegiatan layanan AEBT."
+    },
+    sop: {
+      eyebrow: "DOCUMENT LIBRARY",
+      title: "SOP Center",
+      description: "Kumpulan prosedur operasional yang digunakan dalam kegiatan layanan AEBT."
+    },
+    standar: {
+      eyebrow: "STANDARD LIBRARY",
+      title: "Data Standar",
+      description:
+        "Kumpulan standar, referensi teknis, dan dokumen pendukung yang digunakan dalam kegiatan layanan AEBT."
+    }
+  };
+  const library = libraries[routeName] || libraries.documents;
+  $("#documents-eyebrow").textContent = library.eyebrow;
+  $("#documents-title").textContent = library.title;
+  $("#documents-description").textContent = library.description;
+  $("#filter-type").value = getDocumentLibraryType(routeName);
+  $("#filter-type").disabled = true;
+  populateCategoryFilter();
+}
+
 function renderMetrics() {
   const docs = safeDocuments();
   $("#metric-total").textContent = docs.length;
@@ -495,6 +532,9 @@ function renderMetrics() {
   ).length;
   $("#metric-sops").textContent = docs.filter(
     (doc) => doc.document_type === "sop"
+  ).length;
+  $("#metric-standards").textContent = docs.filter(
+    (doc) => doc.document_type === "standar"
   ).length;
   $("#metric-review").textContent = docs.filter(
     (doc) => doc.status === "Perlu Review"
@@ -532,7 +572,15 @@ function loadRecentDocuments() {
 function populateCategoryFilter() {
   const select = $("#filter-category");
   const current = select.value;
-  const categories = [...new Set(safeDocuments().map((doc) => doc.category).filter(Boolean))]
+  const libraryType = getDocumentLibraryType();
+  const categories = [
+    ...new Set(
+      safeDocuments()
+        .filter((doc) => !libraryType || doc.document_type === libraryType)
+        .map((doc) => doc.category)
+        .filter(Boolean)
+    )
+  ]
     .sort((a, b) => a.localeCompare(b, "id"));
 
   select.innerHTML =
@@ -548,9 +596,8 @@ function populateCategoryFilter() {
 
 function renderDocumentTable() {
   const body = $("#documents-body");
-  const isSopRoute = location.hash.startsWith("#sop");
   const query = $("#filter-search").value.trim().toLowerCase();
-  const selectedType = isSopRoute ? "sop" : $("#filter-type").value;
+  const selectedType = getDocumentLibraryType() || $("#filter-type").value;
   const category = $("#filter-category").value;
   const status = $("#filter-status").value;
 
@@ -771,6 +818,9 @@ function renderServiceMapping() {
       (doc) => doc.document_type === "regulasi"
     ).length;
     const sopCount = documents.filter((doc) => doc.document_type === "sop").length;
+    const standardCount = documents.filter(
+      (doc) => doc.document_type === "standar"
+    ).length;
 
     return `
       <article class="service-card category-card accent-${index % 4} ${
@@ -788,8 +838,9 @@ function renderServiceMapping() {
           <span>${documents.length} dokumen</span>
           <em>${regulationCount} regulasi</em>
           <em>${sopCount} SOP</em>
+          <em>${standardCount} standar</em>
         </div>
-        <p>Regulasi/SOP yang berkaitan dengan kategori ${escapeHtml(
+        <p>Regulasi, SOP, dan standar yang berkaitan dengan kategori ${escapeHtml(
           category.category
         )}.</p>
         <button class="button secondary small" type="button" data-service-category="${escapeAttribute(
@@ -836,7 +887,7 @@ function renderServiceCategoryDetail(categoryName) {
     <div class="section-heading">
       <div>
         <h2>${escapeHtml(category.category)}</h2>
-        <p>${categoryDocuments.length} dokumen terkait kategori ini. Pilih sub-layanan untuk melihat daftar regulasi/SOP.</p>
+        <p>${categoryDocuments.length} dokumen terkait kategori ini. Pilih sub-layanan untuk melihat daftar regulasi, SOP, dan standar.</p>
       </div>
     </div>
     <div class="sub-service-grid">
@@ -2092,8 +2143,12 @@ function numberOrNull(value) {
 }
 
 function typeBadge(type) {
-  const label = type === "sop" ? "SOP" : "Regulasi";
-  return `<span class="badge ${type === "sop" ? "sop" : ""}">${label}</span>`;
+  const badge = {
+    regulasi: { label: "Regulasi", className: "regulasi" },
+    sop: { label: "SOP", className: "sop" },
+    standar: { label: "Standar", className: "standar" }
+  }[type] || { label: String(type || "-"), className: "" };
+  return `<span class="badge ${badge.className}">${escapeHtml(badge.label)}</span>`;
 }
 
 function statusBadge(status) {

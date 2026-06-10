@@ -40,6 +40,8 @@ Jangan pernah memasukkan `service_role`, secret key, atau database password ke
 5. Klik **Run**.
 6. Jalankan juga `supabase-service-catalog.sql` agar fitur Kelola Layanan
    menggunakan tabel `service_categories` dan `service_items`.
+7. Untuk project lama, jalankan `supabase-add-standar-document-type.sql` agar
+   kolom `documents.document_type` menerima nilai `standar`.
 
 Script tersebut:
 
@@ -62,6 +64,10 @@ dengan Supabase Auth bisa menambah atau memperbarui data layanan.
 
 Jika data dari versi Next.js sudah ada, `create table if not exists` tidak
 menghapus data tersebut.
+
+Migration `supabase-add-standar-document-type.sql` hanya mengganti check
+constraint `document_type`. Data lama tetap dipertahankan dan nilai yang
+diizinkan menjadi `regulasi`, `sop`, dan `standar`.
 
 ## 3. Membuat Admin User
 
@@ -137,10 +143,30 @@ magic-link flow.
 9. Buka **Table Editor > documents** dan pastikan metadata muncul.
 10. Buka **Table Editor > update_logs** dan pastikan log "Tambah dokumen"
     muncul.
-11. Kembali ke menu **Database Regulasi** atau **SOP Center**.
+11. Kembali ke menu **Database Regulasi**, **SOP Center**, atau **Data Standar**
+    sesuai tipe dokumen.
 12. Buka detail dokumen dan cek preview serta tombol download.
 
-## 7. Edit dan Hapus
+## 7. Data Standar dan Perbaikan Tipe Dokumen
+
+- **Database Regulasi** hanya menampilkan `document_type = regulasi`.
+- **SOP Center** hanya menampilkan `document_type = sop`.
+- **Data Standar** hanya menampilkan `document_type = standar`.
+- Search, kategori, dan status tetap bekerja di dalam tipe pustaka aktif.
+
+Untuk menambah standar:
+
+1. Jalankan `supabase-add-standar-document-type.sql`.
+2. Login melalui menu **Admin**.
+3. Pilih **Standar** pada field **Tipe dokumen**.
+4. Lengkapi metadata dan PDF, lalu simpan.
+5. Buka menu **Data Standar** dan pastikan dokumen muncul.
+
+Jika dokumen berada di menu yang salah, klik **Edit**, ubah **Tipe dokumen**
+menjadi Regulasi, SOP, atau Standar, lalu simpan perubahan. Aplikasi tidak
+menebak tipe berdasarkan judul.
+
+## 8. Edit dan Hapus
 
 Setelah login:
 
