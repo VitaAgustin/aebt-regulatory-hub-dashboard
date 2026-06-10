@@ -7,7 +7,8 @@
     "build": "node build-static.mjs",
     "build:next": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "import:regulations": "node scripts/import-regulations.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.4",

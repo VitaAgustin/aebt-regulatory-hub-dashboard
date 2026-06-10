@@ -2872,10 +2872,44 @@ function normalizeFileSource(value, doc = null) {
 }
 
 function splitServices(value) {
-  return String(value || "")
-    .split(/[,;\n|]+/)
-    .map((item) => item.trim())
-    .filter(Boolean);
+  let remaining = String(value || "").trim();
+  if (!remaining) return [];
+
+  const knownServices = getServiceEntries()
+    .map((entry) => entry.value)
+    .filter(Boolean)
+    .sort((left, right) => right.length - left.length);
+  const services = [];
+
+  while (remaining) {
+    remaining = remaining.replace(/^[,;\n|]+\s*/, "");
+    if (!remaining) break;
+
+    const lowerRemaining = remaining.toLocaleLowerCase("id-ID");
+    const knownService = knownServices.find((service) => {
+      const lowerService = service.toLocaleLowerCase("id-ID");
+      if (!lowerRemaining.startsWith(lowerService)) return false;
+      const nextCharacter = remaining.slice(service.length).trimStart().charAt(0);
+      return !nextCharacter || /[,;\n|]/.test(nextCharacter);
+    });
+
+    if (knownService) {
+      services.push(knownService);
+      remaining = remaining.slice(knownService.length);
+      continue;
+    }
+
+    const separatorIndex = remaining.search(/[,;\n|]/);
+    if (separatorIndex === -1) {
+      services.push(remaining.trim());
+      break;
+    }
+
+    services.push(remaining.slice(0, separatorIndex).trim());
+    remaining = remaining.slice(separatorIndex + 1);
+  }
+
+  return services.filter(Boolean);
 }
 
 function sanitizeServiceList(value) {

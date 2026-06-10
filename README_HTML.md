@@ -216,6 +216,29 @@ Pilihan disimpan sebagai string kompatibel dengan data lama, misalnya
 `EBT 041 - AEB - 1B, IAPPM 042 - AEB - 2F`. Kolom `related_services`
 tidak berubah dan tidak dicampur dengan data portofolio.
 
+## 10. Import Regulasi Massal
+
+Metadata impor 10 Juni 2026 disimpan di
+`data/regulation-import-2026-06-10.json`. File ini mencatat tipe dokumen,
+nomor regulasi, status, layanan terkait, dan portofolio terkait.
+
+Gunakan dry-run terlebih dahulu:
+
+```powershell
+npm.cmd run import:regulations
+```
+
+Untuk menjalankan insert/update dan upload PDF:
+
+```powershell
+npm.cmd run import:regulations -- --apply
+```
+
+Script membaca kredensial server dari `.env.local` dan tidak pernah
+memasukkan service role key ke frontend atau manifest. File dengan nama atau
+nomor yang sudah ada akan diperbarui, sehingga impor dapat dijalankan ulang
+tanpa membuat duplikat dokumen.
+
 ## Catatan Keamanan
 
 - Bucket tetap private.
