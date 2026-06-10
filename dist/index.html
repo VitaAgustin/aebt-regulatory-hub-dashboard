@@ -538,7 +538,62 @@
               </fieldset>
 
               <fieldset class="form-card form-card-file">
-                <legend>Sumber, file, dan pemutakhiran</legend>
+                <legend>Sumber File Dokumen</legend>
+                <div class="file-source-options" role="radiogroup" aria-label="Sumber file dokumen">
+                  <label class="file-source-option">
+                    <input name="file_source" type="radio" value="supabase" />
+                    <span>
+                      <strong>Upload PDF ke Supabase</strong>
+                      <small>Gunakan Storage bucket regulatory-files.</small>
+                    </span>
+                  </label>
+                  <label class="file-source-option">
+                    <input name="file_source" type="radio" value="external" />
+                    <span>
+                      <strong>Link Google Drive / eksternal</strong>
+                      <small>Simpan tautan HTTPS tanpa upload file.</small>
+                    </span>
+                  </label>
+                  <label class="file-source-option">
+                    <input name="file_source" type="radio" value="none" checked />
+                    <span>
+                      <strong>Tidak ada file untuk saat ini</strong>
+                      <small>Metadata dokumen tetap dapat disimpan.</small>
+                    </span>
+                  </label>
+                </div>
+                <div id="supabase-file-fields" class="file-source-fields hidden">
+                  <label>
+                    <span>File PDF</span>
+                    <input
+                      name="file"
+                      type="file"
+                      accept="application/pdf,.pdf"
+                    />
+                  </label>
+                  <p id="existing-file-note" class="field-hint">
+                    Pilih PDF hanya jika ingin mengunggah file baru.
+                  </p>
+                </div>
+                <div id="external-file-fields" class="file-source-fields hidden">
+                  <label>
+                    <span>Link file Google Drive / eksternal *</span>
+                    <input
+                      name="external_file_url"
+                      type="url"
+                      inputmode="url"
+                      placeholder="https://drive.google.com/..."
+                    />
+                  </label>
+                  <p class="field-hint">
+                    Pastikan akses file sudah dibagikan kepada pengguna yang
+                    akan membukanya.
+                  </p>
+                </div>
+              </fieldset>
+
+              <fieldset class="form-card form-card-file">
+                <legend>Sumber resmi dan pemutakhiran</legend>
                 <div class="form-grid">
                   <label>
                     <span>Link sumber resmi</span>
@@ -551,15 +606,6 @@
                   <label>
                     <span>PIC update</span>
                     <input name="pic_update" />
-                  </label>
-                  <label>
-                    <span>File PDF <b id="file-required-mark">*</b></span>
-                    <input
-                      name="file"
-                      type="file"
-                      accept="application/pdf,.pdf"
-                      required
-                    />
                   </label>
                   <label class="span-2">
                     <span>Catatan</span>

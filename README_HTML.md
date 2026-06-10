@@ -42,6 +42,8 @@ Jangan pernah memasukkan `service_role`, secret key, atau database password ke
    menggunakan tabel `service_categories` dan `service_items`.
 7. Untuk project lama, jalankan `supabase-add-standar-document-type.sql` agar
    kolom `documents.document_type` menerima nilai `standar`.
+8. Jalankan `supabase-add-external-file-url.sql` agar dokumen dapat memakai
+   PDF Supabase, link Google Drive/eksternal, atau disimpan tanpa file.
 
 Script tersebut:
 
@@ -68,6 +70,10 @@ menghapus data tersebut.
 Migration `supabase-add-standar-document-type.sql` hanya mengganti check
 constraint `document_type`. Data lama tetap dipertahankan dan nilai yang
 diizinkan menjadi `regulasi`, `sop`, dan `standar`.
+
+Migration `supabase-add-external-file-url.sql` menambahkan kolom
+`external_file_url` dan `file_source`. Dokumen lama yang memiliki `file_path`
+ditandai sebagai `supabase`; dokumen lama tanpa file ditandai sebagai `none`.
 
 ## 3. Membuat Admin User
 
@@ -130,22 +136,23 @@ Tambahkan URL hosting ke **Authentication > URL Configuration > Redirect
 URLs** jika nantinya menambahkan email confirmation, password reset, atau
 magic-link flow.
 
-## 6. Mengetes Upload PDF
+## 6. Sumber File Dokumen
 
 1. Pastikan `supabase-html-schema.sql` sudah berhasil dijalankan.
-2. Pastikan publishable/anon key sudah dimasukkan ke `app.js`.
-3. Buka menu **Admin**.
-4. Login memakai admin user Supabase Auth.
-5. Isi judul, tipe dokumen, ringkasan, layanan terkait, dan metadata lain.
-6. Pilih file PDF.
-7. Klik **Simpan dokumen**.
-8. Buka Supabase **Storage > regulatory-files** dan pastikan file muncul.
-9. Buka **Table Editor > documents** dan pastikan metadata muncul.
-10. Buka **Table Editor > update_logs** dan pastikan log "Tambah dokumen"
-    muncul.
-11. Kembali ke menu **Database Regulasi**, **SOP Center**, atau **Data Standar**
-    sesuai tipe dokumen.
-12. Buka detail dokumen dan cek preview serta tombol download.
+2. Untuk database lama, jalankan `supabase-add-external-file-url.sql`.
+3. Pastikan publishable/anon key sudah dimasukkan ke `app.js`.
+4. Buka menu **Admin** dan login.
+5. Isi metadata dokumen.
+6. Pilih salah satu sumber file:
+   - **Upload PDF ke Supabase**: pilih PDF, lalu simpan. File masuk ke bucket
+     `regulatory-files` dan detail menampilkan preview serta download.
+   - **Link Google Drive / eksternal**: isi URL `http://` atau `https://`.
+     Tidak ada upload Storage dan detail menampilkan tombol **Buka File**.
+   - **Tidak ada file untuk saat ini**: simpan langsung tanpa PDF atau link.
+     Detail menampilkan **File belum tersedia**.
+7. Periksa **Table Editor > documents** dan **update_logs**.
+8. Buka detail dokumen dari Database Regulasi, SOP Center, Data Standar, atau
+   Service Mapping.
 
 ## 7. Data Standar dan Perbaikan Tipe Dokumen
 
@@ -159,7 +166,7 @@ Untuk menambah standar:
 1. Jalankan `supabase-add-standar-document-type.sql`.
 2. Login melalui menu **Admin**.
 3. Pilih **Standar** pada field **Tipe dokumen**.
-4. Lengkapi metadata dan PDF, lalu simpan.
+4. Lengkapi metadata dan pilih sumber file sesuai kebutuhan, lalu simpan.
 5. Buka menu **Data Standar** dan pastikan dokumen muncul.
 
 Jika dokumen berada di menu yang salah, klik **Edit**, ubah **Tipe dokumen**
@@ -172,7 +179,10 @@ Setelah login:
 
 - tombol **Edit** mengisi form dengan metadata dokumen;
 - PDF baru bersifat opsional saat edit;
-- jika PDF baru dipilih, file lama akan dicoba dihapus setelah update sukses;
+- file Supabase lama tetap digunakan jika sumber file tetap Supabase dan tidak
+  ada PDF baru;
+- admin dapat mengganti sumber file menjadi link eksternal atau tanpa file;
+- mengganti sumber file tidak otomatis menghapus objek lama dari Storage;
 - tombol **Hapus** menghapus metadata, membuat update log, dan mencoba
   menghapus file Storage;
 - setiap operasi akan ditolak oleh RLS jika session Auth tidak aktif.

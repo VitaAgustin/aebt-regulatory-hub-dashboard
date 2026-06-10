@@ -1015,6 +1015,36 @@ tbody tr:last-child td {
   font-size: 10px;
 }
 
+.file-source-indicator {
+  width: fit-content;
+  max-width: 100%;
+  margin-top: 6px;
+  padding: 3px 7px;
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: #64748b;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.file-source-indicator.supabase {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.file-source-indicator.external {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.file-source-indicator.none {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
 .badge {
   width: fit-content;
   max-width: 100%;
@@ -1476,6 +1506,37 @@ td .empty-state {
   text-align: center;
 }
 
+.external-file-placeholder {
+  align-content: center;
+  gap: 10px;
+}
+
+.external-file-placeholder strong,
+.external-file-placeholder small {
+  display: block;
+}
+
+.external-file-placeholder small {
+  color: var(--muted);
+}
+
+.external-file-placeholder .button {
+  margin: 8px auto 0;
+}
+
+.external-file-icon {
+  width: 48px;
+  height: 48px;
+  margin: 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: var(--teal-light);
+  color: var(--teal-dark);
+  font-size: 11px;
+  font-weight: 800;
+}
+
 .auth-panel {
   padding: 28px;
   display: grid;
@@ -1604,6 +1665,80 @@ td .empty-state {
   color: var(--text);
   font-size: 13px;
   font-weight: 800;
+}
+
+.file-source-options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.file-source-option {
+  min-width: 0;
+  min-height: 104px;
+  margin: 0;
+  padding: 14px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  cursor: pointer;
+  transition:
+    border-color 150ms ease,
+    background 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.file-source-option:has(input:checked) {
+  border-color: #67c8be;
+  background: var(--surface-teal);
+  box-shadow: 0 0 0 2px rgba(15, 118, 110, 0.08);
+}
+
+.file-source-option input {
+  flex: 0 0 auto;
+  width: 17px;
+  height: 17px;
+  min-height: 17px;
+  margin: 1px 0 0;
+  accent-color: var(--teal);
+}
+
+.file-source-option span {
+  min-width: 0;
+}
+
+.file-source-option strong,
+.file-source-option small {
+  display: block;
+}
+
+.file-source-option strong {
+  color: var(--text);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.file-source-option small {
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 500;
+  line-height: 1.45;
+}
+
+.file-source-fields {
+  margin-top: 14px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: #fff;
+}
+
+.file-source-fields label {
+  margin: 0;
 }
 
 .span-2 {
@@ -2009,6 +2144,10 @@ td .empty-state {
   .service-manager-forms,
   .custom-service-list {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .file-source-options {
+    grid-template-columns: 1fr;
   }
 
   .filter-bar {

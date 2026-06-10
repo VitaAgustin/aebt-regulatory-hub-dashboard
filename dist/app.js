@@ -132,6 +132,7 @@ document.addEventListener("DOMContentLoaded", initialize);
 
 async function initialize() {
   bindEvents();
+  syncFileSourceFields();
   renderServiceCheckboxes();
   if (!location.hash) {
     const legacyRoute = routeFromPathname();
@@ -260,6 +261,7 @@ function bindEvents() {
   $("#admin-login-form").addEventListener("submit", handleLogin);
   $("#admin-logout").addEventListener("click", handleLogout);
   $("#document-form").addEventListener("submit", handleDocumentSubmit);
+  $("#document-form").addEventListener("change", handleDocumentFormChange);
   $("#cancel-edit").addEventListener("click", resetEditor);
   $("#service-category-form").addEventListener("submit", handleServiceCategorySubmit);
   $("#service-item-form").addEventListener("submit", handleServiceItemSubmit);
@@ -558,6 +560,7 @@ function loadRecentDocuments() {
           <td>
             <div class="document-title">${escapeHtml(doc.title)}</div>
             <div class="document-meta">${escapeHtml(doc.regulation_number || "-")}</div>
+            ${fileSourceIndicator(doc)}
           </td>
           <td>${typeBadge(doc.document_type)}</td>
           <td>${escapeHtml(doc.category || "-")}</td>
@@ -637,6 +640,7 @@ function renderDocumentTable() {
             <div class="document-meta">${escapeHtml(
               doc.regulation_number || String(doc.document_type).toUpperCase()
             )}</div>
+            ${fileSourceIndicator(doc)}
           </td>
           <td>${escapeHtml(doc.category || "-")}</td>
           <td>${statusBadge(doc.status)}</td>
@@ -975,6 +979,7 @@ function renderSubServiceDocuments(subServiceName) {
                     <div class="document-meta">${escapeHtml(
                       doc.regulation_number || doc.file_name || "-"
                     )}</div>
+                    ${fileSourceIndicator(doc)}
                   </td>
                   <td>${typeBadge(doc.document_type)}</td>
                   <td>${escapeHtml(doc.category || "-")}</td>
@@ -1049,7 +1054,12 @@ async function renderDocumentDetail(id) {
     return;
   }
 
-  const storagePath = validStoragePath(doc.file_path);
+  const fileSource = getDocumentFileSource(doc);
+  const storagePath =
+    fileSource === "supabase" ? validStoragePath(doc.file_path) : null;
+  const externalFileUrl =
+    fileSource === "external" ? validExternalUrl(doc.external_file_url) : null;
+  const filePanel = getFilePanelContent(doc, fileSource);
   $("#detail-updated").textContent = `Diperbarui ${formatDateTime(doc.updated_at)}`;
   container.innerHTML = `
     <article>
@@ -1057,6 +1067,7 @@ async function renderDocumentDetail(id) {
         <div class="detail-title-row">
           <div>
             ${typeBadge(doc.document_type)}
+            ${fileSourceIndicator(doc)}
             <h1>${escapeHtml(doc.title)}</h1>
             <p class="muted">${escapeHtml(doc.regulation_number || doc.file_name || "-")}</p>
           </div>
@@ -1120,15 +1131,13 @@ async function renderDocumentDetail(id) {
           <section class="detail-section pdf-section">
             <div class="section-heading">
               <div>
-                <h2>Preview PDF</h2>
-                <p>${escapeHtml(
-                  storagePath ? doc.file_name || "Dokumen PDF" : "File belum tersedia"
-                )}</p>
+                <h2>${escapeHtml(filePanel.title)}</h2>
+                <p>${escapeHtml(filePanel.subtitle)}</p>
               </div>
             </div>
-            <div id="pdf-preview" class="pdf-placeholder">${
-              storagePath ? "Menyiapkan signed URL..." : "File belum tersedia"
-            }</div>
+            <div id="pdf-preview" class="pdf-placeholder">${escapeHtml(
+              filePanel.message
+            )}</div>
           </section>
         </aside>
       </div>
@@ -1136,7 +1145,30 @@ async function renderDocumentDetail(id) {
   `;
 
   if (storagePath) await attachSignedUrls(doc, renderToken);
+  else if (externalFileUrl) attachExternalFile(doc, externalFileUrl, renderToken);
   else showFileUnavailable();
+}
+
+function getFilePanelContent(doc, fileSource = getDocumentFileSource(doc)) {
+  if (fileSource === "supabase") {
+    return {
+      title: "Preview PDF",
+      subtitle: doc.file_name || "Dokumen PDF",
+      message: "Menyiapkan signed URL..."
+    };
+  }
+  if (fileSource === "external") {
+    return {
+      title: "File eksternal",
+      subtitle: "Google Drive / link eksternal",
+      message: "File tersimpan di link eksternal"
+    };
+  }
+  return {
+    title: "File dokumen",
+    subtitle: "File belum tersedia",
+    message: "File belum tersedia"
+  };
 }
 
 async function attachSignedUrls(doc, renderToken) {
@@ -1198,12 +1230,41 @@ async function attachSignedUrls(doc, renderToken) {
   }
 }
 
+function attachExternalFile(doc, externalFileUrl, renderToken) {
+  if (renderToken !== state.detailRenderToken) return;
+  const safeUrl = validExternalUrl(externalFileUrl);
+  if (!safeUrl) {
+    showFileUnavailable();
+    return;
+  }
+
+  hideFileActions();
+  const openLink = $("#open-file-link");
+  openLink.href = safeUrl;
+  openLink.textContent = "Buka File";
+  openLink.classList.remove("hidden");
+
+  const preview = $("#pdf-preview");
+  if (preview) {
+    const hostname = new URL(safeUrl).hostname.replace(/^www\./, "");
+    preview.className = "pdf-placeholder external-file-placeholder";
+    preview.innerHTML = `
+      <span class="external-file-icon" aria-hidden="true">URL</span>
+      <strong>File tersimpan di link eksternal</strong>
+      <small>${escapeHtml(hostname)}</small>
+      <a class="button primary" href="${escapeAttribute(
+        safeUrl
+      )}" target="_blank" rel="noopener noreferrer">Buka File</a>
+    `;
+  }
+}
+
 function showFileUnavailable() {
   hideFileActions();
   const preview = $("#pdf-preview");
   if (preview) {
     preview.className = "pdf-placeholder";
-    preview.textContent = "File belum tersedia";
+    preview.textContent = "File belum tersedia.";
   }
 }
 
@@ -1667,6 +1728,39 @@ function documentRowActions(documentId, detailLabel = "Detail") {
   `;
 }
 
+function handleDocumentFormChange(event) {
+  if (event.target.name === "file_source") syncFileSourceFields();
+}
+
+function syncFileSourceFields() {
+  const form = $("#document-form");
+  if (!form) return;
+
+  const source = normalizeFileSource(form.elements.file_source?.value);
+  const supabaseFields = $("#supabase-file-fields");
+  const externalFields = $("#external-file-fields");
+  const fileInput = form.elements.file;
+  const externalInput = form.elements.external_file_url;
+  const existingPath = validStoragePath(form.elements.existing_file_path?.value);
+
+  supabaseFields?.classList.toggle("hidden", source !== "supabase");
+  externalFields?.classList.toggle("hidden", source !== "external");
+
+  if (fileInput) {
+    fileInput.required = false;
+    if (source !== "supabase") fileInput.value = "";
+  }
+  if (externalInput) externalInput.required = source === "external";
+
+  const note = $("#existing-file-note");
+  if (note) {
+    note.textContent =
+      source === "supabase" && existingPath
+        ? "File Supabase lama tetap digunakan jika tidak memilih PDF baru."
+        : "Pilih PDF yang akan diunggah ke Supabase Storage.";
+  }
+}
+
 async function handleDocumentSubmit(event) {
   event.preventDefault();
   if (!requireAdmin()) return;
@@ -1676,24 +1770,46 @@ async function handleDocumentSubmit(event) {
   const id = cleanText(form.get("id"));
   const original = id ? state.documents.find((doc) => doc.id === id) : null;
   const file = form.get("file");
+  const hasNewFile = file instanceof File && file.size > 0;
+  const fileSource = normalizeFileSource(form.get("file_source"), original);
+  const originalStoragePath = validStoragePath(original?.file_path);
+  const externalFileUrl = validExternalUrl(form.get("external_file_url"));
 
-  if (!id && (!(file instanceof File) || !file.size)) {
-    showToast("File PDF wajib dipilih untuk dokumen baru.", true);
+  if (fileSource === "supabase" && !hasNewFile && !originalStoragePath) {
+    showToast("Pilih file PDF untuk sumber file Supabase.", true);
     return;
   }
 
-  if (file instanceof File && file.size && file.type !== "application/pdf") {
+  if (fileSource === "external" && !externalFileUrl) {
+    showToast(
+      "Link file eksternal wajib diisi dan harus diawali http:// atau https://.",
+      true
+    );
+    return;
+  }
+
+  if (
+    fileSource === "supabase" &&
+    hasNewFile &&
+    file.type !== "application/pdf" &&
+    !file.name.toLowerCase().endsWith(".pdf")
+  ) {
     showToast("File harus berformat PDF.", true);
     return;
   }
 
-  setFormBusy(true, id ? "Memperbarui dokumen..." : "Mengunggah dokumen...");
+  setFormBusy(true, id ? "Memperbarui dokumen..." : "Menyimpan dokumen...");
 
   let uploadedPath = null;
   try {
     const payload = buildDocumentPayload(form);
+    payload.file_source = fileSource;
+    payload.external_file_url =
+      fileSource === "external" ? externalFileUrl : null;
+    payload.file_path = original?.file_path || null;
+    payload.file_name = original?.file_name || null;
 
-    if (file instanceof File && file.size) {
+    if (fileSource === "supabase" && hasNewFile) {
       uploadedPath = makeStoragePath(payload, file.name);
       const { error: uploadError } = await db.storage
         .from(STORAGE_BUCKET)
@@ -1705,9 +1821,6 @@ async function handleDocumentSubmit(event) {
       if (uploadError) throw uploadError;
       payload.file_path = uploadedPath;
       payload.file_name = file.name;
-    } else if (original) {
-      payload.file_path = original.file_path;
-      payload.file_name = original.file_name;
     }
 
     if (id && original) {
@@ -1731,10 +1844,6 @@ async function handleDocumentSubmit(event) {
         throw logError;
       }
 
-      const originalStoragePath = validStoragePath(original.file_path);
-      if (uploadedPath && originalStoragePath && originalStoragePath !== uploadedPath) {
-        await removeStorageFile(originalStoragePath);
-      }
       showToast(`Dokumen "${data.title}" berhasil diperbarui.`);
     } else {
       const { data, error } = await db
@@ -1783,6 +1892,8 @@ function buildDocumentPayload(form) {
     status: cleanText(form.get("status")) || "Berlaku",
     related_services: cleanText(getSelectedServices().join(", ")),
     source_url: cleanText(form.get("source_url")),
+    file_source: normalizeFileSource(form.get("file_source")),
+    external_file_url: cleanText(form.get("external_file_url")),
     last_checked_at: cleanText(form.get("last_checked_at")),
     pic_update: cleanText(form.get("pic_update")) || state.session.user.email,
     notes: cleanText(form.get("notes"))
@@ -1818,7 +1929,7 @@ function renderAdminDocuments() {
           </td>
           <td>${typeBadge(doc.document_type)}</td>
           <td>${statusBadge(doc.status)}</td>
-          <td>${escapeHtml(doc.file_name || "-")}</td>
+          <td>${fileSourceIndicator(doc)}</td>
           <td>
             <div class="table-actions">
               <button class="button secondary small" data-edit-id="${doc.id}">Edit</button>
@@ -1852,14 +1963,16 @@ function startEdit(id) {
   form.elements.id.value = doc.id;
   form.elements.existing_file_path.value = doc.file_path || "";
   form.elements.existing_file_name.value = doc.file_name || "";
+  form.elements.file_source.value = getDocumentFileSource(doc);
+  form.elements.external_file_url.value = doc.external_file_url || "";
   form.elements.file.required = false;
   setSelectedServices(doc.related_services);
+  syncFileSourceFields();
 
   $("#editor-title").textContent = "Edit dokumen";
   $("#editor-description").textContent = `Mengedit: ${doc.title}`;
   $("#save-document").textContent = "Simpan perubahan";
   $("#cancel-edit").classList.remove("hidden");
-  $("#file-required-mark").classList.add("hidden");
   $(".editor-section").scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
@@ -1870,15 +1983,16 @@ function resetEditor() {
   form.elements.id.value = "";
   form.elements.existing_file_path.value = "";
   form.elements.existing_file_name.value = "";
-  form.elements.file.required = true;
+  form.elements.file.required = false;
+  form.elements.file_source.value = "none";
   state.legacyRelatedServices = [];
   setSelectedServices("");
+  syncFileSourceFields();
   $("#editor-title").textContent = "Tambah dokumen";
   $("#editor-description").textContent =
-    "Upload PDF dan simpan metadata ke Supabase.";
+    "Simpan metadata dengan PDF Supabase, link eksternal, atau tanpa file.";
   $("#save-document").textContent = "Simpan dokumen";
   $("#cancel-edit").classList.add("hidden");
-  $("#file-required-mark").classList.remove("hidden");
   $("#form-status").textContent = "";
 }
 
@@ -1888,7 +2002,7 @@ async function deleteDocument(id) {
   if (!doc) return;
 
   const confirmed = window.confirm(
-    `Hapus "${doc.title}"? Metadata akan dihapus dan file PDF akan dicoba dihapus dari Storage.`
+    `Hapus "${doc.title}"? Metadata akan dihapus dan file Supabase terkait akan dicoba dihapus dari Storage.`
   );
   if (!confirmed) return;
 
@@ -2086,6 +2200,39 @@ function validStoragePath(value) {
   return path;
 }
 
+function validExternalUrl(value) {
+  if (typeof value !== "string") return null;
+  const candidate = value.trim();
+  if (!candidate) return null;
+
+  try {
+    const parsed = new URL(candidate);
+    if (!["http:", "https:"].includes(parsed.protocol)) return null;
+    return parsed.href;
+  } catch {
+    return null;
+  }
+}
+
+function getDocumentFileSource(doc) {
+  const declaredSource = String(doc?.file_source || "").trim().toLowerCase();
+  const hasStorageFile = Boolean(validStoragePath(doc?.file_path));
+  const hasExternalFile = Boolean(validExternalUrl(doc?.external_file_url));
+
+  if (declaredSource === "external") return hasExternalFile ? "external" : "none";
+  if (declaredSource === "supabase") return hasStorageFile ? "supabase" : "none";
+  if (declaredSource === "none") return "none";
+  if (hasExternalFile) return "external";
+  if (hasStorageFile) return "supabase";
+  return "none";
+}
+
+function normalizeFileSource(value, doc = null) {
+  const source = String(value || "").trim().toLowerCase();
+  if (["supabase", "external", "none"].includes(source)) return source;
+  return doc ? getDocumentFileSource(doc) : "none";
+}
+
 function splitServices(value) {
   return String(value || "")
     .split(/[,;\n|]+/)
@@ -2149,6 +2296,19 @@ function typeBadge(type) {
     standar: { label: "Standar", className: "standar" }
   }[type] || { label: String(type || "-"), className: "" };
   return `<span class="badge ${badge.className}">${escapeHtml(badge.label)}</span>`;
+}
+
+function fileSourceIndicator(doc) {
+  const source = getDocumentFileSource(doc);
+  const sourceMeta = {
+    supabase: { label: "Supabase PDF", className: "supabase" },
+    external: { label: "Link Drive/Eksternal", className: "external" },
+    none: { label: "Belum ada file", className: "none" }
+  }[source];
+
+  return `<span class="file-source-indicator ${sourceMeta.className}">${escapeHtml(
+    sourceMeta.label
+  )}</span>`;
 }
 
 function statusBadge(status) {

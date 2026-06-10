@@ -28,6 +28,9 @@ create table if not exists public.documents (
   source_url text,
   file_path text,
   file_name text,
+  external_file_url text,
+  file_source text not null default 'none'
+    check (file_source in ('supabase', 'external', 'none')),
   last_checked_at date,
   pic_update text,
   notes text,
