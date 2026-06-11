@@ -1572,8 +1572,6 @@ async function renderDocumentDetail(id) {
             <section class="detail-section">
               <h2>Substansi regulasi</h2>
               ${detailField("Ringkasan", doc.summary)}
-              ${detailField("Kewajiban utama", doc.key_obligation)}
-              ${detailField("Pihak terdampak", doc.impacted_party)}
             </section>
             <section class="detail-section">
               <h2>Keterkaitan SBU</h2>
@@ -1587,9 +1585,6 @@ async function renderDocumentDetail(id) {
                 renderServiceTags(doc.related_portfolios),
                 true
               )}
-              ${detailField("Peluang layanan", doc.service_opportunity)}
-              ${detailField("Risiko compliance", doc.compliance_risk)}
-              ${detailField("Action point", doc.action_point)}
             </section>
           </div>
 
