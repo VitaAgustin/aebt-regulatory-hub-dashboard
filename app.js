@@ -511,7 +511,7 @@ function renderDocumentLoadingState() {
     5,
     "Memuat dokumen dari Supabase..."
   );
-  $("#documents-body").innerHTML = emptyRow(6, "Memuat dokumen dari Supabase...");
+  $("#documents-body").innerHTML = emptyRow(5, "Memuat dokumen dari Supabase...");
   $("#admin-documents-body").innerHTML = emptyRow(
     5,
     "Memuat dokumen dari Supabase..."
@@ -696,8 +696,7 @@ function renderDocumentTable() {
       doc.title,
       doc.regulation_number,
       doc.summary,
-      doc.category,
-      doc.related_services
+      doc.category
     ]
       .filter(Boolean)
       .join(" ")
@@ -714,7 +713,7 @@ function renderDocumentTable() {
   $("#documents-count").textContent = `${docs.length} dokumen`;
 
   if (!docs.length) {
-    body.innerHTML = emptyRow(6, "Tidak ada dokumen yang sesuai filter.");
+    body.innerHTML = emptyRow(5, "Tidak ada dokumen yang sesuai filter.");
     return;
   }
 
@@ -724,15 +723,12 @@ function renderDocumentTable() {
         <tr>
           <td>
             <div class="document-title">${escapeHtml(doc.title)}</div>
-            <div class="document-meta">${escapeHtml(
-              doc.regulation_number || String(doc.document_type).toUpperCase()
-            )}</div>
-            ${fileSourceIndicator(doc)}
           </td>
+          <td>${escapeHtml(
+            doc.regulation_number || String(doc.document_type).toUpperCase()
+          )}</td>
           <td>${escapeHtml(doc.category || "-")}</td>
           <td>${statusBadge(doc.status)}</td>
-          <td>${escapeHtml(doc.related_services || "-")}</td>
-          <td>${formatDate(doc.last_checked_at)}</td>
           <td>${documentRowActions(doc.id)}</td>
         </tr>
       `
@@ -2763,7 +2759,7 @@ function renderEmptyApplication(message = "Hubungkan aplikasi ke Supabase untuk 
   state.selectedPortfolioItemCode = null;
   renderAll();
   $("#recent-documents-body").innerHTML = emptyRow(5, message);
-  $("#documents-body").innerHTML = emptyRow(6, message);
+  $("#documents-body").innerHTML = emptyRow(5, message);
 }
 
 function renderDocumentFetchError(error) {
@@ -2771,7 +2767,7 @@ function renderDocumentFetchError(error) {
   renderAll();
   const message = readableError(error);
   $("#recent-documents-body").innerHTML = emptyRow(5, message);
-  $("#documents-body").innerHTML = emptyRow(6, message);
+  $("#documents-body").innerHTML = emptyRow(5, message);
 }
 
 function ensureConfigured() {

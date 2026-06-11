@@ -966,6 +966,37 @@ table {
   border-collapse: collapse;
 }
 
+.documents-table {
+  min-width: 700px;
+  table-layout: fixed;
+}
+
+.documents-table th:nth-child(1),
+.documents-table td:nth-child(1) {
+  width: 40%;
+}
+
+.documents-table th:nth-child(2),
+.documents-table td:nth-child(2) {
+  width: 21%;
+}
+
+.documents-table th:nth-child(3),
+.documents-table td:nth-child(3) {
+  width: 18%;
+}
+
+.documents-table th:nth-child(4),
+.documents-table td:nth-child(4) {
+  width: 12%;
+}
+
+.documents-table th:nth-child(5),
+.documents-table td:nth-child(5) {
+  width: 9%;
+  text-align: right;
+}
+
 th,
 td {
   padding: 14px 15px;
