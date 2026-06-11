@@ -9,6 +9,7 @@ const SERVICE_CATEGORY_TABLE = "service_categories";
 const SERVICE_ITEM_TABLE = "service_items";
 const PORTFOLIO_CATEGORY_TABLE = "portfolio_categories";
 const PORTFOLIO_ITEM_TABLE = "portfolio_items";
+const SITE_ACCESS_SESSION_KEY = "aebt_site_unlocked";
 const SUPABASE_CLIENT_CDN =
   "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.107.0/dist/umd/supabase.min.js";
 const SUPABASE_CLIENT_URL = SUPABASE_URL.trim()
@@ -133,7 +134,9 @@ const state = {
   documentsPromise: null,
   serviceCatalogPromise: null,
   portfolioCatalogPromise: null,
-  supabasePromise: null
+  supabasePromise: null,
+  portalInitialized: false,
+  siteUnlocked: false
 };
 
 const $ = (selector, parent = document) => parent.querySelector(selector);
@@ -146,6 +149,22 @@ async function initialize() {
   syncFileSourceFields();
   renderServiceCheckboxes();
   renderPortfolioCheckboxes();
+
+  if (hasSiteAccessSession()) {
+    showPortal();
+    await initializePortal();
+  } else {
+    showSiteAccessGate();
+  }
+}
+
+async function initializePortal() {
+  if (state.portalInitialized) {
+    route();
+    return;
+  }
+  state.portalInitialized = true;
+
   if (!location.hash) {
     const legacyRoute = routeFromPathname();
     history.replaceState(null, "", `/#${legacyRoute || "home"}`);
@@ -161,7 +180,7 @@ async function initialize() {
     return;
   }
 
-  state.supabasePromise = loadSupabaseClient();
+  state.supabasePromise = ensureSupabaseClient();
   const documentsPromise = loadDocuments({ preserveExisting: hasCachedDocuments });
   const serviceCatalogPromise = state.supabasePromise.then(() =>
     loadServiceCatalog()
@@ -188,6 +207,17 @@ async function initialize() {
   }
 
   route();
+}
+
+function ensureSupabaseClient() {
+  if (db) return Promise.resolve(db);
+  if (!state.supabasePromise) {
+    state.supabasePromise = loadSupabaseClient().catch((error) => {
+      state.supabasePromise = null;
+      throw error;
+    });
+  }
+  return state.supabasePromise;
 }
 
 async function loadSupabaseClient() {
@@ -257,7 +287,9 @@ function routeFromPathname() {
 }
 
 function bindEvents() {
-  window.addEventListener("hashchange", route);
+  window.addEventListener("hashchange", () => {
+    if (hasSiteAccessSession()) route();
+  });
   window.addEventListener("resize", () => {
     if (window.innerWidth > 1080) setSidebarOpen(false);
   });
@@ -266,6 +298,9 @@ function bindEvents() {
     setSidebarOpen(!document.body.classList.contains("sidebar-open"));
   });
   $("#sidebar-backdrop").addEventListener("click", () => setSidebarOpen(false));
+  $("#site-access-form").addEventListener("submit", handleSiteAccessSubmit);
+  $("#site-access-password").addEventListener("input", clearSiteAccessError);
+  $("#lock-portal").addEventListener("click", lockPortal);
 
   $("#document-filters").addEventListener("input", renderDocumentTable);
   $("#document-filters").addEventListener("change", renderDocumentTable);
@@ -309,6 +344,112 @@ function bindEvents() {
   );
   $("#admin-documents-body").addEventListener("click", handleAdminTableAction);
   $("#service-catalog-list").addEventListener("click", handleServiceCatalogAction);
+}
+
+function hasSiteAccessSession() {
+  if (state.siteUnlocked) return true;
+  try {
+    const unlocked =
+      sessionStorage.getItem(SITE_ACCESS_SESSION_KEY) === "true";
+    state.siteUnlocked = unlocked;
+    return unlocked;
+  } catch {
+    return false;
+  }
+}
+
+function setSiteAccessSession(unlocked) {
+  state.siteUnlocked = unlocked;
+  try {
+    if (unlocked) sessionStorage.setItem(SITE_ACCESS_SESSION_KEY, "true");
+    else sessionStorage.removeItem(SITE_ACCESS_SESSION_KEY);
+  } catch {
+    // Access still works for the current page when session storage is blocked.
+  }
+}
+
+function showPortal() {
+  $("#site-access-gate").classList.add("hidden");
+  $("#portal-app").classList.remove("hidden");
+  $("#portal-app").setAttribute("aria-hidden", "false");
+  document.body.classList.remove("portal-locked");
+}
+
+function showSiteAccessGate() {
+  $("#portal-app").classList.add("hidden");
+  $("#portal-app").setAttribute("aria-hidden", "true");
+  $("#site-access-gate").classList.remove("hidden");
+  document.body.classList.add("portal-locked");
+  clearSiteAccessError();
+  window.setTimeout(() => $("#site-access-password")?.focus(), 0);
+}
+
+function clearSiteAccessError() {
+  const error = $("#site-access-error");
+  error.textContent = "";
+  error.classList.add("hidden");
+}
+
+function showSiteAccessError(message) {
+  const error = $("#site-access-error");
+  error.textContent = message;
+  error.classList.remove("hidden");
+}
+
+function setSiteAccessBusy(active) {
+  const submit = $("#site-access-submit");
+  const input = $("#site-access-password");
+  submit.disabled = active;
+  input.disabled = active;
+  submit.textContent = active ? "Memverifikasi..." : "Masuk ke Portal";
+}
+
+async function handleSiteAccessSubmit(event) {
+  event.preventDefault();
+  clearSiteAccessError();
+  const formElement = event.currentTarget;
+
+  if (!configured) {
+    showSiteAccessError(
+      "Gagal memverifikasi password akses. Periksa koneksi atau konfigurasi Supabase."
+    );
+    return;
+  }
+
+  const password = String(
+    new FormData(formElement).get("password") || ""
+  );
+  setSiteAccessBusy(true);
+
+  try {
+    const client = await ensureSupabaseClient();
+    const { data, error } = await client.rpc("verify_site_password", {
+      input_password: password
+    });
+    if (error) throw error;
+    if (data !== true) {
+      showSiteAccessError("Password akses salah.");
+      return;
+    }
+
+    setSiteAccessSession(true);
+    formElement.reset();
+    showPortal();
+    await initializePortal();
+  } catch {
+    showSiteAccessError(
+      "Gagal memverifikasi password akses. Periksa koneksi atau konfigurasi Supabase."
+    );
+  } finally {
+    setSiteAccessBusy(false);
+  }
+}
+
+function lockPortal() {
+  setSiteAccessSession(false);
+  setSidebarOpen(false);
+  setLoading(false);
+  showSiteAccessGate();
 }
 
 function setSidebarOpen(open) {

@@ -48,6 +48,10 @@ body {
   line-height: 1.55;
 }
 
+body.portal-locked {
+  overflow: hidden;
+}
+
 button,
 input,
 select,
@@ -83,6 +87,197 @@ code {
 
 .dashboard-layout {
   min-height: 100vh;
+}
+
+.site-access-gate {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  min-height: 100vh;
+  padding: 32px;
+  display: grid;
+  place-items: center;
+  overflow: auto;
+  background:
+    linear-gradient(rgba(15, 118, 110, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(15, 118, 110, 0.035) 1px, transparent 1px),
+    #f8fafc;
+  background-size: 32px 32px;
+}
+
+.access-gate-shell {
+  width: min(980px, 100%);
+  min-height: 560px;
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(310px, 0.75fr);
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: var(--surface);
+  box-shadow: 0 28px 70px rgba(15, 23, 42, 0.12);
+}
+
+.access-gate-brand {
+  grid-column: 1 / -1;
+  height: 76px;
+  padding: 18px 24px;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  border-bottom: 1px solid var(--line);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.access-gate-mark {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: var(--teal);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 800;
+  box-shadow: 0 8px 18px rgba(15, 118, 110, 0.2);
+}
+
+.access-gate-content {
+  padding: 56px 52px;
+  align-self: center;
+}
+
+.access-gate-content h1 {
+  max-width: 540px;
+  margin: 8px 0 16px;
+  font-size: clamp(30px, 4vw, 46px);
+  line-height: 1.08;
+  letter-spacing: 0;
+}
+
+.access-gate-content > p:not(.eyebrow):not(.access-gate-note) {
+  max-width: 580px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.access-gate-form {
+  max-width: 480px;
+  margin-top: 30px;
+  display: grid;
+  gap: 10px;
+}
+
+.access-gate-form label {
+  color: #334155;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.access-gate-form input {
+  min-height: 48px;
+  background: #fff;
+}
+
+.access-gate-form .button {
+  min-height: 46px;
+  margin-top: 4px;
+  justify-content: center;
+}
+
+.access-gate-form .button:disabled {
+  opacity: 0.72;
+  cursor: wait;
+}
+
+.access-gate-error {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid #fecaca;
+  border-radius: 9px;
+  background: #fff1f2;
+  color: #991b1b;
+  font-size: 12px;
+}
+
+.access-gate-note {
+  max-width: 480px;
+  margin: 18px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.access-gate-visual {
+  position: relative;
+  min-height: 484px;
+  overflow: hidden;
+  border-left: 1px solid #99d7d2;
+  background: #e6fffa;
+}
+
+.access-visual-grid {
+  position: absolute;
+  inset: 0;
+  opacity: 0.7;
+  background:
+    linear-gradient(rgba(15, 118, 110, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(15, 118, 110, 0.08) 1px, transparent 1px);
+  background-size: 38px 38px;
+}
+
+.access-visual-document {
+  position: absolute;
+  top: 25%;
+  left: 18%;
+  width: 64%;
+  aspect-ratio: 0.82;
+  border: 8px solid #fff;
+  border-radius: 14px;
+  background:
+    linear-gradient(#99d7d2 0 0) 22px 30px / 58% 9px no-repeat,
+    linear-gradient(#cbd5e1 0 0) 22px 58px / 74% 7px no-repeat,
+    linear-gradient(#cbd5e1 0 0) 22px 80px / 66% 7px no-repeat,
+    linear-gradient(#cbd5e1 0 0) 22px 102px / 72% 7px no-repeat,
+    #fff;
+  box-shadow: 0 22px 48px rgba(15, 118, 110, 0.18);
+  transform: rotate(-3deg);
+}
+
+.access-visual-lock {
+  position: absolute;
+  right: 13%;
+  bottom: 19%;
+  width: 112px;
+  height: 92px;
+  border: 8px solid #0f766e;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 18px 38px rgba(15, 118, 110, 0.22);
+}
+
+.access-visual-lock::before {
+  content: "";
+  position: absolute;
+  left: 22px;
+  top: -58px;
+  width: 52px;
+  height: 58px;
+  border: 8px solid #0f766e;
+  border-bottom: 0;
+  border-radius: 28px 28px 0 0;
+}
+
+.access-visual-lock::after {
+  content: "";
+  position: absolute;
+  left: 43px;
+  top: 27px;
+  width: 12px;
+  height: 25px;
+  border-radius: 8px;
+  background: #0f766e;
 }
 
 .app-sidebar {
@@ -237,6 +432,44 @@ code {
   margin-top: 1px;
   color: var(--muted);
   font-size: 10px;
+}
+
+.sidebar-lock-button {
+  width: 100%;
+  min-height: 40px;
+  margin-top: 10px;
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  color: #475569;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    border-color 150ms ease,
+    color 150ms ease,
+    background 150ms ease;
+}
+
+.sidebar-lock-button:hover {
+  border-color: #76bfb8;
+  background: var(--surface-teal);
+  color: var(--teal-dark);
+}
+
+.sidebar-lock-button svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .sidebar-backdrop {
@@ -2274,6 +2507,35 @@ td .empty-state {
 
   .pdf-placeholder {
     min-height: 430px;
+  }
+}
+
+@media (max-width: 760px) {
+  .site-access-gate {
+    padding: 18px;
+    place-items: start center;
+  }
+
+  .access-gate-shell {
+    min-height: auto;
+    grid-template-columns: 1fr;
+  }
+
+  .access-gate-brand {
+    height: 68px;
+    padding: 14px 18px;
+  }
+
+  .access-gate-content {
+    padding: 36px 26px 40px;
+  }
+
+  .access-gate-content h1 {
+    font-size: 32px;
+  }
+
+  .access-gate-visual {
+    display: none;
   }
 }
 

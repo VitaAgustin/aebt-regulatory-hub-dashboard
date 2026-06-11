@@ -19,7 +19,56 @@
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <div class="dashboard-layout">
+    <section
+      id="site-access-gate"
+      class="site-access-gate"
+      aria-labelledby="site-access-title"
+    >
+      <div class="access-gate-shell">
+        <div class="access-gate-brand" aria-hidden="true">
+          <span class="access-gate-mark">AE</span>
+          <span>AEBT Internal Portal</span>
+        </div>
+        <div class="access-gate-content">
+          <p class="eyebrow">Secure portal access</p>
+          <h1 id="site-access-title">AEBT Regulatory Knowledge Hub</h1>
+          <p>
+            Masukkan password akses untuk membuka portal internal regulasi,
+            SOP, data standar, service mapping, dan portofolio SBU AEBT.
+          </p>
+          <form id="site-access-form" class="access-gate-form">
+            <label for="site-access-password">Password akses</label>
+            <input
+              id="site-access-password"
+              name="password"
+              type="password"
+              placeholder="Password akses"
+              autocomplete="current-password"
+              required
+            />
+            <p
+              id="site-access-error"
+              class="access-gate-error hidden"
+              role="alert"
+            ></p>
+            <button id="site-access-submit" class="button primary" type="submit">
+              Masuk ke Portal
+            </button>
+          </form>
+          <p class="access-gate-note">
+            Akses portal tidak memberikan hak tambah, edit, atau hapus data.
+            Pengelolaan tetap memerlukan login admin.
+          </p>
+        </div>
+        <div class="access-gate-visual" aria-hidden="true">
+          <span class="access-visual-grid"></span>
+          <span class="access-visual-document"></span>
+          <span class="access-visual-lock"></span>
+        </div>
+      </div>
+    </section>
+
+    <div id="portal-app" class="dashboard-layout hidden" aria-hidden="true">
       <aside id="app-sidebar" class="app-sidebar" aria-label="Navigasi aplikasi">
         <a class="brand" href="#home" aria-label="Buka halaman Home">
           <span class="brand-mark">AE</span>
@@ -73,6 +122,13 @@
             <small id="sidebar-account-state">Regulatory workspace</small>
           </span>
         </div>
+        <button id="lock-portal" class="sidebar-lock-button" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="5" y="10" width="14" height="10" rx="2" />
+            <path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v2" />
+          </svg>
+          <span>Lock Portal</span>
+        </button>
       </aside>
 
       <button

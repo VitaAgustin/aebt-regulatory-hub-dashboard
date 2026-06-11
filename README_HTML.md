@@ -46,6 +46,8 @@ Jangan pernah memasukkan `service_role`, secret key, atau database password ke
    PDF Supabase, link Google Drive/eksternal, atau disimpan tanpa file.
 9. Jalankan `supabase-add-portfolio-to-service-mapping.sql` untuk membuat
    katalog Portofolio SBU dan kolom `documents.related_portfolios`.
+10. Jalankan `supabase-site-access-password.sql` untuk membuat password akses
+    viewer melalui RPC tanpa mengekspos hash ke frontend.
 
 Script tersebut:
 
@@ -81,6 +83,11 @@ Migration `supabase-add-portfolio-to-service-mapping.sql` membuat tabel
 `portfolio_categories` dan `portfolio_items`, menambahkan kolom
 `documents.related_portfolios`, mengaktifkan RLS, serta mengisi data awal
 portofolio EBT 041 dan IAPPM 042.
+
+Migration `supabase-site-access-password.sql` membuat tabel
+`site_access_settings` dengan RLS aktif, menyimpan hash bcrypt, dan membuat
+RPC `verify_site_password`. Role `anon` dan `authenticated` hanya mendapat
+izin menjalankan RPC; keduanya tidak mendapat izin membaca `password_hash`.
 
 ## 3. Membuat Admin User
 
@@ -238,6 +245,21 @@ Script membaca kredensial server dari `.env.local` dan tidak pernah
 memasukkan service role key ke frontend atau manifest. File dengan nama atau
 nomor yang sudah ada akan diperbarui, sehingga impor dapat dijalankan ulang
 tanpa membuat duplikat dokumen.
+
+## 11. Password Akses Portal
+
+1. Jalankan `supabase-site-access-password.sql` di SQL Editor Supabase.
+2. Password awal untuk pengujian adalah `aebt2026`.
+3. Password hanya diverifikasi melalui RPC `verify_site_password`.
+4. Status portal tersimpan di `sessionStorage`, bukan `localStorage`.
+5. Tombol **Lock Portal** menghapus status akses viewer tanpa melakukan logout
+   dari Supabase Auth.
+
+Untuk mengganti password, jalankan contoh SQL yang tersedia sebagai komentar
+di bagian bawah `supabase-site-access-password.sql`. Gunakan password viewer
+yang berbeda dari password akun admin. Password viewer hanya membuka portal;
+semua operasi tambah, edit, hapus, dan upload tetap memerlukan session
+Supabase Auth.
 
 ## Catatan Keamanan
 
