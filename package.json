@@ -4,10 +4,11 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "node build-static.mjs",
+    "build": "npm run security:audit && node build-static.mjs && npm run security:audit",
     "build:next": "next build",
     "start": "next start",
     "lint": "next lint",
+    "security:audit": "node scripts/security-audit.mjs",
     "import:regulations": "node scripts/import-regulations.mjs"
   },
   "dependencies": {

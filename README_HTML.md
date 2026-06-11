@@ -28,8 +28,8 @@ Nilai tersebut tersedia di Supabase Dashboard:
 3. Salin **Project URL**.
 4. Salin **Publishable key** atau legacy **anon key**.
 
-Jangan pernah memasukkan `service_role`, secret key, atau database password ke
-`app.js`, HTML, repository publik, maupun static hosting.
+Jangan pernah memasukkan privileged server key, database password, atau secret
+lain ke `app.js`, HTML, repository publik, maupun static hosting.
 
 ## 2. Menjalankan SQL
 
@@ -249,17 +249,26 @@ tanpa membuat duplikat dokumen.
 ## 11. Password Akses Portal
 
 1. Jalankan `supabase-site-access-password.sql` di SQL Editor Supabase.
-2. Password awal untuk pengujian adalah `aebt2026`.
-3. Password hanya diverifikasi melalui RPC `verify_site_password`.
-4. Status portal tersimpan di `sessionStorage`, bukan `localStorage`.
-5. Tombol **Lock Portal** menghapus status akses viewer tanpa melakukan logout
+2. Migration tidak menyimpan password awal dalam source code.
+3. Buat password unik minimal 12 karakter melalui query terpisah:
+
+```sql
+select public.set_site_password('<PASSWORD_UNIK_MINIMAL_12_KARAKTER>');
+```
+
+Ganti placeholder langsung di SQL Editor dan jangan menyimpan nilai sebenarnya
+ke repository, README, screenshot, atau chat.
+
+4. Password hanya diverifikasi melalui RPC `verify_site_password`.
+5. Status portal tersimpan di `sessionStorage`, bukan `localStorage`.
+6. Tombol **Lock Portal** menghapus status akses viewer tanpa melakukan logout
    dari Supabase Auth.
 
-Untuk mengganti password, jalankan contoh SQL yang tersedia sebagai komentar
-di bagian bawah `supabase-site-access-password.sql`. Gunakan password viewer
-yang berbeda dari password akun admin. Password viewer hanya membuka portal;
-semua operasi tambah, edit, hapus, dan upload tetap memerlukan session
-Supabase Auth.
+Untuk mengganti password, panggil kembali `set_site_password` dari SQL Editor
+dengan nilai baru. Function menonaktifkan hash lama dan menyimpan hash bcrypt
+baru. Gunakan password viewer yang berbeda dari password akun admin. Password
+viewer hanya membuka portal; semua operasi tambah, edit, hapus, dan upload
+tetap memerlukan session Supabase Auth.
 
 ## Catatan Keamanan
 
@@ -269,3 +278,4 @@ Supabase Auth.
 - Semua perlindungan tulis berasal dari RLS, bukan dari menyembunyikan tombol.
 - Nonaktifkan anonymous sign-in dan public sign-up agar role `authenticated`
   hanya diberikan kepada akun admin yang memang dibuat secara manual.
+- Jalankan `npm run security:audit` sebelum commit atau deploy.

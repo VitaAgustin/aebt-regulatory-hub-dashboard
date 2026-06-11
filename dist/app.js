@@ -10,15 +10,15 @@ const SERVICE_ITEM_TABLE = "service_items";
 const PORTFOLIO_CATEGORY_TABLE = "portfolio_categories";
 const PORTFOLIO_ITEM_TABLE = "portfolio_items";
 const SITE_ACCESS_SESSION_KEY = "aebt_site_unlocked";
-const SUPABASE_CLIENT_CDN =
+const CLIENT_LIBRARY_URL =
   "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.107.0/dist/umd/supabase.min.js";
-const SUPABASE_CLIENT_URL = SUPABASE_URL.trim()
+const PROJECT_API_URL = SUPABASE_URL.trim()
   .replace(/\/rest\/v1\/?$/i, "")
   .replace(/\/+$/, "");
 
 const configured =
-  SUPABASE_CLIENT_URL.startsWith("https://") &&
-  !SUPABASE_CLIENT_URL.includes("YOUR_PROJECT") &&
+  PROJECT_API_URL.startsWith("https://") &&
+  !PROJECT_API_URL.includes("YOUR_PROJECT") &&
   SUPABASE_ANON_KEY.length > 30 &&
   !SUPABASE_ANON_KEY.includes("YOUR_SUPABASE");
 
@@ -224,7 +224,7 @@ async function loadSupabaseClient() {
   if (!window.supabase) {
     await new Promise((resolve, reject) => {
       const script = document.createElement("script");
-      script.src = SUPABASE_CLIENT_CDN;
+  script.src = CLIENT_LIBRARY_URL;
       script.async = true;
       script.onload = resolve;
       script.onerror = () =>
@@ -233,7 +233,7 @@ async function loadSupabaseClient() {
     });
   }
 
-  db = window.supabase.createClient(SUPABASE_CLIENT_URL, SUPABASE_ANON_KEY, {
+  db = window.supabase.createClient(PROJECT_API_URL, SUPABASE_ANON_KEY, {
     auth: {
       persistSession: true,
       autoRefreshToken: true,
@@ -597,7 +597,7 @@ async function loadPortfolioCatalog({ force = false } = {}) {
 }
 
 async function fetchDocumentsFromRest() {
-  const endpoint = new URL(`${SUPABASE_CLIENT_URL}/rest/v1/documents`);
+  const endpoint = new URL(`${PROJECT_API_URL}/rest/v1/documents`);
   endpoint.searchParams.set("select", "*");
   endpoint.searchParams.set("order", "updated_at.desc");
 

@@ -1,6 +1,7 @@
 # AEBT Regulatory Knowledge Hub
 
-Web database regulasi dan SOP untuk SBU AEBT. Aplikasi ini menyimpan metadata dokumen di Supabase Postgres dan file PDF di Supabase Storage, sehingga file benar-benar bisa dilihat dan di-download.
+Versi produksi saat ini adalah aplikasi static `index.html`, `styles.css`, dan
+`app.js`. Panduan lengkap tersedia di `README_HTML.md`.
 
 ## Fitur
 
@@ -15,10 +16,9 @@ Web database regulasi dan SOP untuk SBU AEBT. Aplikasi ini menyimpan metadata do
 
 ## Stack
 
-- Next.js App Router
-- TypeScript
-- Supabase Postgres
-- Supabase Storage
+- HTML, CSS, dan JavaScript vanilla
+- Supabase Database, Storage, Auth, dan RPC
+- Vercel static hosting
 
 ## Setup
 
@@ -38,37 +38,32 @@ Jalankan di Supabase SQL Editor.
 
 Opsional: jalankan `supabase/seed.sql` untuk sample data tanpa file.
 
-### 3. Ambil environment variable Supabase
+### 3. Ambil konfigurasi publik Supabase
 
 Di Supabase Dashboard, ambil:
 
 - Project URL
-- Service Role Key
+- Publishable key atau legacy anon key
 
-Service role key hanya boleh disimpan di server/env, jangan dimasukkan ke frontend publik.
+Hanya konfigurasi publik tersebut dan nama bucket yang boleh berada di
+frontend. Jangan menaruh privileged server key, database password, JWT signing
+secret, atau password portal di source code.
 
-### 4. Buat `.env.local`
+### 4. Konfigurasi frontend
 
-Copy `.env.example` menjadi `.env.local`:
-
-```bash
-cp .env.example .env.local
-```
-
-Isi:
-
-```env
-NEXT_PUBLIC_APP_NAME="AEBT Regulatory Knowledge Hub"
-SUPABASE_URL="https://YOUR_PROJECT.supabase.co"
-SUPABASE_SERVICE_ROLE_KEY="YOUR_SERVICE_ROLE_KEY"
-SUPABASE_STORAGE_BUCKET="regulatory-files"
-ADMIN_PASSWORD="password-admin-yang-kuat"
-```
+Atur `SUPABASE_URL`, `SUPABASE_ANON_KEY`, dan `STORAGE_BUCKET` di bagian paling
+atas `app.js`. Jangan membuat `.env.local` berisi secret untuk static frontend.
 
 ### 5. Install dependency
 
 ```bash
 npm install
+```
+
+Jalankan audit keamanan sebelum build:
+
+```bash
+npm run security:audit
 ```
 
 ### 6. Jalankan lokal
