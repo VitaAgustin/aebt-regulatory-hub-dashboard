@@ -224,7 +224,7 @@ async function loadSupabaseClient() {
   if (!window.supabase) {
     await new Promise((resolve, reject) => {
       const script = document.createElement("script");
-  script.src = CLIENT_LIBRARY_URL;
+      script.src = CLIENT_LIBRARY_URL;
       script.async = true;
       script.onload = resolve;
       script.onerror = () =>
