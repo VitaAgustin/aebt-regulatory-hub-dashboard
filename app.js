@@ -511,7 +511,7 @@ function renderDocumentLoadingState() {
     5,
     "Memuat dokumen dari Supabase..."
   );
-  $("#documents-body").innerHTML = emptyRow(5, "Memuat dokumen dari Supabase...");
+  $("#documents-body").innerHTML = emptyRow(4, "Memuat dokumen dari Supabase...");
   $("#admin-documents-body").innerHTML = emptyRow(
     5,
     "Memuat dokumen dari Supabase..."
@@ -713,7 +713,7 @@ function renderDocumentTable() {
   $("#documents-count").textContent = `${docs.length} dokumen`;
 
   if (!docs.length) {
-    body.innerHTML = emptyRow(5, "Tidak ada dokumen yang sesuai filter.");
+    body.innerHTML = emptyRow(4, "Tidak ada dokumen yang sesuai filter.");
     return;
   }
 
@@ -727,7 +727,6 @@ function renderDocumentTable() {
           <td>${escapeHtml(
             doc.regulation_number || String(doc.document_type).toUpperCase()
           )}</td>
-          <td>${escapeHtml(doc.category || "-")}</td>
           <td>${statusBadge(doc.status)}</td>
           <td>${documentRowActions(doc.id)}</td>
         </tr>
@@ -2754,7 +2753,7 @@ function renderEmptyApplication(message = "Hubungkan aplikasi ke Supabase untuk 
   state.selectedPortfolioItemCode = null;
   renderAll();
   $("#recent-documents-body").innerHTML = emptyRow(5, message);
-  $("#documents-body").innerHTML = emptyRow(5, message);
+  $("#documents-body").innerHTML = emptyRow(4, message);
 }
 
 function renderDocumentFetchError(error) {
@@ -2762,7 +2761,7 @@ function renderDocumentFetchError(error) {
   renderAll();
   const message = readableError(error);
   $("#recent-documents-body").innerHTML = emptyRow(5, message);
-  $("#documents-body").innerHTML = emptyRow(5, message);
+  $("#documents-body").innerHTML = emptyRow(4, message);
 }
 
 function ensureConfigured() {

@@ -967,33 +967,28 @@ table {
 }
 
 .documents-table {
-  min-width: 700px;
+  min-width: 620px;
   table-layout: fixed;
 }
 
 .documents-table th:nth-child(1),
 .documents-table td:nth-child(1) {
-  width: 40%;
+  width: 50%;
 }
 
 .documents-table th:nth-child(2),
 .documents-table td:nth-child(2) {
-  width: 21%;
+  width: 27%;
 }
 
 .documents-table th:nth-child(3),
 .documents-table td:nth-child(3) {
-  width: 18%;
+  width: 13%;
 }
 
 .documents-table th:nth-child(4),
 .documents-table td:nth-child(4) {
-  width: 12%;
-}
-
-.documents-table th:nth-child(5),
-.documents-table td:nth-child(5) {
-  width: 9%;
+  width: 10%;
   text-align: right;
 }
 
