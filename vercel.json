@@ -30,6 +30,14 @@
       "destination": "/"
     },
     {
+      "source": "/library",
+      "destination": "/"
+    },
+    {
+      "source": "/library/:id",
+      "destination": "/"
+    },
+    {
       "source": "/service-mapping",
       "destination": "/"
     },
@@ -45,6 +53,15 @@
   "headers": [
     {
       "source": "/app.js",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/knowledge-features.js",
       "headers": [
         {
           "key": "Cache-Control",

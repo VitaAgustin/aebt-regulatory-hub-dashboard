@@ -108,6 +108,12 @@
             </span>
             <span>Service Mapping</span>
           </a>
+          <a href="#library" data-nav="library">
+            <span class="nav-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M4 5.5h6l2 2h8v11H4zM4 9h16" /></svg>
+            </span>
+            <span>Library</span>
+          </a>
           <a href="#admin" data-nav="admin">
             <span class="nav-icon" aria-hidden="true">
               <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5" /><path d="M5.5 20c.5-4 2.7-6 6.5-6s6 2 6.5 6" /></svg>
@@ -295,7 +301,16 @@
           <span id="documents-count" class="count-label">0 dokumen</span>
         </div>
 
-        <form id="document-filters" class="filter-bar">
+        <div id="standard-folder-browser" class="hidden">
+          <div id="standard-folder-grid" class="folder-grid"></div>
+          <section
+            id="standard-folder-documents"
+            class="folder-content-panel hidden"
+          ></section>
+        </div>
+
+        <div id="document-library-table-view">
+          <form id="document-filters" class="filter-bar">
           <label class="search-field">
             <span>Cari dokumen</span>
             <input
@@ -330,20 +345,21 @@
             </select>
           </label>
           <button class="button secondary" type="reset">Reset</button>
-        </form>
+          </form>
 
-        <div class="table-frame">
-          <table class="documents-table">
-            <thead>
-              <tr>
-                <th>Judul dokumen</th>
-                <th>Nomor / kode</th>
-                <th>Status</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody id="documents-body"></tbody>
-          </table>
+          <div class="table-frame">
+            <table class="documents-table">
+              <thead>
+                <tr>
+                  <th>Judul dokumen</th>
+                  <th>Nomor / kode</th>
+                  <th>Status</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="documents-body"></tbody>
+            </table>
+          </div>
         </div>
       </section>
 
@@ -396,6 +412,37 @@
         <div id="document-detail"></div>
       </section>
 
+      <section id="view-library" class="view page-shell hidden" data-view="library">
+        <div class="page-heading compact">
+          <div>
+            <p class="eyebrow">Knowledge resources</p>
+            <h1>Library</h1>
+            <p class="page-description">
+              Materi HSE Talk, poster, training, form, template, campaign, dan
+              referensi internal AEBT.
+            </p>
+          </div>
+          <span id="library-count" class="count-label">0 item</span>
+        </div>
+        <div id="library-folder-grid" class="folder-grid"></div>
+        <section
+          id="library-folder-items"
+          class="folder-content-panel hidden"
+        ></section>
+      </section>
+
+      <section
+        id="view-library-detail"
+        class="view page-shell hidden"
+        data-view="library-detail"
+      >
+        <div class="detail-toolbar">
+          <a class="button secondary" href="#library">Kembali ke Library</a>
+          <span id="library-detail-updated" class="muted"></span>
+        </div>
+        <div id="library-item-detail"></div>
+      </section>
+
       <section id="view-admin" class="view page-shell hidden" data-view="admin">
         <div class="page-heading compact">
           <div>
@@ -442,9 +489,221 @@
               <span>Session aktif</span>
             </div>
             <button id="admin-logout" class="button secondary" type="button">
-              Logout
+              Logout Admin
             </button>
           </div>
+
+          <section class="content-section admin-panel-card">
+            <div class="section-heading">
+              <div>
+                <h2>Permintaan Download</h2>
+                <p>
+                  Review permintaan akses file dokumen dan materi Library.
+                </p>
+              </div>
+              <button
+                id="refresh-access-requests"
+                class="button secondary small"
+                type="button"
+              >
+                Refresh
+              </button>
+            </div>
+            <div class="table-frame">
+              <table class="access-request-table">
+                <thead>
+                  <tr>
+                    <th>Pemohon</th>
+                    <th>Resource</th>
+                    <th>Alasan</th>
+                    <th>Status</th>
+                    <th>Review</th>
+                  </tr>
+                </thead>
+                <tbody id="access-requests-body"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="content-section admin-panel-card">
+            <div class="section-heading">
+              <div>
+                <h2>Kelola Folder Data Standar</h2>
+                <p>
+                  Folder aktif langsung muncul di Data Standar dan form dokumen.
+                </p>
+              </div>
+            </div>
+            <form id="standard-folder-form" class="manager-inline-form">
+              <input name="id" type="hidden" />
+              <label>
+                <span>Nama folder *</span>
+                <input name="name" placeholder="Contoh: API" required />
+              </label>
+              <label class="manager-description-field">
+                <span>Deskripsi</span>
+                <input
+                  name="description"
+                  placeholder="Ringkasan isi folder standar"
+                />
+              </label>
+              <div class="manager-inline-actions">
+                <button class="button primary" type="submit">
+                  Simpan folder
+                </button>
+                <button
+                  id="cancel-standard-folder-edit"
+                  class="button secondary hidden"
+                  type="button"
+                >
+                  Batal edit
+                </button>
+              </div>
+            </form>
+            <div id="standard-folder-manager" class="manager-card-grid"></div>
+          </section>
+
+          <section class="content-section admin-panel-card">
+            <div class="section-heading">
+              <div>
+                <h2>Kelola Library</h2>
+                <p>
+                  Kelola folder dan materi Library dengan upload opsional atau
+                  link eksternal.
+                </p>
+              </div>
+            </div>
+            <div class="library-manager-layout">
+              <form id="library-folder-form" class="service-manager-form">
+                <input name="id" type="hidden" />
+                <div class="service-manager-form-heading">
+                  <h3>Folder Library</h3>
+                  <p>Tambah atau edit folder materi.</p>
+                </div>
+                <label>
+                  <span>Nama folder *</span>
+                  <input name="name" required />
+                </label>
+                <label>
+                  <span>Deskripsi</span>
+                  <textarea name="description"></textarea>
+                </label>
+                <div class="form-actions">
+                  <button class="button primary" type="submit">
+                    Simpan folder
+                  </button>
+                  <button
+                    id="cancel-library-folder-edit"
+                    class="button secondary hidden"
+                    type="button"
+                  >
+                    Batal edit
+                  </button>
+                </div>
+              </form>
+
+              <form id="library-item-form" class="service-manager-form">
+                <input name="id" type="hidden" />
+                <input name="existing_file_path" type="hidden" />
+                <input name="existing_file_name" type="hidden" />
+                <div class="service-manager-form-heading">
+                  <h3>Materi Library</h3>
+                  <p>Tambah atau edit file/materi Library.</p>
+                </div>
+                <div class="form-grid">
+                  <label>
+                    <span>Folder</span>
+                    <select name="folder_id">
+                      <option value="">Belum dikategorikan</option>
+                    </select>
+                  </label>
+                  <label>
+                    <span>Jenis materi</span>
+                    <select name="item_type">
+                      <option value="hse_talk">HSE Talk</option>
+                      <option value="poster">Poster</option>
+                      <option value="training_material">Materi Training</option>
+                      <option value="form">Form</option>
+                      <option value="template">Template</option>
+                      <option value="campaign">Campaign</option>
+                      <option value="toolbox_meeting">Toolbox Meeting</option>
+                      <option value="other">Lainnya</option>
+                    </select>
+                  </label>
+                  <label class="span-2">
+                    <span>Judul *</span>
+                    <input name="title" required />
+                  </label>
+                  <label class="span-2">
+                    <span>Deskripsi</span>
+                    <textarea name="description"></textarea>
+                  </label>
+                </div>
+                <div
+                  class="file-source-options compact-file-options"
+                  role="radiogroup"
+                  aria-label="Sumber file Library"
+                >
+                  <label class="file-source-option">
+                    <input name="file_source" type="radio" value="supabase" />
+                    <span><strong>Upload Supabase</strong></span>
+                  </label>
+                  <label class="file-source-option">
+                    <input name="file_source" type="radio" value="external" />
+                    <span><strong>Link eksternal</strong></span>
+                  </label>
+                  <label class="file-source-option">
+                    <input name="file_source" type="radio" value="none" checked />
+                    <span><strong>Belum ada file</strong></span>
+                  </label>
+                </div>
+                <div id="library-supabase-fields" class="file-source-fields hidden">
+                  <label>
+                    <span>File materi</span>
+                    <input name="file" type="file" />
+                  </label>
+                  <p id="library-existing-file-note" class="field-hint"></p>
+                </div>
+                <div id="library-external-fields" class="file-source-fields hidden">
+                  <label>
+                    <span>Link Google Drive / eksternal *</span>
+                    <input
+                      name="external_file_url"
+                      type="url"
+                      placeholder="https://drive.google.com/..."
+                    />
+                  </label>
+                </div>
+                <div class="form-actions">
+                  <button id="save-library-item" class="button primary" type="submit">
+                    Simpan materi
+                  </button>
+                  <button
+                    id="cancel-library-item-edit"
+                    class="button secondary hidden"
+                    type="button"
+                  >
+                    Batal edit
+                  </button>
+                </div>
+              </form>
+            </div>
+            <div id="library-folder-manager" class="manager-card-grid"></div>
+            <div class="table-frame library-admin-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Materi</th>
+                    <th>Folder</th>
+                    <th>Sumber</th>
+                    <th>Status</th>
+                    <th>Aksi</th>
+                  </tr>
+                </thead>
+                <tbody id="library-items-admin-body"></tbody>
+              </table>
+            </div>
+          </section>
 
           <section class="custom-service-admin content-section admin-panel-card">
             <div class="section-heading">
@@ -564,6 +823,12 @@
                       Jika dokumen muncul di menu yang salah, ubah Tipe Dokumen
                       melalui form edit.
                     </small>
+                  </label>
+                  <label id="standard-folder-field" class="hidden">
+                    <span>Folder Data Standar</span>
+                    <select name="standard_folder_id">
+                      <option value="">Belum dikategorikan</option>
+                    </select>
                   </label>
                   <label class="span-2">
                     <span>Judul *</span>
@@ -768,6 +1033,71 @@
     </div>
     <div id="toast-region" class="toast-region" aria-live="polite"></div>
 
+    <div
+      id="download-request-modal"
+      class="modal-backdrop hidden"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="download-request-title"
+    >
+      <div class="request-modal">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">File access request</p>
+            <h2 id="download-request-title">Ajukan Download</h2>
+          </div>
+          <button
+            id="close-download-request"
+            class="icon-button"
+            type="button"
+            aria-label="Tutup form"
+          >
+            &times;
+          </button>
+        </div>
+        <p class="request-policy-note">
+          Permintaan download akan direview admin. Jika disetujui, admin akan
+          menghubungi pemohon atau memberikan akses sesuai kebijakan internal.
+        </p>
+        <form id="download-request-form" class="request-form">
+          <input name="resource_type" type="hidden" />
+          <input name="document_id" type="hidden" />
+          <input name="library_item_id" type="hidden" />
+          <label>
+            <span>Dokumen / materi</span>
+            <input name="resource_title" readonly />
+          </label>
+          <div class="form-grid">
+            <label>
+              <span>Nama pemohon *</span>
+              <input name="requester_name" required />
+            </label>
+            <label>
+              <span>Email pemohon *</span>
+              <input name="requester_email" type="email" required />
+            </label>
+            <label class="span-2">
+              <span>Unit / Departemen</span>
+              <input name="requester_unit" />
+            </label>
+            <label class="span-2">
+              <span>Alasan kebutuhan download *</span>
+              <textarea name="reason" required></textarea>
+            </label>
+          </div>
+          <div class="form-actions">
+            <button class="button secondary" type="button" data-close-request>
+              Batal
+            </button>
+            <button id="submit-download-request" class="button primary" type="submit">
+              Kirim Permintaan
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
     <script src="app.js" defer></script>
+    <script src="knowledge-features.js" defer></script>
   </body>
 </html>

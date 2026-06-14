@@ -9,6 +9,10 @@ const SERVICE_CATEGORY_TABLE = "service_categories";
 const SERVICE_ITEM_TABLE = "service_items";
 const PORTFOLIO_CATEGORY_TABLE = "portfolio_categories";
 const PORTFOLIO_ITEM_TABLE = "portfolio_items";
+const STANDARD_FOLDER_TABLE = "standard_folders";
+const LIBRARY_FOLDER_TABLE = "library_folders";
+const LIBRARY_ITEM_TABLE = "library_items";
+const FILE_ACCESS_REQUEST_TABLE = "file_access_requests";
 const SITE_ACCESS_SESSION_KEY = "aebt_site_unlocked";
 const CLIENT_LIBRARY_URL =
   "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.107.0/dist/umd/supabase.min.js";
@@ -119,6 +123,20 @@ const state = {
   portfolioItems: [],
   portfolioCatalogLoaded: false,
   portfolioCatalogError: null,
+  standardFolders: [],
+  standardFoldersLoaded: false,
+  standardFoldersError: null,
+  libraryFolders: [],
+  libraryItems: [],
+  libraryLoaded: false,
+  libraryError: null,
+  accessRequests: [],
+  accessRequestsLoaded: false,
+  selectedStandardFolderId: null,
+  selectedLibraryFolderId: null,
+  editingStandardFolderId: null,
+  editingLibraryFolderId: null,
+  editingLibraryItemId: null,
   session: null,
   editingId: null,
   pendingEditId: null,
@@ -134,6 +152,9 @@ const state = {
   documentsPromise: null,
   serviceCatalogPromise: null,
   portfolioCatalogPromise: null,
+  standardFoldersPromise: null,
+  libraryPromise: null,
+  accessRequestsPromise: null,
   supabasePromise: null,
   portalInitialized: false,
   siteUnlocked: false
@@ -188,12 +209,20 @@ async function initializePortal() {
   const portfolioCatalogPromise = state.supabasePromise.then(() =>
     loadPortfolioCatalog()
   );
+  const standardFoldersPromise = state.supabasePromise.then(() =>
+    loadStandardFolders()
+  );
+  const libraryPromise = state.supabasePromise.then(() =>
+    loadLibraryCatalog()
+  );
   const authPromise = state.supabasePromise.then(initializeAuth);
   const [authResult, documentsResult] = await Promise.allSettled([
     authPromise,
     documentsPromise,
     serviceCatalogPromise,
-    portfolioCatalogPromise
+    portfolioCatalogPromise,
+    standardFoldersPromise,
+    libraryPromise
   ]);
 
   if (authResult.status === "rejected") {
@@ -248,9 +277,12 @@ async function initializeAuth() {
     state.session = nextSession;
     updateAdminState();
     if (nextSession) loadAdminLogs();
+    if (nextSession) loadAccessRequests();
     if (db) {
       loadServiceCatalog({ force: true }).catch(() => {});
       loadPortfolioCatalog({ force: true }).catch(() => {});
+      loadStandardFolders({ force: true }).catch(() => {});
+      loadLibraryCatalog({ force: true }).catch(() => {});
     }
   });
 
@@ -280,6 +312,7 @@ function routeFromPathname() {
   if (path === "/sop") return "sop";
   if (path === "/standar" || path === "/standards") return "standar";
   if (path === "/services" || path === "/service-mapping") return "services";
+  if (path === "/library") return "library";
   if (path === "/admin" || path === "/admin/upload") return "admin";
 
   const documentMatch = location.pathname.match(/^\/documents\/([^/]+)\/?$/i);
@@ -344,6 +377,7 @@ function bindEvents() {
   );
   $("#admin-documents-body").addEventListener("click", handleAdminTableAction);
   $("#service-catalog-list").addEventListener("click", handleServiceCatalogAction);
+  bindKnowledgeFeatureEvents();
 }
 
 function hasSiteAccessSession() {
@@ -671,6 +705,7 @@ function renderAll() {
   renderServiceCatalogManager();
   populateServiceCategorySelect();
   renderPortfolioCheckboxes();
+  renderKnowledgeFeatures();
 }
 
 function route() {
@@ -678,13 +713,17 @@ function route() {
   const [routeName, routeId] = routeValue.split("/");
   const normalizedRoute = ["sop", "standar"].includes(routeName)
     ? "documents"
-    : routeName;
+    : routeName === "library-item"
+      ? "library-detail"
+      : routeName;
   const routeContext = {
     home: ["Regulatory Intelligence", "Dashboard Home"],
     documents: ["Document Repository", "Database Regulasi"],
     sop: ["Document Library", "SOP Center"],
     standar: ["Standard Library", "Data Standar"],
     services: ["Business Relevance", "Service Mapping"],
+    library: ["Knowledge Resources", "Library"],
+    "library-item": ["Knowledge Resources", "Detail Library"],
     admin: ["Restricted Access", "Admin Management"],
     document: ["Document Repository", "Detail Dokumen"]
   };
@@ -698,7 +737,9 @@ function route() {
     const target = link.dataset.nav;
     link.classList.toggle(
       "active",
-      target === routeName || (routeName === "document" && target === "documents")
+      target === routeName ||
+        (routeName === "document" && target === "documents") ||
+        (routeName === "library-item" && target === "library")
     );
   });
   $("#topbar-eyebrow").textContent = eyebrow;
@@ -708,11 +749,19 @@ function route() {
   if (getDocumentLibraryType(routeName)) {
     configureDocumentLibrary(routeName);
     renderDocumentTable();
+    if (routeName === "standar") renderStandardFolderBrowser();
   } else if (routeName === "document" && routeId) {
     renderDocumentDetail(routeId);
+  } else if (routeName === "library") {
+    renderLibrary();
+  } else if (routeName === "library-item" && routeId) {
+    renderLibraryItemDetail(routeId);
   } else if (routeName === "admin") {
     updateAdminState();
-    if (state.session) loadAdminLogs();
+    if (state.session) {
+      loadAdminLogs();
+      loadAccessRequests();
+    }
   }
 
   window.scrollTo({ top: 0, behavior: "auto" });
@@ -752,6 +801,11 @@ function configureDocumentLibrary(routeName) {
   $("#filter-type").value = getDocumentLibraryType(routeName);
   $("#filter-type").disabled = true;
   populateCategoryFilter();
+  $("#standard-folder-browser").classList.toggle("hidden", routeName !== "standar");
+  $("#document-library-table-view").classList.toggle(
+    "hidden",
+    routeName === "standar"
+  );
 }
 
 function renderMetrics() {
@@ -1643,255 +1697,7 @@ function handleServiceDocumentAction(event) {
 }
 
 async function renderDocumentDetail(id) {
-  const container = $("#document-detail");
-  const documentId = String(id || "").trim();
-  const renderToken = ++state.detailRenderToken;
-
-  if (state.documentsError) {
-    container.innerHTML = `
-      <section class="detail-section">
-        <h1>Dokumen belum dapat dimuat</h1>
-        <p class="muted">${escapeHtml(readableError(state.documentsError))}</p>
-      </section>
-    `;
-    return;
-  }
-
-  if (!state.documentsLoaded) {
-    container.innerHTML =
-      '<section class="detail-section"><h1>Memuat dokumen...</h1><p class="muted">Mohon tunggu data dari Supabase.</p></section>';
-    return;
-  }
-
-  const doc = safeDocuments().find((item) => item.id === documentId);
-
-  if (!doc) {
-    container.innerHTML =
-      '<section class="detail-section"><h1>Dokumen tidak ditemukan</h1><p class="muted">Data mungkin sudah dihapus atau belum dimuat.</p></section>';
-    return;
-  }
-
-  const fileSource = getDocumentFileSource(doc);
-  const storagePath =
-    fileSource === "supabase" ? validStoragePath(doc.file_path) : null;
-  const externalFileUrl =
-    fileSource === "external" ? validExternalUrl(doc.external_file_url) : null;
-  const filePanel = getFilePanelContent(doc, fileSource);
-  $("#detail-updated").textContent = `Diperbarui ${formatDateTime(doc.updated_at)}`;
-  container.innerHTML = `
-    <article>
-      <header class="detail-header">
-        <div class="detail-title-row">
-          <div>
-            ${typeBadge(doc.document_type)}
-            ${fileSourceIndicator(doc)}
-            <h1>${escapeHtml(doc.title)}</h1>
-            <p class="muted">${escapeHtml(doc.regulation_number || doc.file_name || "-")}</p>
-          </div>
-          <div class="detail-actions">
-            <button id="edit-detail-document" class="button secondary" type="button" data-edit-id="${escapeAttribute(
-              doc.id
-            )}">Edit dokumen</button>
-            <a id="open-file-link" class="button secondary hidden" target="_blank" rel="noopener">Buka file</a>
-            <a id="download-file-link" class="button primary hidden">Download PDF</a>
-          </div>
-        </div>
-        <div class="meta-grid">
-          ${metaItem("Tahun", doc.year || "-")}
-          ${metaItem("Instansi penerbit", doc.issuing_body || "-")}
-          ${metaItem("Kategori", doc.category || "-")}
-          ${metaItem("Sub-kategori", doc.sub_category || "-")}
-          ${metaItem("Status", doc.status || "-")}
-          ${metaItem("Terakhir dicek", formatDate(doc.last_checked_at))}
-        </div>
-      </header>
-
-      <div class="document-detail-layout">
-        <div class="document-detail-info">
-          <div class="detail-columns">
-            <section class="detail-section">
-              <h2>Substansi regulasi</h2>
-              ${detailField("Ringkasan", doc.summary)}
-            </section>
-            <section class="detail-section">
-              <h2>Keterkaitan SBU</h2>
-              ${detailField(
-                "Layanan terkait",
-                renderServiceTags(doc.related_services),
-                true
-              )}
-              ${detailField(
-                "Portofolio terkait",
-                renderServiceTags(doc.related_portfolios),
-                true
-              )}
-            </section>
-          </div>
-
-          <section class="detail-section pdf-section">
-            <h2>Sumber dan catatan</h2>
-            ${detailField(
-              "Sumber resmi",
-              doc.source_url
-                ? `<a href="${escapeAttribute(doc.source_url)}" target="_blank" rel="noopener">${escapeHtml(
-                    doc.source_url
-                  )}</a>`
-                : "-",
-              true
-            )}
-            ${detailField("PIC update", doc.pic_update)}
-            ${detailField("Catatan", doc.notes)}
-          </section>
-        </div>
-
-        <aside class="document-pdf-panel">
-          <section class="detail-section pdf-section">
-            <div class="section-heading">
-              <div>
-                <h2>${escapeHtml(filePanel.title)}</h2>
-                <p>${escapeHtml(filePanel.subtitle)}</p>
-              </div>
-            </div>
-            <div id="pdf-preview" class="pdf-placeholder">${escapeHtml(
-              filePanel.message
-            )}</div>
-          </section>
-        </aside>
-      </div>
-    </article>
-  `;
-
-  if (storagePath) await attachSignedUrls(doc, renderToken);
-  else if (externalFileUrl) attachExternalFile(doc, externalFileUrl, renderToken);
-  else showFileUnavailable();
-}
-
-function getFilePanelContent(doc, fileSource = getDocumentFileSource(doc)) {
-  if (fileSource === "supabase") {
-    return {
-      title: "Preview PDF",
-      subtitle: doc.file_name || "Dokumen PDF",
-      message: "Menyiapkan signed URL..."
-    };
-  }
-  if (fileSource === "external") {
-    return {
-      title: "File eksternal",
-      subtitle: "Google Drive / link eksternal",
-      message: "File tersimpan di link eksternal"
-    };
-  }
-  return {
-    title: "File dokumen",
-    subtitle: "File belum tersedia",
-    message: "File belum tersedia"
-  };
-}
-
-async function attachSignedUrls(doc, renderToken) {
-  const storagePath = validStoragePath(doc?.file_path);
-  if (!storagePath) {
-    showFileUnavailable();
-    return;
-  }
-
-  try {
-    const storageClient = db || (await state.supabasePromise);
-    let signedUrls = state.signedUrls.get(storagePath);
-    if (!signedUrls) {
-      const [previewResult, downloadResult] = await Promise.all([
-        storageClient.storage
-          .from(STORAGE_BUCKET)
-          .createSignedUrl(storagePath, 3600),
-        storageClient.storage
-          .from(STORAGE_BUCKET)
-          .createSignedUrl(storagePath, 3600, {
-            download: doc.file_name || "dokumen.pdf"
-          })
-      ]);
-
-      if (previewResult.error) throw previewResult.error;
-      if (downloadResult.error) throw downloadResult.error;
-      if (!previewResult.data?.signedUrl || !downloadResult.data?.signedUrl) {
-        throw new Error("Supabase tidak mengembalikan signed URL PDF.");
-      }
-
-      signedUrls = {
-        preview: previewResult.data.signedUrl,
-        download: downloadResult.data.signedUrl
-      };
-      state.signedUrls.set(storagePath, signedUrls);
-    }
-
-    if (renderToken !== state.detailRenderToken) return;
-
-    const openLink = $("#open-file-link");
-    openLink.href = signedUrls.preview;
-    openLink.classList.remove("hidden");
-
-    const downloadLink = $("#download-file-link");
-    downloadLink.href = signedUrls.download;
-    downloadLink.classList.remove("hidden");
-
-    $("#pdf-preview").outerHTML = `<iframe class="pdf-frame" src="${escapeAttribute(
-      signedUrls.preview
-    )}" title="Preview ${escapeAttribute(doc.title)}"></iframe>`;
-  } catch (error) {
-    if (renderToken !== state.detailRenderToken) return;
-    hideFileActions();
-    const preview = $("#pdf-preview");
-    if (preview) {
-      preview.className = "pdf-placeholder";
-      preview.textContent = `Preview tidak dapat dimuat: ${readableError(error)}`;
-    }
-  }
-}
-
-function attachExternalFile(doc, externalFileUrl, renderToken) {
-  if (renderToken !== state.detailRenderToken) return;
-  const safeUrl = validExternalUrl(externalFileUrl);
-  if (!safeUrl) {
-    showFileUnavailable();
-    return;
-  }
-
-  hideFileActions();
-  const openLink = $("#open-file-link");
-  openLink.href = safeUrl;
-  openLink.textContent = "Buka File";
-  openLink.classList.remove("hidden");
-
-  const preview = $("#pdf-preview");
-  if (preview) {
-    const hostname = new URL(safeUrl).hostname.replace(/^www\./, "");
-    preview.className = "pdf-placeholder external-file-placeholder";
-    preview.innerHTML = `
-      <span class="external-file-icon" aria-hidden="true">URL</span>
-      <strong>File tersimpan di link eksternal</strong>
-      <small>${escapeHtml(hostname)}</small>
-      <a class="button primary" href="${escapeAttribute(
-        safeUrl
-      )}" target="_blank" rel="noopener noreferrer">Buka File</a>
-    `;
-  }
-}
-
-function showFileUnavailable() {
-  hideFileActions();
-  const preview = $("#pdf-preview");
-  if (preview) {
-    preview.className = "pdf-placeholder";
-    preview.textContent = "File belum tersedia.";
-  }
-}
-
-function hideFileActions() {
-  ["#open-file-link", "#download-file-link"].forEach((selector) => {
-    const link = $(selector);
-    if (!link) return;
-    link.classList.add("hidden");
-    link.removeAttribute("href");
-  });
+  return renderEnhancedDocumentDetail(id);
 }
 
 async function handleLogin(event) {
@@ -1924,14 +1730,14 @@ async function handleLogin(event) {
 }
 
 async function handleLogout() {
-  setLoading(true, "Mengakhiri session...");
+  setLoading(true, "Logout akun admin...");
   try {
     const { error } = await db.auth.signOut();
     if (error) throw error;
     state.session = null;
     resetEditor();
     updateAdminState();
-    showToast("Anda sudah logout.");
+    showToast("Logout admin berhasil. Portal viewer tetap terbuka.");
   } catch (error) {
     showToast(readableError(error), true);
   } finally {
@@ -1955,6 +1761,7 @@ function updateAdminState() {
     $("#sidebar-account-name").textContent = "Akses publik";
     $("#sidebar-account-state").textContent = "Regulatory workspace";
   }
+  renderAdminKnowledgeFeatures();
 }
 
 function renderServiceCheckboxes() {
@@ -2489,6 +2296,7 @@ function documentRowActions(documentId, detailLabel = "Detail") {
 
 function handleDocumentFormChange(event) {
   if (event.target.name === "file_source") syncFileSourceFields();
+  if (event.target.name === "document_type") syncStandardFolderField();
 }
 
 function syncFileSourceFields() {
@@ -2640,9 +2448,11 @@ async function handleDocumentSubmit(event) {
 
 function buildDocumentPayload(form) {
   const year = numberOrNull(form.get("year"));
+  const documentType =
+    cleanText(form.get("document_type")) || "regulasi";
 
   return {
-    document_type: cleanText(form.get("document_type")) || "regulasi",
+    document_type: documentType,
     title: cleanText(form.get("title")),
     regulation_number: cleanText(form.get("regulation_number")),
     year,
@@ -2651,6 +2461,10 @@ function buildDocumentPayload(form) {
     status: cleanText(form.get("status")) || "Berlaku",
     related_services: cleanText(getSelectedServices().join(", ")),
     related_portfolios: cleanText(getSelectedPortfolios().join(", ")),
+    standard_folder_id:
+      documentType === "standar"
+        ? cleanText(form.get("standard_folder_id")) || null
+        : null,
     source_url: cleanText(form.get("source_url")),
     file_source: normalizeFileSource(form.get("file_source")),
     external_file_url: cleanText(form.get("external_file_url")),
@@ -2725,10 +2539,14 @@ function startEdit(id) {
   form.elements.existing_file_name.value = doc.file_name || "";
   form.elements.file_source.value = getDocumentFileSource(doc);
   form.elements.external_file_url.value = doc.external_file_url || "";
+  if (form.elements.standard_folder_id) {
+    form.elements.standard_folder_id.value = doc.standard_folder_id || "";
+  }
   form.elements.file.required = false;
   setSelectedServices(doc.related_services);
   setSelectedPortfolios(doc.related_portfolios);
   syncFileSourceFields();
+  syncStandardFolderField();
 
   $("#editor-title").textContent = "Edit dokumen";
   $("#editor-description").textContent = `Mengedit: ${doc.title}`;
@@ -2751,6 +2569,7 @@ function resetEditor() {
   setSelectedServices("");
   setSelectedPortfolios("");
   syncFileSourceFields();
+  syncStandardFolderField();
   $("#editor-title").textContent = "Tambah dokumen";
   $("#editor-description").textContent =
     "Simpan metadata dengan PDF Supabase, link eksternal, atau tanpa file.";
@@ -2890,6 +2709,13 @@ function renderEmptyApplication(message = "Hubungkan aplikasi ke Supabase untuk 
   state.portfolioItems = [];
   state.portfolioCatalogLoaded = false;
   state.portfolioCatalogError = null;
+  state.standardFolders = [];
+  state.standardFoldersLoaded = false;
+  state.standardFoldersError = null;
+  state.libraryFolders = [];
+  state.libraryItems = [];
+  state.libraryLoaded = false;
+  state.libraryError = null;
   state.selectedPortfolioCategoryId = null;
   state.selectedPortfolioItemCode = null;
   renderAll();

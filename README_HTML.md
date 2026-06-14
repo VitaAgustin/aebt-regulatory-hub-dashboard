@@ -48,6 +48,10 @@ lain ke `app.js`, HTML, repository publik, maupun static hosting.
    katalog Portofolio SBU dan kolom `documents.related_portfolios`.
 10. Jalankan `supabase-site-access-password.sql` untuk membuat password akses
     viewer melalui RPC tanpa mengekspos hash ke frontend.
+11. Jalankan `supabase-standard-folders.sql` untuk folder dinamis Data Standar.
+12. Jalankan `supabase-library.sql` untuk folder dan materi Library.
+13. Jalankan `supabase-file-access-requests.sql` untuk workflow permintaan
+    download. File ini dijalankan setelah `supabase-library.sql`.
 
 Script tersebut:
 
@@ -159,13 +163,15 @@ magic-link flow.
 5. Isi metadata dokumen.
 6. Pilih salah satu sumber file:
    - **Upload PDF ke Supabase**: pilih PDF, lalu simpan. File masuk ke bucket
-     `regulatory-files` dan detail menampilkan preview serta download.
+     `regulatory-files` dan detail menampilkan preview besar.
    - **Link Google Drive / eksternal**: isi URL `http://` atau `https://`.
-     Tidak ada upload Storage dan detail menampilkan tombol **Buka File**.
+     Tidak ada upload Storage; link yang didukung ditampilkan sebagai preview.
    - **Tidak ada file untuk saat ini**: simpan langsung tanpa PDF atau link.
      Detail menampilkan **File belum tersedia**.
-7. Periksa **Table Editor > documents** dan **update_logs**.
-8. Buka detail dokumen dari Database Regulasi, SOP Center, Data Standar, atau
+7. Akses file publik menggunakan tombol **Ajukan Download** dan menunggu
+   review admin. Portal tidak menyediakan tombol download atau buka tab baru.
+8. Periksa **Table Editor > documents** dan **update_logs**.
+9. Buka detail dokumen dari Database Regulasi, SOP Center, Data Standar, atau
    Service Mapping.
 
 ## 7. Data Standar dan Perbaikan Tipe Dokumen
@@ -279,3 +285,26 @@ tetap memerlukan session Supabase Auth.
 - Nonaktifkan anonymous sign-in dan public sign-up agar role `authenticated`
   hanya diberikan kepada akun admin yang memang dibuat secara manual.
 - Jalankan `npm run security:audit` sebelum commit atau deploy.
+
+## 12. Preview dan Approval Download
+
+- File Supabase dipreview melalui signed URL tanpa tombol download publik.
+- Link Google Drive dengan format `/file/d/FILE_ID/view` atau `open?id=FILE_ID`
+  diubah menjadi URL `/preview`.
+- PDF eksternal langsung dapat ditampilkan dalam iframe jika URL dapat
+  di-embed.
+- Pengguna mengirim form **Ajukan Download**. Request hanya dicatat sebagai
+  `pending`; approval admin tidak menghasilkan direct download link.
+- Admin membuka **Permintaan Download** untuk approve/reject dan menghubungi
+  pemohon sesuai kebijakan internal.
+
+## 13. Folder Data Standar dan Library
+
+- Data Standar menggunakan `standard_folders` dan kolom
+  `documents.standard_folder_id`.
+- Folder baru ditambahkan melalui Admin → Kelola Folder Data Standar.
+- Library menggunakan `library_folders` dan `library_items`.
+- Materi Library dapat memakai upload Supabase, link Google Drive/eksternal,
+  atau disimpan tanpa file.
+- Folder dan materi dinonaktifkan secara soft delete agar relasi lama tetap
+  aman.
