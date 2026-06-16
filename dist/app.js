@@ -13,6 +13,7 @@ const STANDARD_FOLDER_TABLE = "standard_folders";
 const LIBRARY_FOLDER_TABLE = "library_folders";
 const LIBRARY_ITEM_TABLE = "library_items";
 const FILE_ACCESS_REQUEST_TABLE = "file_access_requests";
+const DASHBOARD_MONTHLY_TABLE = "dashboard_monthly_data";
 const SITE_ACCESS_SESSION_KEY = "aebt_site_unlocked";
 const CLIENT_LIBRARY_URL =
   "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.107.0/dist/umd/supabase.min.js";
@@ -130,6 +131,12 @@ const state = {
   libraryItems: [],
   libraryLoaded: false,
   libraryError: null,
+  kpiRecords: [],
+  kpiLoaded: false,
+  kpiError: null,
+  selectedKpiMonth: 12,
+  selectedKpiYear: 2025,
+  editingKpiRecordId: null,
   accessRequests: [],
   accessRequestsLoaded: false,
   selectedStandardFolderId: null,
@@ -154,6 +161,7 @@ const state = {
   portfolioCatalogPromise: null,
   standardFoldersPromise: null,
   libraryPromise: null,
+  kpiPromise: null,
   accessRequestsPromise: null,
   supabasePromise: null,
   portalInitialized: false,
@@ -215,6 +223,11 @@ async function initializePortal() {
   const libraryPromise = state.supabasePromise.then(() =>
     loadLibraryCatalog()
   );
+  const kpiPromise = state.supabasePromise.then(() =>
+    typeof loadKpiDashboardData === "function"
+      ? loadKpiDashboardData()
+      : Promise.resolve([])
+  );
   const authPromise = state.supabasePromise.then(initializeAuth);
   const [authResult, documentsResult] = await Promise.allSettled([
     authPromise,
@@ -222,7 +235,8 @@ async function initializePortal() {
     serviceCatalogPromise,
     portfolioCatalogPromise,
     standardFoldersPromise,
-    libraryPromise
+    libraryPromise,
+    kpiPromise
   ]);
 
   if (authResult.status === "rejected") {
@@ -278,6 +292,7 @@ async function initializeAuth() {
     updateAdminState();
     if (nextSession) loadAdminLogs();
     if (nextSession) loadAccessRequests();
+    if (typeof renderKpiInputState === "function") renderKpiInputState();
     if (db) {
       loadServiceCatalog({ force: true }).catch(() => {});
       loadPortfolioCatalog({ force: true }).catch(() => {});
@@ -297,6 +312,7 @@ async function initializeAuth() {
 
     state.session = session;
     updateAdminState();
+    if (typeof renderKpiInputState === "function") renderKpiInputState();
   } catch (error) {
     throw error;
   }
@@ -313,6 +329,10 @@ function routeFromPathname() {
   if (path === "/standar" || path === "/standards") return "standar";
   if (path === "/services" || path === "/service-mapping") return "services";
   if (path === "/library") return "library";
+  if (path === "/kpi" || path === "/dashboard-kpi" || path === "/dashboard-k3") {
+    return "kpi";
+  }
+  if (path === "/kpi-input" || path === "/input-update-data") return "kpi-input";
   if (path === "/admin" || path === "/admin/upload") return "admin";
 
   const documentMatch = location.pathname.match(/^\/documents\/([^/]+)\/?$/i);
@@ -378,6 +398,7 @@ function bindEvents() {
   $("#admin-documents-body").addEventListener("click", handleAdminTableAction);
   $("#service-catalog-list").addEventListener("click", handleServiceCatalogAction);
   bindKnowledgeFeatureEvents();
+  if (typeof bindKpiDashboardEvents === "function") bindKpiDashboardEvents();
 }
 
 function hasSiteAccessSession() {
@@ -706,24 +727,33 @@ function renderAll() {
   populateServiceCategorySelect();
   renderPortfolioCheckboxes();
   renderKnowledgeFeatures();
+  if (typeof renderKpiDashboard === "function") renderKpiDashboard();
+  if (typeof renderKpiInputState === "function") renderKpiInputState();
 }
 
 function route() {
   const routeValue = location.hash.replace(/^#/, "") || "home";
   const [routeName, routeId] = routeValue.split("/");
+  if (routeName === "kpi-input" && !state.session?.user) {
+    showToast("Login admin diperlukan untuk membuka Input / Update Data.", true);
+    location.hash = "#admin";
+    return;
+  }
   const normalizedRoute = ["sop", "standar"].includes(routeName)
     ? "documents"
     : routeName === "library-item"
       ? "library-detail"
       : routeName;
   const routeContext = {
-    home: ["Regulatory Intelligence", "Dashboard Home"],
+    home: ["Regulatory Intelligence", "Beranda"],
     documents: ["Document Repository", "Database Regulasi"],
     sop: ["Document Library", "SOP Center"],
     standar: ["Standard Library", "Data Standar"],
     services: ["Business Relevance", "Service Mapping"],
-    library: ["Knowledge Resources", "Library"],
+    library: ["Knowledge Resources", "Library K3"],
     "library-item": ["Knowledge Resources", "Detail Library"],
+    kpi: ["Performance Dashboard", "Dashboard KPI & K3L"],
+    "kpi-input": ["Restricted Access", "Input / Update Data"],
     admin: ["Restricted Access", "Admin Management"],
     document: ["Document Repository", "Detail Dokumen"]
   };
@@ -744,6 +774,10 @@ function route() {
   });
   $("#topbar-eyebrow").textContent = eyebrow;
   $("#topbar-title").textContent = title;
+  document.body.classList.toggle(
+    "kpi-active",
+    routeName === "kpi" || routeName === "kpi-input"
+  );
   setSidebarOpen(false);
 
   if (getDocumentLibraryType(routeName)) {
@@ -756,6 +790,10 @@ function route() {
     renderLibrary();
   } else if (routeName === "library-item" && routeId) {
     renderLibraryItemDetail(routeId);
+  } else if (routeName === "kpi") {
+    if (typeof renderKpiDashboard === "function") renderKpiDashboard();
+  } else if (routeName === "kpi-input") {
+    if (typeof renderKpiInputState === "function") renderKpiInputState();
   } else if (routeName === "admin") {
     updateAdminState();
     if (state.session) {
@@ -1762,6 +1800,7 @@ function updateAdminState() {
     $("#sidebar-account-state").textContent = "Regulatory workspace";
   }
   renderAdminKnowledgeFeatures();
+  if (typeof renderKpiInputState === "function") renderKpiInputState();
 }
 
 function renderServiceCheckboxes() {
@@ -2716,6 +2755,9 @@ function renderEmptyApplication(message = "Hubungkan aplikasi ke Supabase untuk 
   state.libraryItems = [];
   state.libraryLoaded = false;
   state.libraryError = null;
+  state.kpiRecords = [];
+  state.kpiLoaded = false;
+  state.kpiError = null;
   state.selectedPortfolioCategoryId = null;
   state.selectedPortfolioItemCode = null;
   renderAll();

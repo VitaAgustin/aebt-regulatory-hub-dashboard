@@ -3297,3 +3297,517 @@ td .empty-state {
     animation-iteration-count: 1 !important;
   }
 }
+
+body.kpi-active .app-sidebar {
+  border-right-color: rgba(255, 255, 255, 0.12);
+  background: linear-gradient(180deg, #075e60 0%, #064e4f 100%);
+  color: #e6fffa;
+}
+
+body.kpi-active .brand,
+body.kpi-active .brand:hover,
+body.kpi-active .main-nav a {
+  color: #d9fffb;
+}
+
+body.kpi-active .brand-mark {
+  background: #0f766e;
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.18);
+}
+
+body.kpi-active .brand small,
+body.kpi-active .sidebar-account small {
+  color: #a7f3d0;
+}
+
+body.kpi-active .main-nav a:hover {
+  background: rgba(255, 255, 255, 0.09);
+  color: #fff;
+}
+
+body.kpi-active .main-nav a.active {
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  box-shadow: inset 3px 0 0 #5eead4;
+}
+
+body.kpi-active .sidebar-account,
+body.kpi-active .sidebar-lock-button {
+  border-color: rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.08);
+  color: #e6fffa;
+}
+
+body.kpi-active .account-avatar {
+  background: #ccfbf1;
+  color: #064e4f;
+}
+
+.kpi-page,
+.kpi-input-page {
+  --kpi-teal: #008b8b;
+  --kpi-teal-dark: #006b72;
+  --kpi-navy: #052f44;
+  --kpi-soft: #f6f9fc;
+  --kpi-line: #e4edf4;
+  --kpi-muted: #64748b;
+  padding: 18px;
+}
+
+.kpi-dashboard-header {
+  min-height: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+.kpi-dashboard-header h1 {
+  margin: 0;
+  font-size: 24px;
+  line-height: 1.15;
+  letter-spacing: 0;
+}
+
+.kpi-dashboard-header p {
+  margin: 3px 0 0;
+  color: var(--kpi-muted);
+  font-size: 12px;
+}
+
+.kpi-toolbar {
+  display: flex;
+  align-items: end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.kpi-period-control {
+  display: grid;
+  gap: 4px;
+  color: #334155;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.kpi-period-control select {
+  min-width: 132px;
+  min-height: 38px;
+  border-color: var(--kpi-line);
+  border-radius: 7px;
+  background: #fff;
+}
+
+.kpi-toolbar .button {
+  min-height: 38px;
+  border-radius: 7px;
+}
+
+.kpi-empty-state {
+  margin-bottom: 14px;
+  padding: 18px;
+  border: 1px dashed #99c7c7;
+  border-radius: 8px;
+  background: #f0fdfa;
+  color: #075e60;
+  text-align: center;
+  font-weight: 700;
+}
+
+.kpi-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.kpi-summary-card,
+.kpi-panel {
+  border: 1px solid var(--kpi-line);
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.04);
+}
+
+.kpi-summary-card {
+  min-height: 112px;
+  padding: 18px 16px;
+  display: grid;
+  align-content: center;
+  gap: 12px;
+}
+
+.kpi-summary-card span {
+  color: #0f2842;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.kpi-summary-card strong {
+  color: #073f56;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: 0;
+}
+
+.kpi-dashboard-grid {
+  display: grid;
+  grid-template-columns: 1.05fr 1.25fr 1.05fr;
+  gap: 12px;
+}
+
+.kpi-panel {
+  min-width: 0;
+  padding: 16px;
+}
+
+.kpi-panel-heading {
+  min-height: 28px;
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.kpi-panel-heading h2 {
+  margin: 0;
+  font-size: 13px;
+  letter-spacing: 0;
+}
+
+.kpi-panel-heading p {
+  margin: 2px 0 0;
+  color: var(--kpi-muted);
+  font-size: 11px;
+}
+
+.kpi-panel-heading strong {
+  color: var(--kpi-teal);
+  font-size: 13px;
+}
+
+.kpi-panel-trend {
+  grid-column: span 2;
+}
+
+.kpi-bar-list {
+  display: grid;
+  gap: 12px;
+}
+
+.kpi-aspect-row {
+  display: grid;
+  grid-template-columns: 120px minmax(100px, 1fr) 42px;
+  align-items: center;
+  gap: 9px;
+}
+
+.kpi-aspect-row span,
+.kpi-target-bars span,
+.kpi-k3l-list span,
+.kpi-legend span,
+.kpi-revenue-values span,
+.kpi-rate-row span {
+  color: #334155;
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.kpi-aspect-row strong {
+  color: #0f172a;
+  font-size: 11px;
+  text-align: right;
+}
+
+.kpi-track {
+  height: 18px;
+  overflow: hidden;
+  border-radius: 0;
+  background: #eef4f8;
+}
+
+.kpi-track i {
+  display: block;
+  height: 100%;
+  background: var(--kpi-teal);
+}
+
+.kpi-revenue-values {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.kpi-revenue-values div {
+  display: grid;
+  gap: 4px;
+}
+
+.kpi-revenue-values strong {
+  color: #073f56;
+  font-size: 20px;
+}
+
+.kpi-target-bars {
+  display: grid;
+  gap: 13px;
+}
+
+.kpi-target-bars > div {
+  display: grid;
+  grid-template-columns: 64px minmax(120px, 1fr) 48px;
+  align-items: center;
+  gap: 10px;
+}
+
+.kpi-target-bars b {
+  color: #0f172a;
+  font-size: 11px;
+  text-align: right;
+}
+
+#kpi-target-bar {
+  background: #06354c;
+}
+
+#kpi-actual-bar {
+  background: var(--kpi-teal);
+}
+
+.kpi-k3l-list {
+  display: grid;
+  gap: 8px;
+}
+
+.kpi-k3l-list > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #eef2f7;
+}
+
+.kpi-k3l-list strong {
+  color: var(--kpi-teal);
+  font-size: 12px;
+}
+
+.kpi-rate-row {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.kpi-rate-row > div {
+  padding: 10px;
+  border-radius: 7px;
+  background: var(--kpi-soft);
+  text-align: center;
+}
+
+.kpi-rate-row strong {
+  display: block;
+  margin-top: 2px;
+  color: var(--kpi-teal);
+  font-size: 14px;
+}
+
+.kpi-donut-layout {
+  display: grid;
+  grid-template-columns: 180px 1fr;
+  align-items: center;
+  gap: 18px;
+}
+
+.kpi-donut {
+  width: 170px;
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #e2e8f0;
+}
+
+.kpi-donut > div {
+  width: 92px;
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  border-radius: 50%;
+  background: #fff;
+  text-align: center;
+  box-shadow: inset 0 0 0 1px var(--kpi-line);
+}
+
+.kpi-donut strong {
+  font-size: 28px;
+  line-height: 1;
+}
+
+.kpi-donut span {
+  color: #475569;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.kpi-legend {
+  display: grid;
+  gap: 12px;
+}
+
+.kpi-legend > div {
+  display: grid;
+  grid-template-columns: 10px 1fr auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.kpi-legend i {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+
+.kpi-legend strong {
+  color: #0f172a;
+  font-size: 12px;
+}
+
+.kpi-line-chart {
+  width: 100%;
+  min-height: 260px;
+}
+
+.kpi-line-chart svg {
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.kpi-grid-lines line {
+  stroke: #e6edf5;
+  stroke-width: 1;
+}
+
+.kpi-line {
+  fill: none;
+  stroke: var(--kpi-teal);
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.kpi-points circle {
+  fill: var(--kpi-teal);
+  stroke: #fff;
+  stroke-width: 2;
+}
+
+.kpi-points text {
+  fill: #64748b;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.kpi-points .kpi-point-label {
+  fill: #0f172a;
+  font-size: 10px;
+}
+
+.kpi-chart-empty {
+  min-height: 220px;
+  display: grid;
+  place-items: center;
+  border: 1px dashed var(--kpi-line);
+  border-radius: 8px;
+  color: var(--kpi-muted);
+  font-weight: 700;
+}
+
+.kpi-data-form {
+  display: grid;
+  gap: 18px;
+}
+
+.kpi-data-form .form-card {
+  border-radius: 8px;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.035);
+}
+
+.sticky-actions {
+  position: sticky;
+  bottom: 16px;
+  z-index: 3;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: var(--shadow);
+}
+
+@media (max-width: 1180px) {
+  .kpi-summary-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .kpi-dashboard-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .kpi-panel-k3l,
+  .kpi-panel-trend {
+    grid-column: span 2;
+  }
+}
+
+@media (max-width: 760px) {
+  .kpi-page,
+  .kpi-input-page {
+    padding: 12px;
+  }
+
+  .kpi-dashboard-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .kpi-toolbar,
+  .kpi-toolbar .button,
+  .kpi-period-control,
+  .kpi-period-control select {
+    width: 100%;
+  }
+
+  .kpi-summary-grid,
+  .kpi-dashboard-grid,
+  .kpi-revenue-values,
+  .kpi-rate-row,
+  .kpi-donut-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .kpi-panel-k3l,
+  .kpi-panel-trend {
+    grid-column: span 1;
+  }
+
+  .kpi-aspect-row,
+  .kpi-target-bars > div {
+    grid-template-columns: 1fr;
+  }
+
+  .kpi-aspect-row strong,
+  .kpi-target-bars b {
+    text-align: left;
+  }
+
+  .kpi-donut {
+    margin: 0 auto;
+  }
+}

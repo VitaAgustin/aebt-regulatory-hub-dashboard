@@ -5,7 +5,8 @@ const staticFiles = [
   "index.html",
   "styles.css",
   "app.js",
-  "knowledge-features.js"
+  "knowledge-features.js",
+  "kpi-dashboard.js"
 ];
 
 await rm(outputDirectory, { recursive: true, force: true });

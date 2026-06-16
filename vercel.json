@@ -38,6 +38,26 @@
       "destination": "/"
     },
     {
+      "source": "/kpi",
+      "destination": "/"
+    },
+    {
+      "source": "/dashboard-kpi",
+      "destination": "/"
+    },
+    {
+      "source": "/dashboard-k3",
+      "destination": "/"
+    },
+    {
+      "source": "/kpi-input",
+      "destination": "/"
+    },
+    {
+      "source": "/input-update-data",
+      "destination": "/"
+    },
+    {
       "source": "/service-mapping",
       "destination": "/"
     },
@@ -62,6 +82,15 @@
     },
     {
       "source": "/knowledge-features.js",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/kpi-dashboard.js",
       "headers": [
         {
           "key": "Cache-Control",

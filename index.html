@@ -82,7 +82,7 @@
             <span class="nav-icon" aria-hidden="true">
               <svg viewBox="0 0 24 24"><path d="M3 11.5 12 4l9 7.5M5.5 10v9.5h13V10M9.5 19.5v-6h5v6" /></svg>
             </span>
-            <span>Home</span>
+            <span>Beranda</span>
           </a>
           <a href="#documents" data-nav="documents">
             <span class="nav-icon" aria-hidden="true">
@@ -112,7 +112,19 @@
             <span class="nav-icon" aria-hidden="true">
               <svg viewBox="0 0 24 24"><path d="M4 5.5h6l2 2h8v11H4zM4 9h16" /></svg>
             </span>
-            <span>Library</span>
+            <span>Library K3</span>
+          </a>
+          <a href="#kpi" data-nav="kpi">
+            <span class="nav-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M4 19h16M7 16V9M12 16V5M17 16v-6" /><path d="m7 9 5-4 5 5" /></svg>
+            </span>
+            <span>Dashboard KPI &amp; K3L</span>
+          </a>
+          <a href="#kpi-input" data-nav="kpi-input">
+            <span class="nav-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M5 4.5h14v15H5zM8 8h8M8 12h5M8 16h4" /><path d="m15 15 3-3 2 2-3 3h-2z" /></svg>
+            </span>
+            <span>Input / Update Data</span>
           </a>
           <a href="#admin" data-nav="admin">
             <span class="nav-icon" aria-hidden="true">
@@ -441,6 +453,281 @@
           <span id="library-detail-updated" class="muted"></span>
         </div>
         <div id="library-item-detail"></div>
+      </section>
+
+      <section id="view-kpi" class="view kpi-page hidden" data-view="kpi">
+        <div class="kpi-dashboard-shell">
+          <header class="kpi-dashboard-header">
+            <div>
+              <h1>Dashboard KPI &amp; K3</h1>
+              <p>Ringkasan kinerja perusahaan dan keselamatan kerja</p>
+            </div>
+            <div class="kpi-toolbar">
+              <label class="kpi-period-control">
+                <span>Bulan</span>
+                <select id="kpi-filter-month" aria-label="Filter bulan dashboard"></select>
+              </label>
+              <label class="kpi-period-control">
+                <span>Tahun</span>
+                <select id="kpi-filter-year" aria-label="Filter tahun dashboard"></select>
+              </label>
+              <button id="kpi-update-data" class="button primary" type="button">
+                Update Data
+              </button>
+            </div>
+          </header>
+
+          <div id="kpi-migration-alert" class="kpi-empty-state hidden"></div>
+
+          <section class="kpi-summary-grid" aria-label="Kartu ringkasan KPI dan K3L">
+            <article class="kpi-summary-card">
+              <span>Skor KPI Keseluruhan</span>
+              <strong id="kpi-card-score">-</strong>
+            </article>
+            <article class="kpi-summary-card">
+              <span>EBITDA Portofolio</span>
+              <strong id="kpi-card-ebitda">-</strong>
+            </article>
+            <article class="kpi-summary-card">
+              <span>Pendapatan Portofolio</span>
+              <strong id="kpi-card-revenue">-</strong>
+            </article>
+            <article class="kpi-summary-card">
+              <span>Customer Retention</span>
+              <strong id="kpi-card-retention">-</strong>
+            </article>
+            <article class="kpi-summary-card">
+              <span>Total Jam Kerja</span>
+              <strong id="kpi-card-work-hours">-</strong>
+            </article>
+            <article class="kpi-summary-card">
+              <span>Insiden K3L</span>
+              <strong id="kpi-card-incidents">-</strong>
+            </article>
+          </section>
+
+          <div class="kpi-dashboard-grid">
+            <section class="kpi-panel kpi-panel-aspects">
+              <div class="kpi-panel-heading">
+                <h2>Capaian KPI per Aspek</h2>
+              </div>
+              <div id="kpi-aspect-bars" class="kpi-bar-list"></div>
+            </section>
+
+            <section class="kpi-panel kpi-panel-revenue">
+              <div class="kpi-panel-heading">
+                <div>
+                  <h2>Pendapatan vs Target</h2>
+                  <p id="kpi-revenue-period">-</p>
+                </div>
+                <strong id="kpi-revenue-achievement">-</strong>
+              </div>
+              <div class="kpi-revenue-values">
+                <div>
+                  <span>Target Pendapatan</span>
+                  <strong id="kpi-revenue-target">-</strong>
+                </div>
+                <div>
+                  <span>Realisasi Pendapatan</span>
+                  <strong id="kpi-revenue-actual">-</strong>
+                </div>
+              </div>
+              <div class="kpi-target-bars">
+                <div>
+                  <span>Target</span>
+                  <div class="kpi-track"><i id="kpi-target-bar"></i></div>
+                  <b id="kpi-target-label">-</b>
+                </div>
+                <div>
+                  <span>Realisasi</span>
+                  <div class="kpi-track"><i id="kpi-actual-bar"></i></div>
+                  <b id="kpi-actual-label">-</b>
+                </div>
+              </div>
+            </section>
+
+            <section class="kpi-panel kpi-panel-k3l">
+              <div class="kpi-panel-heading">
+                <h2>Ringkasan K3L</h2>
+              </div>
+              <div id="kpi-k3l-list" class="kpi-k3l-list"></div>
+              <div class="kpi-rate-row">
+                <div>
+                  <span>Frequency Rate</span>
+                  <strong id="kpi-frequency-rate">-</strong>
+                </div>
+                <div>
+                  <span>Severity Rate</span>
+                  <strong id="kpi-severity-rate">-</strong>
+                </div>
+              </div>
+            </section>
+
+            <section class="kpi-panel kpi-panel-employees">
+              <div class="kpi-panel-heading">
+                <h2>Komposisi Jumlah Pegawai</h2>
+              </div>
+              <div class="kpi-donut-layout">
+                <div
+                  id="kpi-employee-donut"
+                  class="kpi-donut"
+                  aria-label="Diagram donat komposisi pegawai"
+                >
+                  <div>
+                    <strong id="kpi-employee-total">-</strong>
+                    <span>Pegawai</span>
+                  </div>
+                </div>
+                <div id="kpi-employee-legend" class="kpi-legend"></div>
+              </div>
+            </section>
+
+            <section class="kpi-panel kpi-panel-trend">
+              <div class="kpi-panel-heading">
+                <h2>Tren Jam Kerja Bulanan</h2>
+                <strong id="kpi-trend-selected-total">-</strong>
+              </div>
+              <div id="kpi-work-hours-chart" class="kpi-line-chart"></div>
+            </section>
+          </div>
+        </div>
+      </section>
+
+      <section
+        id="view-kpi-input"
+        class="view kpi-input-page hidden"
+        data-view="kpi-input"
+      >
+        <div id="kpi-input-locked" class="auth-panel hidden">
+          <div>
+            <h2>Login admin diperlukan</h2>
+            <p>
+              Input dan update data KPI &amp; K3L hanya dapat dilakukan admin
+              yang login menggunakan Supabase Auth.
+            </p>
+          </div>
+          <a class="button primary" href="#admin">Login Admin</a>
+        </div>
+
+        <div id="kpi-input-workspace" class="kpi-input-workspace hidden">
+          <div class="page-heading compact">
+            <div>
+              <p class="eyebrow">Admin data input</p>
+              <h1>Input / Update Data</h1>
+              <p class="page-description">
+                Isi data bulanan KPI, komposisi pegawai, jam kerja, dan K3L.
+                Data tersimpan per kombinasi bulan dan tahun.
+              </p>
+            </div>
+          </div>
+
+          <form id="kpi-data-form" class="kpi-data-form">
+            <input name="id" type="hidden" />
+            <fieldset class="form-card">
+              <legend>Data Ringkasan KPI</legend>
+              <div class="form-grid">
+                <label>
+                  <span>Bulan *</span>
+                  <select name="month" required></select>
+                </label>
+                <label>
+                  <span>Tahun *</span>
+                  <input name="year" type="number" min="2020" max="2100" required />
+                </label>
+                <label>
+                  <span>Skor KPI Keseluruhan (%)</span>
+                  <input name="kpi_overall_score" type="number" min="0" max="100" step="0.01" />
+                </label>
+                <label>
+                  <span>EBITDA Portofolio (Rp M)</span>
+                  <input name="ebitda_portfolio" type="number" min="0" step="0.01" />
+                </label>
+                <label>
+                  <span>Pendapatan Portofolio (Rp M)</span>
+                  <input name="portfolio_revenue" type="number" min="0" step="0.01" />
+                </label>
+                <label>
+                  <span>Customer Retention (%)</span>
+                  <input name="customer_retention" type="number" min="0" max="100" step="0.01" />
+                </label>
+                <label>
+                  <span>Target Pendapatan (Rp M)</span>
+                  <input name="revenue_target" type="number" min="0" step="0.01" />
+                </label>
+                <label>
+                  <span>Realisasi Pendapatan (Rp M)</span>
+                  <input name="revenue_actual" type="number" min="0" step="0.01" />
+                </label>
+                <label>
+                  <span>Capaian Pendapatan (%)</span>
+                  <input id="kpi-form-revenue-achievement" readonly />
+                </label>
+              </div>
+            </fieldset>
+
+            <fieldset class="form-card">
+              <legend>Capaian KPI per Aspek</legend>
+              <div class="form-grid">
+                <label><span>Ekonomi dan Sosial (%)</span><input name="economic_social_score" type="number" min="0" max="100" step="0.01" /></label>
+                <label><span>Inovasi Model Bisnis (%)</span><input name="business_innovation_score" type="number" min="0" max="100" step="0.01" /></label>
+                <label><span>Kepemimpinan Teknologi (%)</span><input name="technology_leadership_score" type="number" min="0" max="100" step="0.01" /></label>
+                <label><span>Peningkatan Investasi (%)</span><input name="investment_score" type="number" min="0" max="100" step="0.01" /></label>
+                <label><span>Pengembangan Talenta (%)</span><input name="talent_development_score" type="number" min="0" max="100" step="0.01" /></label>
+                <label><span>K3L (%)</span><input name="k3l_score" type="number" min="0" max="100" step="0.01" /></label>
+              </div>
+            </fieldset>
+
+            <fieldset class="form-card">
+              <legend>Data Jumlah Pegawai</legend>
+              <div class="form-grid">
+                <label><span>Pegawai Tetap</span><input name="permanent_employees" type="number" min="0" step="1" /></label>
+                <label><span>Pegawai Tidak Tetap</span><input name="temporary_employees" type="number" min="0" step="1" /></label>
+                <label><span>PTT Proyek/Non-NPP</span><input name="project_employees" type="number" min="0" step="1" /></label>
+                <label><span>Tenaga Kerja Pihak Ketiga</span><input name="third_party_employees" type="number" min="0" step="1" /></label>
+                <label><span>Total Pegawai</span><input id="kpi-form-total-employees" readonly /></label>
+              </div>
+            </fieldset>
+
+            <fieldset class="form-card">
+              <legend>Data Jam Kerja</legend>
+              <div class="form-grid">
+                <label><span>Jam kerja Pegawai Tetap</span><input name="permanent_work_hours" type="number" min="0" step="0.01" /></label>
+                <label><span>Jam kerja Pegawai Tidak Tetap</span><input name="temporary_work_hours" type="number" min="0" step="0.01" /></label>
+                <label><span>Jam kerja PTT Proyek/Non-NPP</span><input name="project_work_hours" type="number" min="0" step="0.01" /></label>
+                <label><span>Jam kerja Tenaga Kerja Pihak Ketiga</span><input name="third_party_work_hours" type="number" min="0" step="0.01" /></label>
+                <label><span>Jam kerja lembur</span><input name="overtime_hours" type="number" min="0" step="0.01" /></label>
+                <label><span>Total jam kerja</span><input name="total_work_hours" type="number" min="0" step="0.01" /></label>
+                <label><span>Jam kerja hilang/LTI</span><input name="lost_work_hours" type="number" min="0" step="0.01" /></label>
+              </div>
+            </fieldset>
+
+            <fieldset class="form-card">
+              <legend>Statistik K3L</legend>
+              <div class="form-grid">
+                <label><span>Fatality</span><input name="fatality" type="number" min="0" step="1" /></label>
+                <label><span>Medical Treatment</span><input name="medical_treatment" type="number" min="0" step="1" /></label>
+                <label><span>First Aid</span><input name="first_aid" type="number" min="0" step="1" /></label>
+                <label><span>Kejadian Berdampak Lingkungan</span><input name="environmental_incident" type="number" min="0" step="1" /></label>
+                <label><span>Near Miss</span><input name="near_miss" type="number" min="0" step="1" /></label>
+                <label><span>Kondisi Tidak Aman</span><input name="unsafe_condition" type="number" min="0" step="1" /></label>
+                <label><span>Perilaku Tidak Aman</span><input name="unsafe_action" type="number" min="0" step="1" /></label>
+                <label><span>Frequency Rate</span><input name="frequency_rate" type="number" min="0" step="0.01" /></label>
+                <label><span>Severity Rate</span><input name="severity_rate" type="number" min="0" step="0.01" /></label>
+                <label class="span-2"><span>Catatan</span><textarea name="notes"></textarea></label>
+              </div>
+            </fieldset>
+
+            <div class="form-actions sticky-actions">
+              <span id="kpi-form-status" class="muted"></span>
+              <button id="kpi-cancel-edit" class="button secondary" type="button">
+                Batal
+              </button>
+              <button id="kpi-save-data" class="button primary" type="submit">
+                Simpan Data
+              </button>
+            </div>
+          </form>
+        </div>
       </section>
 
       <section id="view-admin" class="view page-shell hidden" data-view="admin">
@@ -1099,5 +1386,6 @@
 
     <script src="app.js" defer></script>
     <script src="knowledge-features.js" defer></script>
+    <script src="kpi-dashboard.js" defer></script>
   </body>
 </html>
