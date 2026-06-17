@@ -54,6 +54,9 @@ lain ke `app.js`, HTML, repository publik, maupun static hosting.
     download. File ini dijalankan setelah `supabase-library.sql`.
 14. Jalankan `supabase-dashboard-kpi-k3l.sql` untuk menu **Dashboard KPI &
     K3L** dan **Input / Update Data**.
+15. Untuk project yang sudah pernah menjalankan migration download request
+    sebelum status `sent` ditambahkan, jalankan
+    `supabase-file-access-requests-sent-status.sql`.
 
 Script tersebut:
 
@@ -296,13 +299,20 @@ tetap memerlukan session Supabase Auth.
 
 ## 12. Preview dan Approval Download
 
-- File Supabase dipreview melalui signed URL tanpa tombol download publik.
+- File Supabase dipreview melalui signed URL.
 - Link Google Drive dengan format `/file/d/FILE_ID/view` atau `open?id=FILE_ID`
   diubah menjadi URL `/preview`.
 - PDF eksternal langsung dapat ditampilkan dalam iframe jika URL dapat
   di-embed.
-- Pengguna mengirim form **Ajukan Download**. Request hanya dicatat sebagai
-  `pending`; approval admin tidak menghasilkan direct download link.
+- Viewer dapat langsung memakai tombol **Download** untuk dokumen Regulasi dan
+  materi **Library K3**.
+- Viewer SOP Center dan Data Standar tetap memakai form **Ajukan Download**.
+  Request dicatat sebagai `pending`; approval admin tidak menghasilkan direct
+  download link untuk viewer.
+- Admin yang login dapat memakai **Download Admin** untuk file Supabase dan
+  **Buka File Admin** untuk link eksternal pada semua tipe dokumen.
+- Setelah request disetujui dan file dikirim manual, admin dapat menandai
+  request sebagai `sent`.
 - Admin membuka **Permintaan Download** untuk approve/reject dan menghubungi
   pemohon sesuai kebijakan internal.
 

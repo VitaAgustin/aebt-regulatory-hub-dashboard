@@ -3210,6 +3210,15 @@ td .empty-state {
   background: #fee2e2;
 }
 
+.request-sent {
+  color: #3730a3;
+  background: #e0e7ff;
+}
+
+.request-admin-actions {
+  margin-top: 8px;
+}
+
 .migration-empty-state {
   display: flex;
   flex-direction: column;

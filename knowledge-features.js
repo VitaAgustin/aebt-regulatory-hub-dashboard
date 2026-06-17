@@ -765,6 +765,7 @@ async function renderEnhancedDocumentDetail(id) {
     ],
     services: doc.related_services,
     portfolios: doc.related_portfolios,
+    resource: doc,
     source,
     sourceLabel: getFileSourceLabel(source, doc.external_file_url),
     fileName: doc.file_name || getExternalFileLabel(doc.external_file_url),
@@ -823,6 +824,7 @@ async function renderLibraryItemDetail(id) {
     sections: [["Deskripsi", item.description]],
     services: null,
     portfolios: null,
+    resource: item,
     source,
     sourceLabel: getFileSourceLabel(source, item.external_file_url),
     fileName: item.file_name || getExternalFileLabel(item.external_file_url),
@@ -842,11 +844,21 @@ function renderKnowledgeDetail({
   sections,
   services,
   portfolios,
+  resource,
   source,
   sourceLabel,
   fileName,
   hasFile
 }) {
+  const fileActions = renderResourceFileActions({
+    resourceType,
+    id,
+    title,
+    resource,
+    source,
+    hasFile
+  });
+
   return `
     <article class="knowledge-detail">
       <header class="knowledge-detail-header">
@@ -903,18 +915,7 @@ function renderKnowledgeDetail({
               source
             )}">${escapeHtml(sourceLabel)}</span>
           </div>
-          ${
-            hasFile
-              ? `<button
-                   class="button primary"
-                   type="button"
-                   data-request-download
-                   data-resource-type="${escapeAttribute(resourceType)}"
-                   data-resource-id="${escapeAttribute(id)}"
-                   data-resource-title="${escapeAttribute(title)}"
-                 >Ajukan Download</button>`
-              : ""
-          }
+          ${fileActions}
         </div>
         <div id="resource-preview" class="resource-preview">
           ${previewLoadingMessage(source)}
@@ -922,6 +923,67 @@ function renderKnowledgeDetail({
       </section>
     </article>
   `;
+}
+
+function renderResourceFileActions({
+  resourceType,
+  id,
+  title,
+  resource,
+  source,
+  hasFile
+}) {
+  if (!hasFile) return "";
+
+  const admin = Boolean(state.session?.user);
+  const directAllowed = admin || canViewerDirectDownload(resourceType, resource);
+  if (directAllowed) {
+    const isExternal = source === "external";
+    const label = admin
+      ? isExternal
+        ? "Buka File Admin"
+        : "Download Admin"
+      : "Download";
+    const actionAttribute = isExternal ? "data-open-external" : "data-direct-download";
+    const buttonClass = admin && isExternal ? "button secondary" : "button primary";
+    return `<button
+      class="${buttonClass}"
+      type="button"
+      ${actionAttribute}
+      data-resource-type="${escapeAttribute(resourceType)}"
+      data-resource-id="${escapeAttribute(id)}"
+      data-resource-title="${escapeAttribute(title)}"
+    >${escapeHtml(label)}</button>`;
+  }
+
+  if (requiresDownloadRequest(resourceType, resource)) {
+    return `<button
+      class="button primary"
+      type="button"
+      data-request-download
+      data-resource-type="${escapeAttribute(resourceType)}"
+      data-resource-id="${escapeAttribute(id)}"
+      data-resource-title="${escapeAttribute(title)}"
+    >Ajukan Download</button>`;
+  }
+
+  return "";
+}
+
+function canViewerDirectDownload(resourceType, resource) {
+  if (resourceType === "library") return true;
+  if (resourceType !== "document") return false;
+  return normalizeDocumentType(resource?.document_type) === "regulasi";
+}
+
+function requiresDownloadRequest(resourceType, resource) {
+  if (state.session?.user) return false;
+  if (resourceType !== "document") return false;
+  return ["sop", "standar"].includes(normalizeDocumentType(resource?.document_type));
+}
+
+function normalizeDocumentType(value) {
+  return String(value || "").trim().toLowerCase();
 }
 
 function previewLoadingMessage(source) {
@@ -1049,8 +1111,12 @@ function getExternalFileLabel(url) {
 }
 
 function handleKnowledgeDetailAction(event) {
+  const directDownload = event.target.closest("[data-direct-download]");
+  const externalOpen = event.target.closest("[data-open-external]");
   const requestButton = event.target.closest("[data-request-download]");
   const libraryEdit = event.target.closest("[data-edit-library-item]");
+  if (directDownload) handleDirectResourceDownload(directDownload.dataset, directDownload);
+  if (externalOpen) handleExternalResourceOpen(externalOpen.dataset);
   if (requestButton) openDownloadRequest(requestButton.dataset);
   if (libraryEdit) {
     if (!requireAdmin()) return;
@@ -1060,6 +1126,112 @@ function handleKnowledgeDetailAction(event) {
       0
     );
   }
+}
+
+async function handleDirectResourceDownload(dataset, button = null) {
+  const resource = resolveActionResource(dataset.resourceType, dataset.resourceId);
+  if (!resource) {
+    showToast("File tidak ditemukan.", true);
+    return;
+  }
+  if (!state.session?.user && !canViewerDirectDownload(dataset.resourceType, resource)) {
+    showToast("Dokumen ini harus diajukan melalui approval download.", true);
+    return;
+  }
+
+  const source = getDocumentFileSource(resource);
+  if (source === "external") {
+    handleExternalResourceOpen(dataset);
+    return;
+  }
+
+  const storagePath = validStoragePath(resource.file_path);
+  if (!storagePath) {
+    showToast("File belum tersedia.", true);
+    return;
+  }
+
+  const previousText = button?.textContent;
+  if (button) {
+    button.disabled = true;
+    button.textContent = "Menyiapkan...";
+  }
+  try {
+    const client = db || (await ensureSupabaseClient());
+    const cached = state.signedUrls.get(storagePath);
+    const existing = typeof cached === "object" ? cached?.download : null;
+    let signedUrl = existing;
+    if (!signedUrl) {
+      const { data, error } = await client.storage
+        .from(STORAGE_BUCKET)
+        .createSignedUrl(storagePath, 300, {
+          download: getDownloadFileName(resource, dataset.resourceTitle)
+        });
+      if (error) throw error;
+      signedUrl = data?.signedUrl;
+      if (!signedUrl) throw new Error("Signed URL download tidak tersedia.");
+      const nextCache =
+        typeof cached === "string" ? { preview: cached } : { ...(cached || {}) };
+      nextCache.download = signedUrl;
+      state.signedUrls.set(storagePath, nextCache);
+    }
+    triggerDownload(signedUrl, getDownloadFileName(resource, dataset.resourceTitle));
+  } catch (error) {
+    showToast(`Download gagal disiapkan: ${readableError(error)}`, true);
+  } finally {
+    if (button) {
+      button.disabled = false;
+      button.textContent = previousText;
+    }
+  }
+}
+
+function handleExternalResourceOpen(dataset) {
+  const resource = resolveActionResource(dataset.resourceType, dataset.resourceId);
+  if (!resource) {
+    showToast("File tidak ditemukan.", true);
+    return;
+  }
+  if (!state.session?.user && !canViewerDirectDownload(dataset.resourceType, resource)) {
+    showToast("Link dokumen ini hanya tersedia melalui approval download.", true);
+    return;
+  }
+  const url = validExternalUrl(resource.external_file_url);
+  if (!url) {
+    showToast("Link file belum tersedia.", true);
+    return;
+  }
+  window.open(url, "_blank", "noopener,noreferrer");
+}
+
+function resolveActionResource(resourceType, resourceId) {
+  const id = String(resourceId || "").trim();
+  if (!id) return null;
+  return resourceType === "library"
+    ? state.libraryItems.find((item) => item.id === id && item.is_active !== false)
+    : safeDocuments().find((doc) => doc.id === id);
+}
+
+function getDownloadFileName(resource, fallbackTitle = "document") {
+  const rawName =
+    resource?.file_name ||
+    resource?.title ||
+    fallbackTitle ||
+    "document";
+  const cleanName = String(rawName).replace(/[\\/:*?"<>|]+/g, "_").trim();
+  if (!cleanName) return "document.pdf";
+  return /\.[a-z0-9]{2,8}$/i.test(cleanName) ? cleanName : `${cleanName}.pdf`;
+}
+
+function triggerDownload(url, fileName) {
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.target = "_blank";
+  anchor.rel = "noopener noreferrer";
+  anchor.download = fileName;
+  document.body.append(anchor);
+  anchor.click();
+  anchor.remove();
 }
 
 function openDownloadRequest(dataset) {
@@ -1181,8 +1353,7 @@ function renderAccessRequests() {
                         )}">Reject</button>
                       </div>
                     `
-                    : `<small>${escapeHtml(request.admin_note || "Tanpa catatan.")}</small>
-                       <small>${escapeHtml(request.reviewed_by || "-")}</small>`
+                    : renderReviewedRequestActions(request, resource)
                 }
               </td>
             </tr>
@@ -1190,6 +1361,61 @@ function renderAccessRequests() {
         })
         .join("")
     : emptyRow(5, "Belum ada permintaan download.");
+}
+
+function renderReviewedRequestActions(request, resource) {
+  const note = `
+    <small>${escapeHtml(request.admin_note || "Tanpa catatan.")}</small>
+    <small>${escapeHtml(request.reviewed_by || "-")}</small>
+  `;
+  const emailButton = `<button
+    class="button secondary small"
+    type="button"
+    data-copy-request-email="${escapeAttribute(request.requester_email)}"
+  >Salin Email</button>`;
+
+  if (request.status === "rejected") {
+    return `${note}<div class="table-actions request-admin-actions">${emailButton}</div>`;
+  }
+
+  const fileAction = renderAdminRequestFileAction(request, resource);
+  const sentButton =
+    request.status === "approved"
+      ? `<button
+          class="button primary small"
+          type="button"
+          data-sent-request="${escapeAttribute(request.id)}"
+        >Tandai Sudah Dikirim</button>`
+      : "";
+  return `
+    ${note}
+    <div class="table-actions request-admin-actions">
+      ${emailButton}
+      ${fileAction}
+      ${sentButton}
+    </div>
+  `;
+}
+
+function renderAdminRequestFileAction(request, resource) {
+  if (!resource) return '<small>Resource tidak tersedia.</small>';
+  const source = getDocumentFileSource(resource);
+  const hasFile =
+    (source === "supabase" && Boolean(validStoragePath(resource.file_path))) ||
+    (source === "external" && Boolean(validExternalUrl(resource.external_file_url)));
+  if (!hasFile) return '<small>File belum tersedia.</small>';
+
+  const resourceType = request.resource_type === "library" ? "library" : "document";
+  const actionAttribute = source === "external" ? "data-open-external" : "data-direct-download";
+  const label = source === "external" ? "Buka File Admin" : "Download Admin";
+  return `<button
+    class="button secondary small"
+    type="button"
+    ${actionAttribute}
+    data-resource-type="${escapeAttribute(resourceType)}"
+    data-resource-id="${escapeAttribute(resource.id)}"
+    data-resource-title="${escapeAttribute(resource.title || "Resource")}"
+  >${escapeHtml(label)}</button>`;
 }
 
 function resolveRequestResource(request) {
@@ -1200,7 +1426,7 @@ function resolveRequestResource(request) {
 
 function requestStatusBadge(status) {
   const label =
-    { pending: "Pending", approved: "Approved", rejected: "Rejected" }[status] ||
+    { pending: "Pending", approved: "Approved", rejected: "Rejected", sent: "Sent" }[status] ||
     status;
   return `<span class="request-status request-${escapeAttribute(
     status
@@ -1210,8 +1436,16 @@ function requestStatusBadge(status) {
 function handleAccessRequestAction(event) {
   const approve = event.target.closest("[data-approve-request]");
   const reject = event.target.closest("[data-reject-request]");
+  const sent = event.target.closest("[data-sent-request]");
+  const copyEmail = event.target.closest("[data-copy-request-email]");
+  const directDownload = event.target.closest("[data-direct-download]");
+  const externalOpen = event.target.closest("[data-open-external]");
   if (approve) reviewAccessRequest(approve.dataset.approveRequest, "approved");
   if (reject) reviewAccessRequest(reject.dataset.rejectRequest, "rejected");
+  if (sent) reviewAccessRequest(sent.dataset.sentRequest, "sent");
+  if (copyEmail) copyRequestEmail(copyEmail.dataset.copyRequestEmail);
+  if (directDownload) handleDirectResourceDownload(directDownload.dataset, directDownload);
+  if (externalOpen) handleExternalResourceOpen(externalOpen.dataset);
 }
 
 async function reviewAccessRequest(id, status) {
@@ -1224,24 +1458,47 @@ async function reviewAccessRequest(id, status) {
     return;
   }
   try {
+    const payload = {
+      status,
+      reviewed_at: new Date().toISOString(),
+      reviewed_by: state.session.user.email || "Admin"
+    };
+    if (status !== "sent") payload.admin_note = adminNote || null;
     const { error } = await db
       .from(FILE_ACCESS_REQUEST_TABLE)
-      .update({
-        status,
-        admin_note: adminNote || null,
-        reviewed_at: new Date().toISOString(),
-        reviewed_by: state.session.user.email || "Admin"
-      })
+      .update(payload)
       .eq("id", id);
     if (error) throw error;
     await loadAccessRequests({ force: true });
     showToast(
       status === "approved"
         ? "Permintaan disetujui. Hubungi pemohon sesuai kebijakan internal."
-        : "Permintaan ditolak."
+        : status === "sent"
+          ? "Permintaan ditandai sudah dikirim."
+          : "Permintaan ditolak."
     );
   } catch (error) {
     showToast(readableError(error), true);
+  }
+}
+
+async function copyRequestEmail(email) {
+  const value = String(email || "").trim();
+  if (!value) {
+    showToast("Email pemohon tidak tersedia.", true);
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(value);
+    showToast("Email pemohon disalin.");
+  } catch {
+    const input = document.createElement("input");
+    input.value = value;
+    document.body.append(input);
+    input.select();
+    document.execCommand("copy");
+    input.remove();
+    showToast("Email pemohon disalin.");
   }
 }
 
@@ -1604,4 +1861,3 @@ function migrationEmptyState(title, message) {
     </div>
   `;
 }
-

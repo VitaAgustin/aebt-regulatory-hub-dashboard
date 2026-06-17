@@ -12,7 +12,7 @@ create table if not exists public.file_access_requests (
   requester_unit text,
   reason text not null,
   status text not null default 'pending'
-    check (status in ('pending', 'approved', 'rejected')),
+    check (status in ('pending', 'approved', 'rejected', 'sent')),
   admin_note text,
   requested_at timestamptz not null default now(),
   reviewed_at timestamptz,
@@ -32,6 +32,31 @@ alter table public.file_access_requests
     or
     (resource_type = 'library' and document_id is null)
   );
+
+do $$
+declare
+  constraint_name text;
+begin
+  for constraint_name in
+    select c.conname
+    from pg_constraint c
+    join pg_class t on t.oid = c.conrelid
+    join pg_namespace n on n.oid = t.relnamespace
+    where n.nspname = 'public'
+      and t.relname = 'file_access_requests'
+      and c.contype = 'c'
+      and pg_get_constraintdef(c.oid) ilike '%status%'
+  loop
+    execute format(
+      'alter table public.file_access_requests drop constraint if exists %I',
+      constraint_name
+    );
+  end loop;
+end $$;
+
+alter table public.file_access_requests
+  add constraint file_access_requests_status_check
+  check (status in ('pending', 'approved', 'rejected', 'sent'));
 
 create index if not exists idx_file_access_requests_status
   on public.file_access_requests(status, requested_at desc);
