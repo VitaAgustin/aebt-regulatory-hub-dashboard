@@ -17,12 +17,19 @@ create table if not exists public.file_access_requests (
   requested_at timestamptz not null default now(),
   reviewed_at timestamptz,
   reviewed_by text,
+  sent_at timestamptz,
+  sent_by text,
   constraint file_access_requests_resource_check check (
     (resource_type = 'document' and library_item_id is null)
     or
     (resource_type = 'library' and document_id is null)
   )
 );
+
+alter table public.file_access_requests
+  add column if not exists sent_at timestamptz;
+alter table public.file_access_requests
+  add column if not exists sent_by text;
 
 alter table public.file_access_requests
   drop constraint if exists file_access_requests_resource_check;
@@ -77,6 +84,8 @@ with check (
   status = 'pending'
   and reviewed_at is null
   and reviewed_by is null
+  and sent_at is null
+  and sent_by is null
   and admin_note is null
   and (
     (resource_type = 'document' and document_id is not null and library_item_id is null)
@@ -95,6 +104,8 @@ with check (
   status = 'pending'
   and reviewed_at is null
   and reviewed_by is null
+  and sent_at is null
+  and sent_by is null
   and admin_note is null
   and (
     (resource_type = 'document' and document_id is not null and library_item_id is null)

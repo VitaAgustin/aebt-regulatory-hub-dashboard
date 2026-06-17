@@ -1,6 +1,11 @@
 -- Allow admins to mark approved download/access requests as sent.
 -- Safe to run after supabase-file-access-requests.sql.
 
+alter table public.file_access_requests
+  add column if not exists sent_at timestamptz;
+alter table public.file_access_requests
+  add column if not exists sent_by text;
+
 do $$
 declare
   constraint_name text;

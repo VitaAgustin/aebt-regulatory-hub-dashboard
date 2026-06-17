@@ -189,38 +189,61 @@
         <main class="app-main">
       <section id="view-home" class="view page-shell" data-view="home">
         <div class="page-heading home-hero">
-          <div class="hero-copy">
-            <p class="eyebrow">Regulatory intelligence</p>
-            <h1>AEBT Regulatory Knowledge Hub</h1>
-            <p class="page-description">
-              Pusat data regulasi, SOP, file PDF, dan pemetaan layanan untuk
-              mendukung pekerjaan kajian dan compliance SBU AEBT.
-            </p>
-            <div class="hero-actions">
-              <a class="button primary" href="#documents">Lihat dokumen</a>
-              <a class="button secondary" href="#services">Service Mapping</a>
-            </div>
+          <div id="poster-hero" class="poster-hero hidden" aria-label="Poster Library K3">
+            <div id="poster-slider-track" class="poster-slider-track"></div>
+            <button
+              id="poster-prev"
+              class="poster-arrow poster-arrow-left"
+              type="button"
+              aria-label="Poster sebelumnya"
+            >
+              <span aria-hidden="true">&lt;</span>
+            </button>
+            <button
+              id="poster-next"
+              class="poster-arrow poster-arrow-right"
+              type="button"
+              aria-label="Poster berikutnya"
+            >
+              <span aria-hidden="true">&gt;</span>
+            </button>
+            <div id="poster-dots" class="poster-dots" aria-label="Navigasi poster"></div>
           </div>
-          <div class="hero-visual" aria-hidden="true">
-            <div class="visual-sun"></div>
-            <div class="visual-turbine turbine-one">
-              <i></i><b></b><b></b><b></b>
+
+          <div id="home-hero-fallback" class="home-hero-fallback">
+            <div class="hero-copy">
+              <p class="eyebrow">Regulatory intelligence</p>
+              <h1>AEBT Regulatory Knowledge Hub</h1>
+              <p class="page-description">
+                Pusat data regulasi, SOP, file PDF, dan pemetaan layanan untuk
+                mendukung pekerjaan kajian dan compliance SBU AEBT.
+              </p>
+              <div class="hero-actions">
+                <a class="button primary" href="#documents">Lihat dokumen</a>
+                <a class="button secondary" href="#services">Service Mapping</a>
+              </div>
             </div>
-            <div class="visual-turbine turbine-two">
-              <i></i><b></b><b></b><b></b>
-            </div>
-            <div class="visual-dashboard">
-              <span class="visual-dashboard-bar"></span>
-              <span class="visual-dashboard-row"></span>
-              <span class="visual-dashboard-row short"></span>
-              <span class="visual-dashboard-cards"></span>
-            </div>
-            <div class="visual-folder"></div>
-            <div class="visual-shield">
-              <svg viewBox="0 0 24 24">
-                <path d="M12 3 19 6v5c0 4.7-2.7 8-7 10-4.3-2-7-5.3-7-10V6z" />
-                <path d="m8.5 12 2.2 2.2 4.8-5" />
-              </svg>
+            <div class="hero-visual" aria-hidden="true">
+              <div class="visual-sun"></div>
+              <div class="visual-turbine turbine-one">
+                <i></i><b></b><b></b><b></b>
+              </div>
+              <div class="visual-turbine turbine-two">
+                <i></i><b></b><b></b><b></b>
+              </div>
+              <div class="visual-dashboard">
+                <span class="visual-dashboard-bar"></span>
+                <span class="visual-dashboard-row"></span>
+                <span class="visual-dashboard-row short"></span>
+                <span class="visual-dashboard-cards"></span>
+              </div>
+              <div class="visual-folder"></div>
+              <div class="visual-shield">
+                <svg viewBox="0 0 24 24">
+                  <path d="M12 3 19 6v5c0 4.7-2.7 8-7 10-4.3-2-7-5.3-7-10V6z" />
+                  <path d="m8.5 12 2.2 2.2 4.8-5" />
+                </svg>
+              </div>
             </div>
           </div>
         </div>
@@ -418,7 +441,7 @@
 
       <section id="view-detail" class="view page-shell hidden" data-view="detail">
         <div class="detail-toolbar">
-          <a class="button secondary" href="#documents">Kembali</a>
+          <a id="detail-back-link" class="button secondary" href="#documents">Kembali</a>
           <span id="detail-updated" class="muted"></span>
         </div>
         <div id="document-detail"></div>
@@ -449,7 +472,7 @@
         data-view="library-detail"
       >
         <div class="detail-toolbar">
-          <a class="button secondary" href="#library">Kembali ke Library</a>
+          <a id="library-detail-back-link" class="button secondary" href="#library">Kembali ke Library K3</a>
           <span id="library-detail-updated" class="muted"></span>
         </div>
         <div id="library-item-detail"></div>

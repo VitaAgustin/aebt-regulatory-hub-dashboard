@@ -153,6 +153,9 @@ const state = {
   activeMappingTab: "services",
   selectedPortfolioCategoryId: null,
   selectedPortfolioItemCode: null,
+  posterSlideIndex: 0,
+  posterTimer: null,
+  posterRenderToken: 0,
   legacyRelatedServices: [],
   legacyRelatedPortfolios: [],
   signedUrls: new Map(),
@@ -727,6 +730,7 @@ function renderAll() {
   populateServiceCategorySelect();
   renderPortfolioCheckboxes();
   renderKnowledgeFeatures();
+  if (typeof renderPosterHero === "function") renderPosterHero();
   if (typeof renderKpiDashboard === "function") renderKpiDashboard();
   if (typeof renderKpiInputState === "function") renderKpiInputState();
 }
@@ -751,13 +755,21 @@ function route() {
     standar: ["Standard Library", "Data Standar"],
     services: ["Business Relevance", "Service Mapping"],
     library: ["Knowledge Resources", "Library K3"],
-    "library-item": ["Knowledge Resources", "Detail Library"],
+    "library-item": ["Knowledge Resources", "Library K3"],
     kpi: ["Performance Dashboard", "Dashboard KPI & K3L"],
     "kpi-input": ["Restricted Access", "Input / Update Data"],
     admin: ["Restricted Access", "Admin Management"],
     document: ["Document Repository", "Detail Dokumen"]
   };
-  const [eyebrow, title] = routeContext[routeName] || routeContext.home;
+  const detailDoc =
+    routeName === "document" && routeId
+      ? safeDocuments().find((item) => item.id === decodeURIComponent(routeId))
+      : null;
+  const detailContext =
+    routeName === "document" ? getDocumentDetailRouteContext(detailDoc) : null;
+  const [eyebrow, title] = detailContext
+    ? [detailContext.eyebrow, detailContext.title]
+    : routeContext[routeName] || routeContext.home;
 
   $$(".view").forEach((view) => view.classList.add("hidden"));
   $(`[data-view="${normalizedRoute === "document" ? "detail" : normalizedRoute}"]`)
@@ -765,15 +777,18 @@ function route() {
 
   $$(".main-nav a").forEach((link) => {
     const target = link.dataset.nav;
+    const detailNav = detailContext?.nav || "documents";
     link.classList.toggle(
       "active",
       target === routeName ||
-        (routeName === "document" && target === "documents") ||
+        (routeName === "document" && target === detailNav) ||
         (routeName === "library-item" && target === "library")
     );
   });
   $("#topbar-eyebrow").textContent = eyebrow;
   $("#topbar-title").textContent = title;
+  if (routeName === "document") applyDocumentDetailRouteContext(detailDoc);
+  if (routeName === "library-item") applyLibraryDetailRouteContext();
   document.body.classList.toggle(
     "kpi-active",
     routeName === "kpi" || routeName === "kpi-input"
@@ -811,6 +826,62 @@ function getDocumentLibraryType(routeName = location.hash.replace(/^#/, "").spli
     sop: "sop",
     standar: "standar"
   }[routeName] || null;
+}
+
+function getDocumentDetailRouteContext(doc) {
+  const type = normalizeText(doc?.document_type);
+  if (type === "sop") {
+    return {
+      nav: "sop",
+      eyebrow: "DOCUMENT LIBRARY",
+      title: "SOP Center",
+      backHref: "#sop",
+      backLabel: "Kembali ke SOP Center"
+    };
+  }
+  if (type === "standar" || doc?.standard_folder_id) {
+    return {
+      nav: "standar",
+      eyebrow: "STANDARD LIBRARY",
+      title: "Data Standar",
+      backHref: "#standar",
+      backLabel: "Kembali ke Data Standar"
+    };
+  }
+  return {
+    nav: "documents",
+    eyebrow: "DOCUMENT REPOSITORY",
+    title: "Database Regulasi",
+    backHref: "#documents",
+    backLabel: "Kembali ke Database Regulasi"
+  };
+}
+
+function applyDocumentDetailRouteContext(doc) {
+  const context = getDocumentDetailRouteContext(doc);
+  $("#topbar-eyebrow").textContent = context.eyebrow;
+  $("#topbar-title").textContent = context.title;
+  $$(".main-nav a").forEach((link) => {
+    link.classList.toggle("active", link.dataset.nav === context.nav);
+  });
+  const backLink = $("#detail-back-link");
+  if (backLink) {
+    backLink.href = context.backHref;
+    backLink.textContent = context.backLabel;
+  }
+}
+
+function applyLibraryDetailRouteContext() {
+  $("#topbar-eyebrow").textContent = "KNOWLEDGE RESOURCES";
+  $("#topbar-title").textContent = "Library K3";
+  $$(".main-nav a").forEach((link) => {
+    link.classList.toggle("active", link.dataset.nav === "library");
+  });
+  const backLink = $("#library-detail-back-link");
+  if (backLink) {
+    backLink.href = "#library";
+    backLink.textContent = "Kembali ke Library K3";
+  }
 }
 
 function configureDocumentLibrary(routeName) {

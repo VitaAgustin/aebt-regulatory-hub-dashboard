@@ -64,6 +64,17 @@ function bindKnowledgeFeatureEvents() {
   $("#refresh-access-requests")?.addEventListener("click", () =>
     loadAccessRequests({ force: true })
   );
+  $("#poster-prev")?.addEventListener("click", () =>
+    showPosterSlide(state.posterSlideIndex - 1, { userInitiated: true })
+  );
+  $("#poster-next")?.addEventListener("click", () =>
+    showPosterSlide(state.posterSlideIndex + 1, { userInitiated: true })
+  );
+  $("#poster-dots")?.addEventListener("click", (event) => {
+    const dot = event.target.closest("[data-poster-dot]");
+    if (!dot) return;
+    showPosterSlide(Number(dot.dataset.posterDot), { userInitiated: true });
+  });
 }
 
 async function loadStandardFolders({ force = false } = {}) {
@@ -138,6 +149,7 @@ async function loadLibraryCatalog({ force = false } = {}) {
       renderLibrary();
       renderLibraryManagers();
       populateLibraryFolderSelect();
+      renderPosterHero();
     }
     return state.libraryItems;
   })();
@@ -185,7 +197,200 @@ function renderKnowledgeFeatures() {
   populateStandardFolderSelect();
   renderStandardFolderBrowser();
   renderLibrary();
+  renderPosterHero();
   renderAdminKnowledgeFeatures();
+}
+
+function getPosterFolder() {
+  return state.libraryFolders.find(
+    (folder) => folder.is_active !== false && normalizeText(folder.name) === "poster"
+  );
+}
+
+function getPosterItems() {
+  const folder = getPosterFolder();
+  if (!folder) return [];
+  return state.libraryItems.filter(
+    (item) => item.is_active !== false && item.folder_id === folder.id
+  );
+}
+
+function renderPosterHero() {
+  const posterHero = $("#poster-hero");
+  const fallback = $("#home-hero-fallback");
+  const track = $("#poster-slider-track");
+  const dots = $("#poster-dots");
+  const prev = $("#poster-prev");
+  const next = $("#poster-next");
+  if (!posterHero || !fallback || !track || !dots) return;
+
+  window.clearInterval(state.posterTimer);
+  state.posterTimer = null;
+
+  const posters = getPosterItems();
+  if (!state.libraryLoaded || !posters.length) {
+    posterHero.classList.add("hidden");
+    fallback.classList.remove("hidden");
+    track.innerHTML = "";
+    dots.innerHTML = "";
+    return;
+  }
+
+  fallback.classList.add("hidden");
+  posterHero.classList.remove("hidden");
+  state.posterSlideIndex = Math.min(
+    Math.max(Number(state.posterSlideIndex) || 0, 0),
+    posters.length - 1
+  );
+  const renderToken = ++state.posterRenderToken;
+
+  track.innerHTML = posters
+    .map((item, index) => renderPosterSlideShell(item, index))
+    .join("");
+  dots.innerHTML =
+    posters.length > 1
+      ? posters
+          .map(
+            (_item, index) => `
+              <button
+                type="button"
+                data-poster-dot="${index}"
+                aria-label="Tampilkan poster ${index + 1}"
+              ></button>
+            `
+          )
+          .join("")
+      : "";
+  prev?.classList.toggle("hidden", posters.length <= 1);
+  next?.classList.toggle("hidden", posters.length <= 1);
+  dots.classList.toggle("hidden", posters.length <= 1);
+
+  showPosterSlide(state.posterSlideIndex, { restartTimer: false });
+  hydratePosterSlides(posters, renderToken);
+  if (posters.length > 1) {
+    state.posterTimer = window.setInterval(
+      () => showPosterSlide(state.posterSlideIndex + 1, { restartTimer: false }),
+      6000
+    );
+  }
+}
+
+function renderPosterSlideShell(item, index) {
+  const source = getDocumentFileSource(item);
+  return `
+    <article
+      class="poster-slide ${index === state.posterSlideIndex ? "active" : ""}"
+      data-poster-slide="${index}"
+    >
+      <div
+        class="poster-media-slot"
+        data-poster-media="${escapeAttribute(item.id)}"
+        data-poster-source="${escapeAttribute(source)}"
+      >
+        <div class="poster-placeholder">Memuat poster...</div>
+      </div>
+      <div class="poster-caption">
+        <span>Library K3 / Poster</span>
+        <strong>${escapeHtml(item.title || "Poster")}</strong>
+        ${item.description ? `<p>${escapeHtml(item.description)}</p>` : ""}
+      </div>
+    </article>
+  `;
+}
+
+async function hydratePosterSlides(posters, renderToken) {
+  await Promise.all(
+    posters.map(async (item) => {
+      const slot = $(`[data-poster-media="${CSS.escape(item.id)}"]`);
+      if (!slot || renderToken !== state.posterRenderToken) return;
+      const source = getDocumentFileSource(item);
+
+      if (source === "external") {
+        const embedUrl = getEmbeddablePreviewUrl(item.external_file_url);
+        slot.innerHTML = embedUrl
+          ? renderPosterMedia(embedUrl, item)
+          : '<div class="poster-placeholder">Preview poster tidak tersedia.</div>';
+        return;
+      }
+
+      if (source !== "supabase") {
+        slot.innerHTML = '<div class="poster-placeholder">File poster belum tersedia.</div>';
+        return;
+      }
+
+      const storagePath = validStoragePath(item.file_path);
+      if (!storagePath) {
+        slot.innerHTML = '<div class="poster-placeholder">File poster belum tersedia.</div>';
+        return;
+      }
+
+      try {
+        const client = db || (await ensureSupabaseClient());
+        let cached = state.signedUrls.get(storagePath);
+        let signedUrl = typeof cached === "string" ? cached : cached?.preview;
+        if (!signedUrl) {
+          const { data, error } = await client.storage
+            .from(STORAGE_BUCKET)
+            .createSignedUrl(storagePath, 3600);
+          if (error) throw error;
+          signedUrl = data?.signedUrl;
+          if (!signedUrl) throw new Error("Signed URL poster tidak tersedia.");
+          state.signedUrls.set(storagePath, { preview: signedUrl });
+        }
+        if (renderToken !== state.posterRenderToken) return;
+        slot.innerHTML = renderPosterMedia(signedUrl, item);
+      } catch (error) {
+        if (renderToken !== state.posterRenderToken) return;
+        slot.innerHTML = `<div class="poster-placeholder">Poster tidak dapat dimuat: ${escapeHtml(
+          readableError(error)
+        )}</div>`;
+      }
+    })
+  );
+}
+
+function renderPosterMedia(url, item) {
+  const title = escapeAttribute(item.title || "Poster Library K3");
+  if (isPosterImage(item, url)) {
+    return `<img class="poster-media" src="${escapeAttribute(url)}" alt="${title}" loading="eager" />`;
+  }
+  return `<iframe
+    class="poster-media poster-frame"
+    src="${escapeAttribute(url)}"
+    title="${title}"
+    loading="eager"
+    referrerpolicy="no-referrer"
+    allow="fullscreen"
+  ></iframe>`;
+}
+
+function isPosterImage(item, url) {
+  const probe = `${item.file_name || ""} ${item.external_file_url || ""} ${url || ""}`.toLowerCase();
+  return /\.(png|jpe?g|webp|gif|svg)(\?|#|$)/i.test(probe);
+}
+
+function showPosterSlide(index, { userInitiated = false, restartTimer = true } = {}) {
+  const slides = $$(".poster-slide");
+  if (!slides.length) return;
+  const nextIndex = ((Number(index) || 0) % slides.length + slides.length) % slides.length;
+  state.posterSlideIndex = nextIndex;
+  slides.forEach((slide, slideIndex) => {
+    const active = slideIndex === nextIndex;
+    slide.classList.toggle("active", active);
+    slide.setAttribute("aria-hidden", String(!active));
+  });
+  $$("[data-poster-dot]").forEach((dot, dotIndex) => {
+    const active = dotIndex === nextIndex;
+    dot.classList.toggle("active", active);
+    dot.setAttribute("aria-current", active ? "true" : "false");
+  });
+  if (userInitiated && restartTimer && slides.length > 1) {
+    window.clearInterval(state.posterTimer);
+    state.posterTimer = window.setInterval(
+      () => showPosterSlide(state.posterSlideIndex + 1, { restartTimer: false }),
+      6000
+    );
+  }
 }
 
 function renderAdminKnowledgeFeatures() {
@@ -721,6 +926,7 @@ async function renderEnhancedDocumentDetail(id) {
       '<div class="empty-state">Dokumen tidak ditemukan.</div>';
     return;
   }
+  applyDocumentDetailRouteContext(doc);
 
   const source = getDocumentFileSource(doc);
   const hasFile =
@@ -790,6 +996,7 @@ async function renderLibraryItemDetail(id) {
     container.innerHTML = '<div class="empty-state">Materi Library tidak ditemukan.</div>';
     return;
   }
+  applyLibraryDetailRouteContext();
   const folder = state.libraryFolders.find((entry) => entry.id === item.folder_id);
   const source = getDocumentFileSource(item);
   const hasFile =
@@ -1315,8 +1522,11 @@ function renderAccessRequests() {
     body.innerHTML = emptyRow(5, "Memuat permintaan download...");
     return;
   }
-  body.innerHTML = state.accessRequests.length
-    ? state.accessRequests
+  const visibleRequests = state.accessRequests.filter(
+    (request) => normalizeText(request.status) !== "sent"
+  );
+  body.innerHTML = visibleRequests.length
+    ? visibleRequests
         .map((request) => {
           const resource = resolveRequestResource(request);
           return `
@@ -1360,7 +1570,7 @@ function renderAccessRequests() {
           `;
         })
         .join("")
-    : emptyRow(5, "Belum ada permintaan download.");
+    : emptyRow(5, "Belum ada permintaan download aktif.");
 }
 
 function renderReviewedRequestActions(request, resource) {
@@ -1458,12 +1668,20 @@ async function reviewAccessRequest(id, status) {
     return;
   }
   try {
-    const payload = {
-      status,
-      reviewed_at: new Date().toISOString(),
-      reviewed_by: state.session.user.email || "Admin"
-    };
-    if (status !== "sent") payload.admin_note = adminNote || null;
+    const adminEmail = state.session.user.email || "Admin";
+    const payload =
+      status === "sent"
+        ? {
+            status,
+            sent_at: new Date().toISOString(),
+            sent_by: adminEmail
+          }
+        : {
+            status,
+            reviewed_at: new Date().toISOString(),
+            reviewed_by: adminEmail,
+            admin_note: adminNote || null
+          };
     const { error } = await db
       .from(FILE_ACCESS_REQUEST_TABLE)
       .update(payload)
