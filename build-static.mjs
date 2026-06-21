@@ -1,6 +1,7 @@
 import { cp, mkdir, rm } from "node:fs/promises";
 
 const outputDirectory = new URL("./dist/", import.meta.url);
+const assetsDirectory = new URL("./assets/", import.meta.url);
 const staticFiles = [
   "index.html",
   "styles.css",
@@ -16,4 +17,8 @@ for (const fileName of staticFiles) {
   await cp(new URL(`./${fileName}`, import.meta.url), new URL(fileName, outputDirectory));
 }
 
-console.log(`Static build complete: ${staticFiles.join(", ")}`);
+await cp(assetsDirectory, new URL("assets/", outputDirectory), {
+  recursive: true
+});
+
+console.log(`Static build complete: ${staticFiles.join(", ")}, assets/`);

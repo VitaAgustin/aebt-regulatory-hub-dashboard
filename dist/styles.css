@@ -305,6 +305,18 @@ code {
   color: var(--text);
 }
 
+.sidebar-brand-logo {
+  justify-content: flex-start;
+  padding: 0 6px 24px;
+}
+
+.sidebar-brand-logo img {
+  width: min(100%, 168px);
+  max-height: 82px;
+  display: block;
+  object-fit: contain;
+}
+
 .brand-mark {
   flex: 0 0 auto;
   width: 44px;
@@ -2610,6 +2622,15 @@ td .empty-state {
   .app-sidebar {
     transform: translateX(-100%);
     transition: transform 190ms ease;
+  }
+
+  .sidebar-brand-logo {
+    justify-content: center;
+  }
+
+  .sidebar-brand-logo img {
+    max-width: 160px;
+    max-height: 78px;
   }
 
   body.sidebar-open .app-sidebar {
