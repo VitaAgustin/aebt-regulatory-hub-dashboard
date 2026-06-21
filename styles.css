@@ -212,9 +212,22 @@ code {
 .access-gate-visual {
   position: relative;
   min-height: 484px;
+  display: grid;
+  place-items: center;
   overflow: hidden;
   border-left: 1px solid #99d7d2;
   background: #e6fffa;
+}
+
+.access-gate-logo {
+  position: relative;
+  z-index: 1;
+  width: min(78%, 330px);
+  max-height: 380px;
+  display: block;
+  object-fit: contain;
+  border-radius: 18px;
+  box-shadow: 0 20px 46px rgba(15, 118, 110, 0.16);
 }
 
 .access-visual-grid {
