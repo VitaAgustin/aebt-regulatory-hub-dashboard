@@ -110,59 +110,6 @@ const SERVICE_CATALOG_FALLBACK = [
   }
 ];
 
-const PORTFOLIO_CATEGORY_OPTIONS = [
-  {
-    code: "AEB-1A",
-    itemCode: "AEB - 1A",
-    label: "AEB-1A - Sampling dan Analisis di bidang EBT"
-  },
-  {
-    code: "AEB-1B",
-    itemCode: "AEB - 1B",
-    label:
-      "AEB-1B - Verifikasi dan Inspeksi Peralatan dan Instalasi di bidang EBT"
-  },
-  {
-    code: "AEB-1C",
-    itemCode: "AEB - 1C",
-    label: "AEB-1C - Konsultasi di bidang EBT"
-  },
-  {
-    code: "AEB-2A",
-    itemCode: "AEB - 2A",
-    label: "AEB-2A - Inspeksi Peralatan dan Instalasi Industri Migas"
-  },
-  {
-    code: "AEB-2B",
-    itemCode: "AEB - 2B",
-    label:
-      "AEB-2B - Konsultasi Terhadap Kehandalan dan Keamanan Peralatan dan Instalasi Industri Migas"
-  },
-  {
-    code: "AEB-2C",
-    itemCode: "AEB - 2C",
-    label:
-      "AEB-2C - QA/QC untuk Fasilitas Industri, Migas, Pertambangan, dan Pembangkit Listrik"
-  },
-  {
-    code: "AEB-2D",
-    itemCode: "AEB - 2D",
-    label:
-      "AEB-2D - Verifikasi dan Inspeksi Peralatan dan Instalasi Industri Minyak dan Gas Bumi (Statutory)"
-  },
-  {
-    code: "AEB-2E",
-    itemCode: "AEB - 2E",
-    label:
-      "AEB-2E - Verifikasi dan Inspeksi Peralatan dan Instalasi Industri Migas dan Peralatan Pelindung Lainnya"
-  },
-  {
-    code: "AEB-2F",
-    itemCode: "AEB - 2F",
-    label: "AEB-2F - Non-Destructive Test"
-  }
-];
-
 let db = null;
 
 const state = {
@@ -434,10 +381,7 @@ function bindEvents() {
   );
   $("#related-portfolios-selector").addEventListener(
     "change",
-    () => {
-      syncSelectedPortfoliosSummary();
-      syncCategoryFromSelectedPortfolios({ force: true });
-    }
+    syncSelectedPortfoliosSummary
   );
 
   $("#documents-body").addEventListener("click", handleTableAction);
@@ -776,8 +720,6 @@ function renderDocumentLoadingState() {
 function renderAll() {
   renderMetrics();
   loadRecentDocuments();
-  populateCategoryFilter();
-  populateDocumentCategorySelect();
   renderDocumentTable();
   renderServiceMappingTabs();
   renderServiceMapping();
@@ -966,7 +908,6 @@ function configureDocumentLibrary(routeName) {
   $("#documents-description").textContent = library.description;
   $("#filter-type").value = getDocumentLibraryType(routeName);
   $("#filter-type").disabled = true;
-  populateCategoryFilter();
   $("#standard-folder-browser").classList.toggle("hidden", routeName !== "standar");
   $("#document-library-table-view").classList.toggle(
     "hidden",
@@ -1020,102 +961,10 @@ function loadRecentDocuments() {
     .join("");
 }
 
-function populateCategoryFilter() {
-  const select = $("#filter-category");
-  if (!select) return;
-  const current = select.value;
-  const categories = getPortfolioCategoryLabels();
-
-  select.innerHTML =
-    '<option value="">Semua kategori</option>' +
-    categories
-      .map(
-        (category) =>
-          `<option value="${escapeAttribute(category)}">${escapeHtml(category)}</option>`
-      )
-      .join("");
-  select.value = categories.includes(current) ? current : "";
-}
-
-function getPortfolioCategoryLabels() {
-  return PORTFOLIO_CATEGORY_OPTIONS.map((category) => category.label);
-}
-
-function isPortfolioCategoryLabel(value) {
-  const key = normalizeText(value);
-  return PORTFOLIO_CATEGORY_OPTIONS.some(
-    (category) => normalizeText(category.label) === key
-  );
-}
-
-function populateDocumentCategorySelect(selectedValue) {
-  const select = $('#document-form select[name="category"]');
-  if (!select) return;
-
-  const current = selectedValue ?? select.value;
-  const categories = getPortfolioCategoryLabels();
-  select.innerHTML =
-    '<option value="">Pilih kategori portofolio</option>' +
-    categories
-      .map(
-        (category) =>
-          `<option value="${escapeAttribute(category)}">${escapeHtml(category)}</option>`
-      )
-      .join("");
-  select.value = categories.includes(current) ? current : "";
-}
-
-function findPortfolioCategoryOption(value) {
-  const key = normalizeText(value);
-  if (!key) return null;
-  return PORTFOLIO_CATEGORY_OPTIONS.find((category) =>
-    [
-      category.label,
-      category.code,
-      category.itemCode,
-      category.itemCode.replace(/\s+/g, "")
-    ].some((candidate) => normalizeText(candidate) === key)
-  );
-}
-
-function inferCategoryFromRelatedPortfolios(relatedPortfoliosString) {
-  const terms = splitServices(relatedPortfoliosString).map(normalizeText);
-  if (!terms.length) return "";
-
-  const option = PORTFOLIO_CATEGORY_OPTIONS.find((category) => {
-    const categoryKeys = [
-      normalizeText(category.code),
-      normalizeText(category.itemCode),
-      normalizeText(category.itemCode.replace(/\s+/g, ""))
-    ];
-    return terms.some((term) =>
-      categoryKeys.some((categoryKey) => term === categoryKey || term.includes(categoryKey))
-    );
-  });
-
-  return option?.label || "";
-}
-
-function syncCategoryFromSelectedPortfolios({ force = false } = {}) {
-  const form = $("#document-form");
-  const select = form?.elements?.category;
-  if (!select) return;
-
-  const selectedCategory = inferCategoryFromRelatedPortfolios(
-    getSelectedPortfolios().join(", ")
-  );
-  if (!selectedCategory) return;
-
-  if (force || !isPortfolioCategoryLabel(select.value)) {
-    select.value = selectedCategory;
-  }
-}
-
 function renderDocumentTable() {
   const body = $("#documents-body");
   const query = $("#filter-search").value.trim().toLowerCase();
   const selectedType = getDocumentLibraryType() || $("#filter-type").value;
-  const category = $("#filter-category").value;
   const status = $("#filter-status").value;
 
   const docs = safeDocuments().filter((doc) => {
@@ -1132,7 +981,6 @@ function renderDocumentTable() {
     return (
       (!query || haystack.includes(query)) &&
       (!selectedType || doc.document_type === selectedType) &&
-      (!category || doc.category === category) &&
       (!status || doc.status === status)
     );
   });
@@ -2215,7 +2063,6 @@ function setSelectedPortfolios(relatedPortfoliosString) {
   });
 
   syncSelectedPortfoliosSummary();
-  syncCategoryFromSelectedPortfolios();
 }
 
 function syncSelectedPortfoliosSummary() {
@@ -2687,19 +2534,12 @@ function buildDocumentPayload(form) {
   const documentType =
     cleanText(form.get("document_type")) || "regulasi";
   const relatedPortfolios = cleanText(getSelectedPortfolios().join(", "));
-  const category =
-    cleanText(form.get("category")) ||
-    inferCategoryFromRelatedPortfolios(relatedPortfolios) ||
-    original?.category ||
-    null;
-
-  return {
+  const payload = {
     document_type: documentType,
     title: cleanText(form.get("title")),
     regulation_number: cleanText(form.get("regulation_number")),
     year,
     issuing_body: cleanText(form.get("issuing_body")),
-    category,
     summary: cleanText(form.get("summary")),
     status: cleanText(form.get("status")) || "Berlaku",
     related_services: cleanText(getSelectedServices().join(", ")),
@@ -2715,6 +2555,12 @@ function buildDocumentPayload(form) {
     pic_update: cleanText(form.get("pic_update")) || state.session.user.email,
     notes: cleanText(form.get("notes"))
   };
+
+  if (original && Object.prototype.hasOwnProperty.call(original, "category")) {
+    payload.category = original.category || null;
+  }
+
+  return payload;
 }
 
 async function insertLog(documentId, actionType, changeNote, payload) {
@@ -2773,7 +2619,6 @@ function startEdit(id) {
 
   state.editingId = id;
   const form = $("#document-form");
-  populateDocumentCategorySelect(doc.category);
   Object.entries(doc).forEach(([key, value]) => {
     const field = form.elements.namedItem(key);
     if (field && "value" in field) field.value = value ?? "";
@@ -2789,9 +2634,6 @@ function startEdit(id) {
   form.elements.file.required = false;
   setSelectedServices(doc.related_services);
   setSelectedPortfolios(doc.related_portfolios);
-  syncCategoryFromSelectedPortfolios({
-    force: !isPortfolioCategoryLabel(doc.category)
-  });
   syncFileSourceFields();
   syncStandardFolderField();
 
@@ -2806,7 +2648,6 @@ function resetEditor() {
   state.editingId = null;
   const form = $("#document-form");
   form.reset();
-  populateDocumentCategorySelect();
   form.elements.id.value = "";
   form.elements.existing_file_path.value = "";
   form.elements.existing_file_name.value = "";

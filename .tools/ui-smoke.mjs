@@ -329,19 +329,11 @@ try {
   await captureScreenshot("documents-desktop.png");
   const documents = await evaluate(`(async () => {
     const input = document.querySelector("#filter-search");
-    const categorySelect = document.querySelector("#filter-category");
     const originalCount = document.querySelector("#documents-count")?.textContent;
-    const categoryOptions = Array.from(categorySelect.options)
-      .map((option) => option.value)
-      .filter(Boolean);
     const visibleTypes = Array.from(document.querySelectorAll("#documents-body [data-detail-id]"))
       .map((button) => state.documents.find((doc) => doc.id === button.dataset.detailId)?.document_type);
     const filterType = document.querySelector("#filter-type")?.value;
     const filterDisabled = document.querySelector("#filter-type")?.disabled;
-    categorySelect.value = "AEB-2A - Inspeksi Peralatan dan Instalasi Industri Migas";
-    categorySelect.dispatchEvent(new Event("change", { bubbles: true }));
-    await new Promise((resolve) => setTimeout(resolve, 50));
-    const categoryFilteredCount = document.querySelector("#documents-count")?.textContent;
     input.value = "zzzz-no-match";
     input.dispatchEvent(new Event("input", { bubbles: true }));
     const emptyCount = document.querySelector("#documents-count")?.textContent;
@@ -353,8 +345,7 @@ try {
       originalCount,
       emptyCount,
       restoredCount: document.querySelector("#documents-count")?.textContent,
-      categoryOptions,
-      categoryFilteredCount,
+      hasCategoryFilter: Boolean(document.querySelector("#filter-category")),
       visibleTypes,
       filterTypeAfterReset: document.querySelector("#filter-type")?.value,
       filterDisabled
@@ -367,9 +358,7 @@ try {
     filterType: document.querySelector("#filter-type")?.value,
     filterDisabled: document.querySelector("#filter-type")?.disabled,
     count: document.querySelector("#documents-count")?.textContent,
-    categoryOptions: Array.from(document.querySelectorAll("#filter-category option"))
-      .map((option) => option.value)
-      .filter(Boolean),
+    hasCategoryFilter: Boolean(document.querySelector("#filter-category")),
     visibleTypes: Array.from(document.querySelectorAll("#documents-body [data-detail-id]"))
       .map((button) => state.documents.find((doc) => doc.id === button.dataset.detailId)?.document_type)
   }))()`);
@@ -385,9 +374,7 @@ try {
     count: document.querySelector("#documents-count")?.textContent,
     foldersReady: !state.standardFoldersError,
     folderCards: document.querySelectorAll("#standard-folder-grid [data-standard-folder-id]").length,
-    categoryOptions: Array.from(document.querySelectorAll("#filter-category option"))
-      .map((option) => option.value)
-      .filter(Boolean),
+    hasCategoryFilter: Boolean(document.querySelector("#filter-category")),
     visibleTypes: Array.from(document.querySelectorAll("#standard-folder-documents [data-detail-id]"))
       .map((button) => state.documents.find((doc) => doc.id === button.dataset.detailId)?.document_type)
   }))()`);
@@ -422,6 +409,7 @@ try {
     setSelectedServices("AIM - Risk Based Inspection, Renewable Energy Services - Geothermal Plant Services, Environmental Services - Air Emission Review, Legacy Service");
     setSelectedPortfolios("EBT 041 - AEB - 1B, IAPPM 042 - AEB - 2F, Legacy Portfolio");
     const removedFieldNames = [
+      "category",
       "sub_category",
       "key_obligation",
       "impacted_party",
@@ -472,16 +460,11 @@ try {
       "#related-portfolios-summary"
     )?.textContent;
     const portfolioPayload = noFilePayload.related_portfolios;
-    const documentCategoryOptions = Array.from(
-      formElement.elements.category.options
-    ).map((option) => option.value).filter(Boolean);
-    const payloadCategory = noFilePayload.category;
     const selectionSummary = document.querySelector(
       "#related-services-summary"
     )?.textContent;
     startEdit("library-standard");
     const editLoadedType = typeSelect.value;
-    const editLoadedCategory = formElement.elements.category.value;
     const editPortfolioChecked = document.querySelectorAll(
       "#related-portfolios-selector input[type=checkbox]:checked"
     ).length;
@@ -504,10 +487,6 @@ try {
       editPortfolioChecked,
       catalogManagerCount: document.querySelectorAll("#service-catalog-list .custom-service-card").length,
       categoryOptionCount: document.querySelectorAll("#service-item-category option:not([value=''])").length,
-      documentCategoryOptionCount: documentCategoryOptions.length,
-      documentCategoryOptions,
-      payloadCategory,
-      editLoadedCategory,
       removedFieldsVisible: removedFieldNames.some((name) =>
         document.querySelector('#document-form [name="' + name + '"]')
       ),
@@ -738,15 +717,8 @@ try {
   if (documents.originalCount !== documents.restoredCount) {
     throw new Error("Search reset did not restore document count.");
   }
-  if (
-    documents.categoryOptions.length !== 9 ||
-    documents.categoryOptions.includes("SOP") ||
-    !documents.categoryOptions.includes(
-      "AEB-2F - Non-Destructive Test"
-    ) ||
-    /0 dokumen/.test(documents.categoryFilteredCount)
-  ) {
-    throw new Error("Database Regulasi category filter is not using portfolio options.");
+  if (documents.hasCategoryFilter) {
+    throw new Error("Database Regulasi still renders the category filter.");
   }
   if (
     documents.filterTypeAfterReset !== "regulasi" ||
@@ -759,8 +731,7 @@ try {
     sop.title !== "SOP Center" ||
     sop.filterType !== "sop" ||
     !sop.filterDisabled ||
-    sop.categoryOptions.length !== 9 ||
-    sop.categoryOptions.includes("SOP") ||
+    sop.hasCategoryFilter ||
     sop.visibleTypes.some((type) => type !== "sop")
   ) {
     throw new Error("SOP Center filter is not locked to sop.");
@@ -770,8 +741,7 @@ try {
     standards.eyebrow !== "STANDARD LIBRARY" ||
     standards.filterType !== "standar" ||
     !standards.filterDisabled ||
-    standards.categoryOptions.length !== 9 ||
-    standards.categoryOptions.includes("SOP") ||
+    standards.hasCategoryFilter ||
     standards.visibleTypes.some((type) => type !== "standar") ||
     !standards.description.includes("Kumpulan standar")
   ) {
@@ -818,15 +788,6 @@ try {
   }
   if (adminForm.catalogManagerCount !== 10 || adminForm.categoryOptionCount !== 9) {
     throw new Error("Admin service catalog manager or category dropdown did not render.");
-  }
-  if (
-    adminForm.documentCategoryOptionCount !== 9 ||
-    adminForm.documentCategoryOptions.includes("SOP") ||
-    !adminForm.documentCategoryOptions.includes("AEB-2F - Non-Destructive Test") ||
-    !adminForm.payloadCategory?.startsWith("AEB-1B -") ||
-    !adminForm.editLoadedCategory?.startsWith("AEB-1B -")
-  ) {
-    throw new Error("Document category dropdown is not using portfolio categories.");
   }
   if (adminForm.removedFieldsVisible || adminForm.removedPayloadKeys.length) {
     throw new Error("Removed admin fields are still visible or included in the payload.");
