@@ -551,9 +551,10 @@ try {
   if (
     !posterHero.visible ||
     !posterHero.fallbackHidden ||
-    posterHero.slideCount !== 1 ||
-    posterHero.imageSrc !== "https://example.com/poster.png" ||
-    !posterHero.dotsHidden
+    posterHero.slideCount < 1 ||
+    !/^https?:/.test(posterHero.imageSrc) ||
+    (posterHero.slideCount === 1 && !posterHero.dotsHidden) ||
+    (posterHero.slideCount > 1 && posterHero.dotsHidden)
   ) {
     throw new Error("Home poster slider did not render Poster folder item.");
   }

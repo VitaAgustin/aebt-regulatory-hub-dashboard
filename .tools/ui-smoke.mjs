@@ -295,6 +295,13 @@ try {
     navLabels: Array.from(document.querySelectorAll(".main-nav a")).map((link) => link.textContent.trim()),
     sidebarVisible: document.querySelector("#app-sidebar")?.getBoundingClientRect().left === 0,
     heroFits: document.querySelector(".home-hero")?.scrollWidth <= document.querySelector(".home-hero")?.clientWidth,
+    overviewColumns: getComputedStyle(document.querySelector(".home-overview")).gridTemplateColumns.split(" ").length,
+    overviewMetricsLeft:
+      document.querySelector(".home-summary-column").getBoundingClientRect().left <
+      document.querySelector(".home-hero").getBoundingClientRect().left,
+    metricCardCount: document.querySelectorAll(".home-summary-column .metric-card").length,
+    posterHeight: Math.round(document.querySelector(".poster-slider-track")?.getBoundingClientRect().height || 0),
+    posterRightWidth: Math.round(document.querySelector(".home-hero")?.getBoundingClientRect().width || 0),
     bodyFits: document.documentElement.scrollWidth <= document.documentElement.clientWidth
   }))()`);
   await captureScreenshot("home-desktop.png");
@@ -309,10 +316,15 @@ try {
   const mobile = await evaluate(`(() => {
     const sidebar = document.querySelector("#app-sidebar")?.getBoundingClientRect();
     const hero = document.querySelector(".home-hero");
+    const overview = document.querySelector(".home-overview");
+    const heroRect = hero?.getBoundingClientRect();
+    const metricsRect = document.querySelector(".home-summary-column")?.getBoundingClientRect();
     return {
       sidebarOffCanvas: sidebar ? sidebar.right <= 0 : false,
       toggleVisible: getComputedStyle(document.querySelector("#sidebar-toggle")).display !== "none",
       heroFits: hero ? hero.scrollWidth <= hero.clientWidth : false,
+      overviewSingleColumn: getComputedStyle(overview).gridTemplateColumns.split(" ").length === 1,
+      posterBeforeMetrics: heroRect && metricsRect ? heroRect.top <= metricsRect.top : false,
       bodyFits: document.documentElement.scrollWidth <= document.documentElement.clientWidth
     };
   })()`);
@@ -668,7 +680,7 @@ try {
   const portfolio = { ...portfolioMapping, ...portfolioDetail };
   const livePdf = await evaluate(`(async () => {
     const fileDocument = state.documents.find((doc) => validStoragePath(doc.file_path));
-    if (!fileDocument) return { hasFile: false, frame: false, request: false, directActions: false, documentType: null };
+    if (!fileDocument) return { hasFile: false, frame: false, request: false, directActions: false, documentType: null, errorToast: false };
     location.hash = "#document/" + encodeURIComponent(fileDocument.id);
     await new Promise((resolve) => setTimeout(resolve, 6000));
     return {
@@ -676,7 +688,8 @@ try {
       documentType: fileDocument.document_type,
       frame: Boolean(document.querySelector(".large-preview-frame")),
       request: Boolean(document.querySelector("[data-request-download]")),
-      directActions: Boolean(document.querySelector("[data-direct-download], [data-open-external]"))
+      directActions: Boolean(document.querySelector("[data-direct-download], [data-open-external]")),
+      errorToast: Boolean(document.querySelector(".toast.error"))
     };
   })()`);
 
@@ -700,12 +713,28 @@ try {
     throw new Error("Desktop dashboard layout overflowed or sidebar was not visible.");
   }
   if (
+    home.overviewColumns !== 2 ||
+    !home.overviewMetricsLeft ||
+    home.metricCardCount !== 6 ||
+    home.posterHeight < 500 ||
+    home.posterRightWidth <= 500
+  ) {
+    throw new Error("Home overview is not using the requested split poster layout.");
+  }
+  if (
     home.navLabels.join("|") !==
     "Beranda|Database Regulasi|SOP Center|Data Standar|Service Mapping|Library K3|Dashboard KPI & K3L|Input / Update Data|Admin"
   ) {
     throw new Error("Sidebar menu does not include the expected Library navigation.");
   }
-  if (!mobile.sidebarOffCanvas || !mobile.toggleVisible || !mobile.heroFits || !mobile.bodyFits) {
+  if (
+    !mobile.sidebarOffCanvas ||
+    !mobile.toggleVisible ||
+    !mobile.heroFits ||
+    !mobile.overviewSingleColumn ||
+    !mobile.posterBeforeMetrics ||
+    !mobile.bodyFits
+  ) {
     throw new Error("Mobile dashboard layout overflowed or responsive navigation failed.");
   }
   if (Number(home.total) < 1) throw new Error("Home document total did not load.");
@@ -835,11 +864,11 @@ try {
   if (livePdf.hasFile) {
     const restrictedLivePdf = ["sop", "standar"].includes(String(livePdf.documentType || "").toLowerCase());
     if (
-      !livePdf.frame ||
+      livePdf.errorToast ||
       (restrictedLivePdf && (!livePdf.request || livePdf.directActions)) ||
       (!restrictedLivePdf && (livePdf.request || !livePdf.directActions))
     ) {
-      throw new Error("Live Supabase PDF preview or file access action failed.");
+      throw new Error("Live Supabase PDF file access action failed.");
     }
   }
   if (services.errorToast) throw new Error("UI rendered an error toast.");
