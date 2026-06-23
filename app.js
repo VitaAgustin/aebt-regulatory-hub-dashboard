@@ -792,6 +792,7 @@ function route() {
     "kpi-active",
     routeName === "kpi" || routeName === "kpi-input"
   );
+  document.body.classList.toggle("kpi-dashboard-active", routeName === "kpi");
   setSidebarOpen(false);
 
   if (getDocumentLibraryType(routeName)) {

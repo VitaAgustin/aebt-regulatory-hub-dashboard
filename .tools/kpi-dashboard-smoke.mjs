@@ -185,6 +185,7 @@ try {
       overallTrendSvg: Boolean(document.querySelector("#kpi-overall-trend-chart svg")),
       selectedTrendTotal: document.querySelector("#kpi-trend-selected-total").textContent.trim(),
       bodyKpi: document.body.classList.contains("kpi-active"),
+      bodyDashboard: document.body.classList.contains("kpi-dashboard-active"),
       kpiColumnLeft:
         document.querySelector(".kpi-performance-kpi").getBoundingClientRect().left <
         document.querySelector(".kpi-performance-hse").getBoundingClientRect().left,
@@ -246,7 +247,11 @@ try {
       payloadMonth: payload.month,
       payloadYear: payload.year,
       payloadTarget: payload.revenue_target,
-      validation
+      validation,
+      dashboardClass: document.body.classList.contains("kpi-dashboard-active"),
+      bodyOverflow: getComputedStyle(document.body).overflowY,
+      appMainOverflow: getComputedStyle(document.querySelector(".app-main")).overflowY,
+      scrollable: document.scrollingElement.scrollHeight > window.innerHeight + 20
     };
 
     return { dashboard, january, locked, formState };
@@ -263,7 +268,7 @@ try {
 
   console.log(JSON.stringify(result, null, 2));
 
-  if (!result.dashboard.visible || !result.dashboard.bodyKpi) {
+  if (!result.dashboard.visible || !result.dashboard.bodyKpi || !result.dashboard.bodyDashboard) {
     throw new Error("KPI dashboard did not render as an active route.");
   }
   if (
@@ -326,6 +331,10 @@ try {
     result.formState.payloadMonth !== 12 ||
     result.formState.payloadYear !== 2025 ||
     result.formState.payloadTarget !== 600 ||
+    result.formState.dashboardClass ||
+    result.formState.bodyOverflow === "hidden" ||
+    result.formState.appMainOverflow === "hidden" ||
+    !result.formState.scrollable ||
     result.formState.validation
   ) {
     throw new Error("KPI input form failed to load, calculate, or validate.");

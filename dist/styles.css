@@ -4414,6 +4414,23 @@ body.kpi-active .account-avatar {
   body.kpi-active .kpi-line-chart svg {
     height: 100%;
   }
+
+  body.kpi-active:not(.kpi-dashboard-active) {
+    overflow: auto;
+  }
+
+  body.kpi-active:not(.kpi-dashboard-active) .app-workspace {
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
+  }
+
+  body.kpi-active:not(.kpi-dashboard-active) .app-main {
+    height: auto;
+    min-height: calc(100vh - var(--topbar-height));
+    padding: 24px 28px 64px;
+    overflow: visible;
+  }
 }
 
 .kpi-data-form {
