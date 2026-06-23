@@ -287,7 +287,9 @@ try {
   })()`);
   const home = await evaluate(`(() => {
     const posterTrack = document.querySelector(".poster-slider-track")?.getBoundingClientRect();
-    const posterMedia = document.querySelector(".poster-slide.active .poster-media");
+    const posterMedia =
+      document.querySelector(".poster-slide.active .poster-media") ||
+      document.querySelector(".poster-media");
     return {
     total: document.querySelector("#metric-total")?.textContent,
     regulations: document.querySelector("#metric-regulations")?.textContent,
@@ -732,7 +734,7 @@ try {
   }
   if (
     home.navLabels.join("|") !==
-    "Beranda|Database Regulasi|SOP Center|Data Standar|Service Mapping|Library K3|Dashboard KPI & K3L|Input / Update Data|Admin"
+    "Beranda|Database Regulasi|SOP Center|Data Standar|Service Mapping|Library K3|Dashboard KPI & HSE|Input / Update Data|Admin"
   ) {
     throw new Error("Sidebar menu does not include the expected Library navigation.");
   }

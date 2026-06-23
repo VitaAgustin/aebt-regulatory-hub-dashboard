@@ -134,8 +134,8 @@ try {
         business_innovation_score: 70,
         technology_leadership_score: 68,
         investment_score: 74,
-        talent_development_score: 61,
-        k3l_score: 100,
+        talent_development_score: 45,
+        k3l_score: 35,
         permanent_employees: 33,
         temporary_employees: 7,
         project_employees: 5,
@@ -165,15 +165,33 @@ try {
     const dashboard = {
       visible: !document.querySelector("#view-kpi").classList.contains("hidden"),
       activeMenu: document.querySelector(".main-nav a.active")?.textContent.trim(),
+      title: document.querySelector(".kpi-dashboard-header h1")?.textContent.trim(),
       labels: Array.from(document.querySelectorAll(".main-nav a")).map((item) => item.textContent.trim()),
+      groupHeadings: Array.from(document.querySelectorAll(".kpi-group-heading")).map((item) => item.textContent.trim()),
       cards: Array.from(document.querySelectorAll(".kpi-summary-card strong")).map((item) => item.textContent.trim()),
       aspects: Array.from(document.querySelectorAll(".kpi-aspect-row strong")).map((item) => item.textContent.trim()),
+      lowAspectRows: document.querySelectorAll(".kpi-aspect-row.kpi-aspect-low").length,
+      lowAspectColor: getComputedStyle(document.querySelector(".kpi-aspect-row.kpi-aspect-low strong")).color,
+      normalAspectColor: getComputedStyle(document.querySelector(".kpi-aspect-row:not(.kpi-aspect-low) strong")).color,
       revenueAchievement: document.querySelector("#kpi-revenue-achievement").textContent.trim(),
+      revenueAchievementSize: Number.parseFloat(getComputedStyle(document.querySelector("#kpi-revenue-achievement")).fontSize),
+      targetBarHeight: document.querySelector("#kpi-target-bar").style.height,
+      actualBarHeight: document.querySelector("#kpi-actual-bar").style.height,
+      targetBarLabel: document.querySelector("#kpi-target-label").textContent.trim(),
+      actualBarLabel: document.querySelector("#kpi-actual-label").textContent.trim(),
       employeeTotal: document.querySelector("#kpi-employee-total").textContent.trim(),
       k3lValues: Array.from(document.querySelectorAll(".kpi-k3l-list strong")).map((item) => item.textContent.trim()),
       trendSvg: Boolean(document.querySelector("#kpi-work-hours-chart svg")),
+      overallTrendSvg: Boolean(document.querySelector("#kpi-overall-trend-chart svg")),
       selectedTrendTotal: document.querySelector("#kpi-trend-selected-total").textContent.trim(),
       bodyKpi: document.body.classList.contains("kpi-active"),
+      kpiColumnLeft:
+        document.querySelector(".kpi-performance-kpi").getBoundingClientRect().left <
+        document.querySelector(".kpi-performance-hse").getBoundingClientRect().left,
+      employeeInHse: document.querySelector(".kpi-performance-hse .kpi-panel-employees") !== null,
+      workTrendBelowEmployees:
+        document.querySelector(".kpi-panel-trend").getBoundingClientRect().top >
+        document.querySelector(".kpi-panel-employees").getBoundingClientRect().top,
       fitsDesktop:
         document.scrollingElement.scrollHeight <= window.innerHeight + 2 &&
         document.querySelector("#view-kpi").getBoundingClientRect().bottom <= window.innerHeight + 2,
@@ -234,6 +252,7 @@ try {
     return { dashboard, january, locked, formState };
   })()`);
 
+  await evaluate(`location.hash = "#kpi"; route();`, 250);
   await send("Page.captureScreenshot", { format: "png", captureBeyondViewport: true })
     .then((shot) =>
       writeFile(
@@ -249,9 +268,18 @@ try {
   }
   if (
     result.dashboard.labels.join("|") !==
-    "Beranda|Database Regulasi|SOP Center|Data Standar|Service Mapping|Library K3|Dashboard KPI & K3L|Input / Update Data|Admin"
+    "Beranda|Database Regulasi|SOP Center|Data Standar|Service Mapping|Library K3|Dashboard KPI & HSE|Input / Update Data|Admin"
   ) {
     throw new Error("Navigation labels/order changed incorrectly.");
+  }
+  if (
+    result.dashboard.title !== "Dashboard KPI & HSE" ||
+    result.dashboard.groupHeadings.join("|") !== "KPI Performance|HSE Performance" ||
+    !result.dashboard.kpiColumnLeft ||
+    !result.dashboard.employeeInHse ||
+    !result.dashboard.workTrendBelowEmployees
+  ) {
+    throw new Error("KPI/HSE split layout did not render as requested.");
   }
   if (
     result.dashboard.cards.join("|") !==
@@ -261,9 +289,19 @@ try {
   }
   if (
     !result.dashboard.aspects.includes("82%") ||
+    !result.dashboard.aspects.includes("45%") ||
+    result.dashboard.lowAspectRows < 2 ||
+    !result.dashboard.lowAspectColor.includes("220") ||
+    result.dashboard.lowAspectColor === result.dashboard.normalAspectColor ||
     result.dashboard.revenueAchievement !== "96,2%" ||
+    result.dashboard.revenueAchievementSize < 30 ||
+    result.dashboard.targetBarHeight !== "100%" ||
+    !result.dashboard.actualBarHeight.startsWith("96.") ||
+    result.dashboard.targetBarLabel !== "Target: 550" ||
+    result.dashboard.actualBarLabel !== "Realisasi: 529" ||
     result.dashboard.employeeTotal !== "51" ||
     !result.dashboard.trendSvg ||
+    !result.dashboard.overallTrendSvg ||
     result.dashboard.selectedTrendTotal !== "Total: 8.976 jam"
   ) {
     throw new Error("KPI charts or calculated values are incorrect.");

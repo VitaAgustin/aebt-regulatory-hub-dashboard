@@ -3765,9 +3765,63 @@ body.kpi-active .account-avatar {
 
 .kpi-summary-grid {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 12px;
-  margin-bottom: 12px;
+  margin-bottom: 0;
+}
+
+.kpi-performance-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+  gap: 12px;
+  align-items: stretch;
+}
+
+.kpi-performance-column {
+  min-width: 0;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) minmax(0, 0.72fr);
+  gap: 12px;
+}
+
+.kpi-group-heading {
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: 7px;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 850;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.kpi-heading-kpi {
+  background: linear-gradient(90deg, #063b65, #0a4d7e);
+}
+
+.kpi-heading-hse {
+  background: linear-gradient(90deg, #047857, #0f766e);
+}
+
+.kpi-summary-grid-kpi {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.kpi-summary-grid-hse {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.kpi-column-grid {
+  min-height: 0;
+  display: grid;
+  gap: 12px;
+}
+
+.kpi-kpi-grid {
+  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+}
+
+.kpi-hse-grid {
+  grid-template-columns: minmax(0, 0.86fr) minmax(0, 1.14fr);
 }
 
 .kpi-summary-card,
@@ -3836,8 +3890,9 @@ body.kpi-active .account-avatar {
   font-size: 13px;
 }
 
-.kpi-panel-trend {
-  grid-column: span 2;
+.kpi-performance-grid .kpi-panel-trend,
+.kpi-panel-kpi-trend {
+  grid-column: auto;
 }
 
 .kpi-bar-list {
@@ -3882,11 +3937,40 @@ body.kpi-active .account-avatar {
   background: var(--kpi-teal);
 }
 
+.kpi-aspect-row.kpi-aspect-low .kpi-track i {
+  background: #dc2626;
+}
+
+.kpi-aspect-row.kpi-aspect-low strong {
+  color: #dc2626;
+}
+
+.kpi-revenue-highlight {
+  display: grid;
+  place-items: center;
+  gap: 2px;
+  margin: -2px 0 10px;
+  text-align: center;
+}
+
+.kpi-revenue-highlight strong {
+  color: #047857;
+  font-size: 40px;
+  line-height: 1;
+  letter-spacing: 0;
+}
+
+.kpi-revenue-highlight span {
+  color: var(--kpi-muted);
+  font-size: 12px;
+  font-weight: 750;
+}
+
 .kpi-revenue-values {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 12px;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
 }
 
 .kpi-revenue-values div {
@@ -3901,28 +3985,52 @@ body.kpi-active .account-avatar {
 
 .kpi-target-bars {
   display: grid;
-  gap: 13px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: end;
+  gap: 18px;
+  min-height: 186px;
 }
 
 .kpi-target-bars > div {
   display: grid;
-  grid-template-columns: 64px minmax(120px, 1fr) 48px;
-  align-items: center;
-  gap: 10px;
+  grid-template-rows: auto minmax(140px, 1fr) auto;
+  justify-items: center;
+  gap: 8px;
+  min-width: 0;
 }
 
 .kpi-target-bars b {
   color: #0f172a;
   font-size: 11px;
-  text-align: right;
+  text-align: center;
+}
+
+.kpi-vertical-track {
+  width: 100%;
+  height: 150px;
+  display: flex;
+  align-items: end;
+  justify-content: center;
+  border-bottom: 1px solid #cbd5e1;
+  background:
+    linear-gradient(#e6edf5 1px, transparent 1px) 0 0 / 100% 25%;
+}
+
+.kpi-vertical-track i {
+  width: min(56px, 58%);
+  height: 0;
+  display: block;
+  border-radius: 7px 7px 0 0;
+  background: var(--kpi-teal);
+  transition: height 180ms ease;
 }
 
 #kpi-target-bar {
-  background: #06354c;
+  background: linear-gradient(180deg, #9bd2ff, #5aa9ec);
 }
 
 #kpi-actual-bar {
-  background: var(--kpi-teal);
+  background: linear-gradient(180deg, #0b4f8a, #083a6a);
 }
 
 .kpi-k3l-list {
@@ -4164,6 +4272,32 @@ body.kpi-active .account-avatar {
     gap: 8px;
   }
 
+  body.kpi-active .kpi-performance-grid {
+    min-height: 0;
+    height: 100%;
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+    gap: 8px;
+    overflow: hidden;
+  }
+
+  body.kpi-active .kpi-performance-column {
+    min-height: 0;
+    grid-template-rows: auto auto minmax(0, 1fr) minmax(0, 0.7fr);
+    gap: 8px;
+    overflow: hidden;
+  }
+
+  body.kpi-active .kpi-group-heading {
+    padding: 7px 10px;
+    border-radius: 6px;
+    font-size: 10px;
+  }
+
+  body.kpi-active .kpi-column-grid {
+    min-height: 0;
+    gap: 8px;
+  }
+
   body.kpi-active .kpi-panel {
     min-height: 0;
     padding: 10px 12px;
@@ -4199,20 +4333,39 @@ body.kpi-active .account-avatar {
 
   body.kpi-active .kpi-revenue-values {
     gap: 8px;
-    margin-bottom: 8px;
+    margin-bottom: 6px;
   }
 
   body.kpi-active .kpi-revenue-values strong {
-    font-size: 17px;
+    font-size: 15px;
+  }
+
+  body.kpi-active .kpi-revenue-highlight {
+    margin-bottom: 6px;
+  }
+
+  body.kpi-active .kpi-revenue-highlight strong {
+    font-size: 32px;
   }
 
   body.kpi-active .kpi-target-bars {
-    gap: 8px;
+    min-height: 148px;
+    gap: 10px;
   }
 
   body.kpi-active .kpi-target-bars > div {
-    grid-template-columns: 54px minmax(100px, 1fr) 42px;
-    gap: 7px;
+    grid-template-columns: 1fr;
+    grid-template-rows: auto minmax(112px, 1fr) auto;
+    gap: 5px;
+  }
+
+  body.kpi-active .kpi-vertical-track {
+    height: 118px;
+  }
+
+  body.kpi-active .kpi-target-bars b,
+  body.kpi-active .kpi-target-bars span {
+    font-size: 9px;
   }
 
   body.kpi-active .kpi-k3l-list {
@@ -4254,7 +4407,7 @@ body.kpi-active .account-avatar {
   }
 
   body.kpi-active .kpi-line-chart {
-    height: 190px;
+    height: 160px;
     min-height: 0;
   }
 
@@ -4286,16 +4439,25 @@ body.kpi-active .account-avatar {
 
 @media (max-width: 1180px) {
   .kpi-summary-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .kpi-performance-grid {
+    grid-template-columns: 1fr;
   }
 
   .kpi-dashboard-grid {
     grid-template-columns: 1fr 1fr;
   }
 
+  .kpi-kpi-grid,
+  .kpi-hse-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .kpi-panel-k3l,
   .kpi-panel-trend {
-    grid-column: span 2;
+    grid-column: auto;
   }
 }
 
@@ -4319,6 +4481,9 @@ body.kpi-active .account-avatar {
 
   .kpi-summary-grid,
   .kpi-dashboard-grid,
+  .kpi-performance-grid,
+  .kpi-kpi-grid,
+  .kpi-hse-grid,
   .kpi-revenue-values,
   .kpi-rate-row,
   .kpi-donut-layout {
@@ -4330,8 +4495,7 @@ body.kpi-active .account-avatar {
     grid-column: span 1;
   }
 
-  .kpi-aspect-row,
-  .kpi-target-bars > div {
+  .kpi-aspect-row {
     grid-template-columns: 1fr;
   }
 

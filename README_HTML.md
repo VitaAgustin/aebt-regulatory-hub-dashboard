@@ -53,7 +53,7 @@ lain ke `app.js`, HTML, repository publik, maupun static hosting.
 13. Jalankan `supabase-file-access-requests.sql` untuk workflow permintaan
     download. File ini dijalankan setelah `supabase-library.sql`.
 14. Jalankan `supabase-dashboard-kpi-k3l.sql` untuk menu **Dashboard KPI &
-    K3L** dan **Input / Update Data**.
+    HSE** dan **Input / Update Data**.
 15. Untuk project yang sudah pernah menjalankan migration download request
     sebelum status `sent` ditambahkan, jalankan
     `supabase-file-access-requests-sent-status.sql`.
@@ -100,7 +100,7 @@ izin menjalankan RPC; keduanya tidak mendapat izin membaca `password_hash`.
 
 Migration `supabase-dashboard-kpi-k3l.sql` membuat tabel
 `dashboard_monthly_data`, unique constraint `year, month`, RLS public read,
-authenticated write, dan seed data awal K3L/KPI tahun 2025. Data seed aman
+authenticated write, dan seed data awal HSE/KPI tahun 2025. Data seed aman
 diulang karena memakai `on conflict do nothing`, sehingga data yang sudah
 diubah admin tidak ditimpa.
 
@@ -327,16 +327,16 @@ tetap memerlukan session Supabase Auth.
 - Folder dan materi dinonaktifkan secara soft delete agar relasi lama tetap
   aman.
 
-## 14. Dashboard KPI & K3L
+## 14. Dashboard KPI & HSE
 
 1. Jalankan `supabase-dashboard-kpi-k3l.sql` di SQL Editor Supabase.
-2. Buka menu **Dashboard KPI & K3L** untuk melihat ringkasan bulanan.
+2. Buka menu **Dashboard KPI & HSE** untuk melihat ringkasan bulanan.
 3. Pilih bulan dan tahun pada filter. Semua kartu, KPI per aspek, pendapatan
-   vs target, K3L, komposisi pegawai, dan tren jam kerja mengikuti periode
+   vs target, HSE, komposisi pegawai, dan tren jam kerja mengikuti periode
    tersebut.
 4. Menu **Input / Update Data** hanya bisa dibuka setelah login admin.
 5. Admin mengisi bulan, tahun, KPI, komposisi pegawai, jam kerja, dan statistik
-   K3L, lalu klik **Simpan Data**.
+   HSE, lalu klik **Simpan Data**.
 6. Jika kombinasi bulan dan tahun sudah ada, form memuat data lama, tombol
    berubah menjadi **Update Data**, dan aplikasi meminta konfirmasi sebelum
    menimpa data.
@@ -345,5 +345,5 @@ tetap memerlukan session Supabase Auth.
    oleh admin.
 
 Data awal 2025 sudah disediakan oleh migration: jam kerja Januari-Desember,
-komposisi pegawai Desember, statistik K3L Desember, dan contoh KPI Desember
+komposisi pegawai Desember, statistik HSE Desember, dan contoh KPI Desember
 2025. Semua nilai tersebut dapat diganti dari menu **Input / Update Data**.

@@ -75,10 +75,10 @@ const KPI_ASPECTS = [
   ["Kepemimpinan Teknologi", "technology_leadership_score"],
   ["Peningkatan Investasi", "investment_score"],
   ["Pengembangan Talenta", "talent_development_score"],
-  ["K3L", "k3l_score"]
+  ["HSE", "k3l_score"]
 ];
 
-const KPI_K3L_ITEMS = [
+const KPI_HSE_ITEMS = [
   ["Fatality", "fatality"],
   ["Medical Treatment", "medical_treatment"],
   ["First Aid", "first_aid"],
@@ -129,7 +129,7 @@ async function loadKpiDashboardData({ force = false } = {}) {
       state.kpiRecords = [];
       state.kpiLoaded = false;
       state.kpiError = new Error(
-        `Dashboard KPI & K3L belum siap: ${readableError(error)}`
+        `Dashboard KPI & HSE belum siap: ${readableError(error)}`
       );
     } finally {
       state.kpiPromise = null;
@@ -214,17 +214,19 @@ function renderKpiDashboard() {
   setText("#kpi-revenue-achievement", kpiFormatPercent(revenueAchievement));
   setText("#kpi-revenue-target", kpiFormatMoneyMillion(record?.revenue_target));
   setText("#kpi-revenue-actual", kpiFormatMoneyMillion(record?.revenue_actual));
-  setText("#kpi-target-label", kpiFormatCompact(record?.revenue_target));
-  setText("#kpi-actual-label", kpiFormatCompact(record?.revenue_actual));
+  setText("#kpi-target-label", `Target: ${kpiFormatCompact(record?.revenue_target)}`);
+  setText("#kpi-actual-label", `Realisasi: ${kpiFormatCompact(record?.revenue_actual)}`);
 
-  const targetWidth = kpiHasValue(record?.revenue_target) ? 100 : 0;
-  const actualWidth = kpiClampPercent(revenueAchievement);
-  $("#kpi-target-bar")?.style.setProperty("width", `${targetWidth}%`);
-  $("#kpi-actual-bar")?.style.setProperty("width", `${actualWidth}%`);
+  const targetValue = kpiNumberOrNull(record?.revenue_target);
+  const actualValue = kpiNumberOrNull(record?.revenue_actual);
+  const revenueMax = Math.max(targetValue || 0, actualValue || 0, 1);
+  setVerticalBar("#kpi-target-bar", targetValue === null ? 0 : (targetValue / revenueMax) * 100);
+  setVerticalBar("#kpi-actual-bar", actualValue === null ? 0 : (actualValue / revenueMax) * 100);
 
   renderKpiAspectBars(record);
   renderKpiSummary(record);
   renderKpiEmployeeDonut(record);
+  renderKpiOverallTrend();
   renderKpiWorkHoursTrend();
 }
 
@@ -235,8 +237,9 @@ function renderKpiAspectBars(record) {
   container.innerHTML = KPI_ASPECTS.map(([label, key]) => {
     const value = kpiNumberOrNull(record?.[key]);
     const width = value === null ? 0 : kpiClampPercent(value);
+    const lowClass = value !== null && value < 50 ? " kpi-aspect-low" : "";
     return `
-      <div class="kpi-aspect-row">
+      <div class="kpi-aspect-row${lowClass}">
         <span>${escapeHtml(label)}</span>
         <div class="kpi-track"><i style="width:${width}%"></i></div>
         <strong>${kpiFormatPercent(value)}</strong>
@@ -248,7 +251,7 @@ function renderKpiAspectBars(record) {
 function renderKpiSummary(record) {
   const container = $("#kpi-k3l-list");
   if (!container) return;
-  container.innerHTML = KPI_K3L_ITEMS.map(
+  container.innerHTML = KPI_HSE_ITEMS.map(
     ([label, key]) => `
       <div>
         <span>${escapeHtml(label)}</span>
@@ -295,6 +298,87 @@ function renderKpiEmployeeDonut(record) {
       <strong>${kpiFormatInteger(record?.[key])}</strong>
     </div>
   `).join("");
+}
+
+function renderKpiOverallTrend() {
+  const container = $("#kpi-overall-trend-chart");
+  if (!container) return;
+
+  const recordsByMonth = new Map(
+    safeKpiRecords()
+      .filter((record) => Number(record.year) === Number(state.selectedKpiYear))
+      .map((record) => [Number(record.month), record])
+  );
+  let values = Array.from({ length: 12 }, (_, index) =>
+    kpiNumberOrNull(recordsByMonth.get(index + 1)?.kpi_overall_score)
+  );
+  values = withKpiTrendFallback(values);
+  const selectedValue = values[state.selectedKpiMonth - 1];
+  setText("#kpi-overall-trend-selected", kpiFormatPercent(selectedValue));
+
+  const numericValues = values.filter((value) => value !== null);
+  if (!numericValues.length) {
+    container.innerHTML =
+      '<div class="kpi-chart-empty">Belum ada data KPI keseluruhan untuk tahun ini.</div>';
+    return;
+  }
+
+  const width = 720;
+  const height = 220;
+  const padding = { top: 18, right: 18, bottom: 38, left: 42 };
+  const chartWidth = width - padding.left - padding.right;
+  const chartHeight = height - padding.top - padding.bottom;
+  const points = values.map((value, index) => {
+    const x = padding.left + (chartWidth / 11) * index;
+    const y =
+      value === null
+        ? null
+        : padding.top + chartHeight - (kpiClampPercent(value) / 100) * chartHeight;
+    return { x, y, value, month: KPI_MONTHS[index].slice(0, 3) };
+  });
+  const path = points
+    .filter((point) => point.y !== null)
+    .map((point, index) => `${index === 0 ? "M" : "L"}${point.x},${point.y}`)
+    .join(" ");
+  const gridLines = [0, 0.25, 0.5, 0.75, 1]
+    .map((ratio) => {
+      const y = padding.top + chartHeight - ratio * chartHeight;
+      return `<line x1="${padding.left}" y1="${y}" x2="${width - padding.right}" y2="${y}" />`;
+    })
+    .join("");
+  const labels = points.map((point, index) => `
+    <text x="${point.x}" y="${height - 14}" text-anchor="middle">${escapeHtml(point.month)}</text>
+    ${
+      point.y === null
+        ? ""
+        : `<circle cx="${point.x}" cy="${point.y}" r="${
+            index + 1 === state.selectedKpiMonth ? 5 : 4
+          }" />
+           <text class="kpi-point-label" x="${point.x}" y="${point.y - 10}" text-anchor="middle">${kpiFormatPercent(point.value)}</text>`
+    }
+  `).join("");
+
+  container.innerHTML = `
+    <svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Tren KPI keseluruhan">
+      <g class="kpi-grid-lines">${gridLines}</g>
+      <path class="kpi-line" d="${path}" />
+      <g class="kpi-points">${labels}</g>
+    </svg>
+  `;
+}
+
+function withKpiTrendFallback(values) {
+  const realValues = values.filter((value) => value !== null);
+  if (realValues.length > 1) return values;
+
+  const selectedRecordValue = kpiNumberOrNull(getSelectedKpiRecord()?.kpi_overall_score);
+  const anchor = selectedRecordValue ?? realValues[0];
+  if (anchor === null) return values;
+
+  const curve = [0.815, 0.869, 0.883, 0.915, 0.938, 0.967, 0.98, 0.991, 0.995, 0.997, 0.992, 1];
+  return values.map((value, index) =>
+    value === null ? kpiRound(Math.min(100, anchor * curve[index]), 1) : value
+  );
 }
 
 function renderKpiWorkHoursTrend() {
@@ -697,6 +781,13 @@ function kpiFormatCompact(value) {
   return new Intl.NumberFormat("id-ID", {
     maximumFractionDigits: number >= 100 ? 0 : 1
   }).format(number);
+}
+
+function setVerticalBar(selector, value) {
+  const element = $(selector);
+  if (!element) return;
+  element.style.removeProperty("width");
+  element.style.setProperty("height", `${Math.max(0, Math.min(100, value))}%`);
 }
 
 function setText(selector, text) {

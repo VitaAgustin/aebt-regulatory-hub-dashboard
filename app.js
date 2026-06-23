@@ -755,7 +755,7 @@ function route() {
     services: ["Business Relevance", "Service Mapping"],
     library: ["Knowledge Resources", "Library K3"],
     "library-item": ["Knowledge Resources", "Library K3"],
-    kpi: ["Performance Dashboard", "Dashboard KPI & K3L"],
+    kpi: ["Performance Dashboard", "Dashboard KPI & HSE"],
     "kpi-input": ["Restricted Access", "Input / Update Data"],
     admin: ["Restricted Access", "Admin Management"],
     document: ["Document Repository", "Detail Dokumen"]

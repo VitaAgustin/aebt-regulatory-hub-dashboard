@@ -120,7 +120,7 @@
             <span class="nav-icon" aria-hidden="true">
               <svg viewBox="0 0 24 24"><path d="M4 19h16M7 16V9M12 16V5M17 16v-6" /><path d="m7 9 5-4 5 5" /></svg>
             </span>
-            <span>Dashboard KPI &amp; K3L</span>
+            <span>Dashboard KPI &amp; HSE</span>
           </a>
           <a href="#kpi-input" data-nav="kpi-input">
             <span class="nav-icon" aria-hidden="true">
@@ -482,7 +482,7 @@
         <div class="kpi-dashboard-shell">
           <header class="kpi-dashboard-header">
             <div>
-              <h1>Dashboard KPI &amp; K3</h1>
+              <h1>Dashboard KPI &amp; HSE</h1>
               <p>Ringkasan kinerja perusahaan dan keselamatan kerja</p>
             </div>
             <div class="kpi-toolbar">
@@ -502,115 +502,141 @@
 
           <div id="kpi-migration-alert" class="kpi-empty-state hidden"></div>
 
-          <section class="kpi-summary-grid" aria-label="Kartu ringkasan KPI dan K3L">
-            <article class="kpi-summary-card">
-              <span>Skor KPI Keseluruhan</span>
-              <strong id="kpi-card-score">-</strong>
-            </article>
-            <article class="kpi-summary-card">
-              <span>EBITDA Portofolio</span>
-              <strong id="kpi-card-ebitda">-</strong>
-            </article>
-            <article class="kpi-summary-card">
-              <span>Pendapatan Portofolio</span>
-              <strong id="kpi-card-revenue">-</strong>
-            </article>
-            <article class="kpi-summary-card">
-              <span>Customer Retention</span>
-              <strong id="kpi-card-retention">-</strong>
-            </article>
-            <article class="kpi-summary-card">
-              <span>Total Jam Kerja</span>
-              <strong id="kpi-card-work-hours">-</strong>
-            </article>
-            <article class="kpi-summary-card">
-              <span>Insiden K3L</span>
-              <strong id="kpi-card-incidents">-</strong>
-            </article>
-          </section>
+          <div class="kpi-performance-grid" aria-label="Dashboard KPI dan HSE">
+            <section class="kpi-performance-column kpi-performance-kpi" aria-label="KPI Performance">
+              <h2 class="kpi-group-heading kpi-heading-kpi">KPI Performance</h2>
 
-          <div class="kpi-dashboard-grid">
-            <section class="kpi-panel kpi-panel-aspects">
-              <div class="kpi-panel-heading">
-                <h2>Capaian KPI per Aspek</h2>
-              </div>
-              <div id="kpi-aspect-bars" class="kpi-bar-list"></div>
-            </section>
+              <section class="kpi-summary-grid kpi-summary-grid-kpi" aria-label="Ringkasan KPI utama">
+                <article class="kpi-summary-card">
+                  <span>Skor KPI Keseluruhan</span>
+                  <strong id="kpi-card-score">-</strong>
+                </article>
+                <article class="kpi-summary-card">
+                  <span>EBITDA Portofolio</span>
+                  <strong id="kpi-card-ebitda">-</strong>
+                </article>
+                <article class="kpi-summary-card">
+                  <span>Pendapatan Portofolio</span>
+                  <strong id="kpi-card-revenue">-</strong>
+                </article>
+                <article class="kpi-summary-card">
+                  <span>Customer Retention</span>
+                  <strong id="kpi-card-retention">-</strong>
+                </article>
+              </section>
 
-            <section class="kpi-panel kpi-panel-revenue">
-              <div class="kpi-panel-heading">
-                <div>
-                  <h2>Pendapatan vs Target</h2>
-                  <p id="kpi-revenue-period">-</p>
-                </div>
-                <strong id="kpi-revenue-achievement">-</strong>
-              </div>
-              <div class="kpi-revenue-values">
-                <div>
-                  <span>Target Pendapatan</span>
-                  <strong id="kpi-revenue-target">-</strong>
-                </div>
-                <div>
-                  <span>Realisasi Pendapatan</span>
-                  <strong id="kpi-revenue-actual">-</strong>
-                </div>
-              </div>
-              <div class="kpi-target-bars">
-                <div>
-                  <span>Target</span>
-                  <div class="kpi-track"><i id="kpi-target-bar"></i></div>
-                  <b id="kpi-target-label">-</b>
-                </div>
-                <div>
-                  <span>Realisasi</span>
-                  <div class="kpi-track"><i id="kpi-actual-bar"></i></div>
-                  <b id="kpi-actual-label">-</b>
-                </div>
-              </div>
-            </section>
-
-            <section class="kpi-panel kpi-panel-k3l">
-              <div class="kpi-panel-heading">
-                <h2>Ringkasan K3L</h2>
-              </div>
-              <div id="kpi-k3l-list" class="kpi-k3l-list"></div>
-              <div class="kpi-rate-row">
-                <div>
-                  <span>Frequency Rate</span>
-                  <strong id="kpi-frequency-rate">-</strong>
-                </div>
-                <div>
-                  <span>Severity Rate</span>
-                  <strong id="kpi-severity-rate">-</strong>
-                </div>
-              </div>
-            </section>
-
-            <section class="kpi-panel kpi-panel-employees">
-              <div class="kpi-panel-heading">
-                <h2>Komposisi Jumlah Pegawai</h2>
-              </div>
-              <div class="kpi-donut-layout">
-                <div
-                  id="kpi-employee-donut"
-                  class="kpi-donut"
-                  aria-label="Diagram donat komposisi pegawai"
-                >
-                  <div>
-                    <strong id="kpi-employee-total">-</strong>
-                    <span>Pegawai</span>
+              <div class="kpi-column-grid kpi-kpi-grid">
+                <section class="kpi-panel kpi-panel-aspects">
+                  <div class="kpi-panel-heading">
+                    <h2>Capaian KPI per Aspek</h2>
                   </div>
-                </div>
-                <div id="kpi-employee-legend" class="kpi-legend"></div>
+                  <div id="kpi-aspect-bars" class="kpi-bar-list"></div>
+                </section>
+
+                <section class="kpi-panel kpi-panel-revenue">
+                  <div class="kpi-panel-heading">
+                    <div>
+                      <h2>Pendapatan vs Target</h2>
+                      <p id="kpi-revenue-period">-</p>
+                    </div>
+                  </div>
+                  <div class="kpi-revenue-highlight">
+                    <strong id="kpi-revenue-achievement">-</strong>
+                    <span>Pencapaian</span>
+                  </div>
+                  <div class="kpi-revenue-values">
+                    <div>
+                      <span>Target Pendapatan</span>
+                      <strong id="kpi-revenue-target">-</strong>
+                    </div>
+                    <div>
+                      <span>Realisasi Pendapatan</span>
+                      <strong id="kpi-revenue-actual">-</strong>
+                    </div>
+                  </div>
+                  <div class="kpi-target-bars" aria-label="Grafik vertikal pendapatan vs target">
+                    <div>
+                      <b id="kpi-target-label">-</b>
+                      <div class="kpi-vertical-track"><i id="kpi-target-bar"></i></div>
+                      <span>Target (Rp M)</span>
+                    </div>
+                    <div>
+                      <b id="kpi-actual-label">-</b>
+                      <div class="kpi-vertical-track"><i id="kpi-actual-bar"></i></div>
+                      <span>Realisasi (Rp M)</span>
+                    </div>
+                  </div>
+                </section>
               </div>
+
+              <section class="kpi-panel kpi-panel-kpi-trend">
+                <div class="kpi-panel-heading">
+                  <h2>Tren KPI Keseluruhan</h2>
+                  <strong id="kpi-overall-trend-selected">-</strong>
+                </div>
+                <div id="kpi-overall-trend-chart" class="kpi-line-chart kpi-line-chart-kpi"></div>
+              </section>
             </section>
 
-            <section class="kpi-panel kpi-panel-trend">
-              <div class="kpi-panel-heading">
-                <h2>Tren Jam Kerja Bulanan</h2>
-                <strong id="kpi-trend-selected-total">-</strong>
+            <section class="kpi-performance-column kpi-performance-hse" aria-label="HSE Performance">
+              <h2 class="kpi-group-heading kpi-heading-hse">HSE Performance</h2>
+
+              <section class="kpi-summary-grid kpi-summary-grid-hse" aria-label="Ringkasan HSE utama">
+                <article class="kpi-summary-card">
+                  <span>Total Jam Kerja</span>
+                  <strong id="kpi-card-work-hours">-</strong>
+                </article>
+                <article class="kpi-summary-card">
+                  <span>Insiden HSE</span>
+                  <strong id="kpi-card-incidents">-</strong>
+                </article>
+              </section>
+
+              <div class="kpi-column-grid kpi-hse-grid">
+                <section class="kpi-panel kpi-panel-k3l">
+                  <div class="kpi-panel-heading">
+                    <h2>Ringkasan HSE</h2>
+                  </div>
+                  <div id="kpi-k3l-list" class="kpi-k3l-list"></div>
+                  <div class="kpi-rate-row">
+                    <div>
+                      <span>Frequency Rate</span>
+                      <strong id="kpi-frequency-rate">-</strong>
+                    </div>
+                    <div>
+                      <span>Severity Rate</span>
+                      <strong id="kpi-severity-rate">-</strong>
+                    </div>
+                  </div>
+                </section>
+
+                <section class="kpi-panel kpi-panel-employees">
+                  <div class="kpi-panel-heading">
+                    <h2>Komposisi Jumlah Pegawai</h2>
+                  </div>
+                  <div class="kpi-donut-layout">
+                    <div
+                      id="kpi-employee-donut"
+                      class="kpi-donut"
+                      aria-label="Diagram donat komposisi pegawai"
+                    >
+                      <div>
+                        <strong id="kpi-employee-total">-</strong>
+                        <span>Pegawai</span>
+                      </div>
+                    </div>
+                    <div id="kpi-employee-legend" class="kpi-legend"></div>
+                  </div>
+                </section>
               </div>
-              <div id="kpi-work-hours-chart" class="kpi-line-chart"></div>
+
+              <section class="kpi-panel kpi-panel-trend">
+                <div class="kpi-panel-heading">
+                  <h2>Tren Jam Kerja Bulanan</h2>
+                  <strong id="kpi-trend-selected-total">-</strong>
+                </div>
+                <div id="kpi-work-hours-chart" class="kpi-line-chart"></div>
+              </section>
             </section>
           </div>
         </div>
@@ -625,7 +651,7 @@
           <div>
             <h2>Login admin diperlukan</h2>
             <p>
-              Input dan update data KPI &amp; K3L hanya dapat dilakukan admin
+              Input dan update data KPI &amp; HSE hanya dapat dilakukan admin
               yang login menggunakan Supabase Auth.
             </p>
           </div>
@@ -638,7 +664,7 @@
               <p class="eyebrow">Admin data input</p>
               <h1>Input / Update Data</h1>
               <p class="page-description">
-                Isi data bulanan KPI, komposisi pegawai, jam kerja, dan K3L.
+                Isi data bulanan KPI, komposisi pegawai, jam kerja, dan HSE.
                 Data tersimpan per kombinasi bulan dan tahun.
               </p>
             </div>
@@ -696,7 +722,7 @@
                 <label><span>Kepemimpinan Teknologi (%)</span><input name="technology_leadership_score" type="number" min="0" max="100" step="0.01" /></label>
                 <label><span>Peningkatan Investasi (%)</span><input name="investment_score" type="number" min="0" max="100" step="0.01" /></label>
                 <label><span>Pengembangan Talenta (%)</span><input name="talent_development_score" type="number" min="0" max="100" step="0.01" /></label>
-                <label><span>K3L (%)</span><input name="k3l_score" type="number" min="0" max="100" step="0.01" /></label>
+                <label><span>HSE (%)</span><input name="k3l_score" type="number" min="0" max="100" step="0.01" /></label>
               </div>
             </fieldset>
 
@@ -725,7 +751,7 @@
             </fieldset>
 
             <fieldset class="form-card">
-              <legend>Statistik K3L</legend>
+              <legend>Statistik HSE</legend>
               <div class="form-grid">
                 <label><span>Fatality</span><input name="fatality" type="number" min="0" step="1" /></label>
                 <label><span>Medical Treatment</span><input name="medical_treatment" type="number" min="0" step="1" /></label>
