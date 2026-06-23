@@ -285,7 +285,10 @@ try {
     renderServiceCheckboxes();
     renderPortfolioCheckboxes();
   })()`);
-  const home = await evaluate(`(() => ({
+  const home = await evaluate(`(() => {
+    const posterTrack = document.querySelector(".poster-slider-track")?.getBoundingClientRect();
+    const posterMedia = document.querySelector(".poster-slide.active .poster-media");
+    return {
     total: document.querySelector("#metric-total")?.textContent,
     regulations: document.querySelector("#metric-regulations")?.textContent,
     sops: document.querySelector("#metric-sops")?.textContent,
@@ -300,10 +303,13 @@ try {
       document.querySelector(".home-summary-column").getBoundingClientRect().left <
       document.querySelector(".home-hero").getBoundingClientRect().left,
     metricCardCount: document.querySelectorAll(".home-summary-column .metric-card").length,
-    posterHeight: Math.round(document.querySelector(".poster-slider-track")?.getBoundingClientRect().height || 0),
+    posterHeight: Math.round(posterTrack?.height || 0),
+    posterAspect: posterTrack?.width && posterTrack?.height ? Number((posterTrack.width / posterTrack.height).toFixed(3)) : 0,
+    posterObjectFit: posterMedia ? getComputedStyle(posterMedia).objectFit : "",
     posterRightWidth: Math.round(document.querySelector(".home-hero")?.getBoundingClientRect().width || 0),
     bodyFits: document.documentElement.scrollWidth <= document.documentElement.clientWidth
-  }))()`);
+    };
+  })()`);
   await captureScreenshot("home-desktop.png");
 
   await send("Emulation.setDeviceMetricsOverride", {
@@ -716,10 +722,13 @@ try {
     home.overviewColumns !== 2 ||
     !home.overviewMetricsLeft ||
     home.metricCardCount !== 6 ||
-    home.posterHeight < 500 ||
+    home.posterHeight < 560 ||
+    home.posterAspect < 0.68 ||
+    home.posterAspect > 0.74 ||
+    home.posterObjectFit !== "contain" ||
     home.posterRightWidth <= 500
   ) {
-    throw new Error("Home overview is not using the requested split poster layout.");
+    throw new Error("Home overview is not using the requested portrait poster split layout.");
   }
   if (
     home.navLabels.join("|") !==

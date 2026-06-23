@@ -730,12 +730,18 @@ code {
   position: relative;
   width: 100%;
   height: 100%;
+  display: grid;
+  place-items: center;
 }
 
 .poster-slider-track {
   position: relative;
-  height: 100%;
-  min-height: clamp(520px, 58vh, 620px);
+  width: min(100%, calc(clamp(600px, calc(100vh - 180px), 760px) * 0.707));
+  height: clamp(600px, calc(100vh - 180px), 760px);
+  max-height: calc(100vh - 180px);
+  aspect-ratio: 1414 / 2000;
+  min-height: 0;
+  margin: 0 auto;
 }
 
 .poster-slide {
@@ -778,7 +784,7 @@ code {
 }
 
 .poster-frame {
-  object-fit: fill;
+  object-fit: contain;
 }
 
 .poster-placeholder {
@@ -790,14 +796,14 @@ code {
 
 .poster-caption {
   position: absolute;
-  left: 18px;
-  bottom: 18px;
-  max-width: min(480px, calc(100% - 36px));
-  padding: 12px 14px;
+  left: 14px;
+  bottom: 44px;
+  max-width: min(300px, calc(100% - 28px));
+  padding: 9px 11px;
   border: 1px solid rgba(203, 213, 225, 0.9);
-  border-radius: 14px;
+  border-radius: 12px;
   background: rgba(255, 255, 255, 0.93);
-  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.11);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.1);
 }
 
 .poster-caption span {
@@ -813,14 +819,14 @@ code {
 .poster-caption strong {
   display: block;
   color: var(--text);
-  font-size: 18px;
+  font-size: 14px;
   line-height: 1.25;
 }
 
 .poster-caption p {
   margin: 5px 0 0;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .poster-arrow {
@@ -2721,7 +2727,10 @@ td .empty-state {
   }
 
   .home-overview .poster-slider-track {
-    min-height: clamp(420px, 70vw, 560px);
+    width: min(100%, calc(clamp(560px, 72vh, 680px) * 0.707));
+    height: clamp(560px, 72vh, 680px);
+    max-height: none;
+    min-height: 0;
   }
 
   .app-sidebar {
@@ -2848,24 +2857,22 @@ td .empty-state {
     transform: none;
   }
 
-  .poster-slider-track {
-    height: 320px;
-  }
-
   .home-summary-column .metrics-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .home-overview .poster-slider-track {
-    height: clamp(360px, 82vw, 500px);
-    min-height: 360px;
+    width: min(100%, 420px);
+    height: auto;
+    aspect-ratio: 1414 / 2000;
+    min-height: 0;
   }
 
   .poster-caption {
-    right: 16px;
-    left: 16px;
-    bottom: 16px;
-    max-width: none;
+    left: 12px;
+    right: auto;
+    bottom: 40px;
+    max-width: min(260px, calc(100% - 24px));
   }
 
   .metrics-grid,
@@ -2974,18 +2981,15 @@ td .empty-state {
     min-height: 198px;
   }
 
-  .poster-slider-track {
-    height: 280px;
-    min-height: 240px;
-  }
-
   .home-summary-column .metrics-grid {
     grid-template-columns: 1fr;
   }
 
   .home-overview .poster-slider-track {
-    height: clamp(320px, 96vw, 440px);
-    min-height: 320px;
+    width: min(100%, 360px);
+    height: auto;
+    aspect-ratio: 1414 / 2000;
+    min-height: 0;
   }
 
   .poster-caption {
