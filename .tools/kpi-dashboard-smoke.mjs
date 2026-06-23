@@ -166,6 +166,7 @@ try {
       visible: !document.querySelector("#view-kpi").classList.contains("hidden"),
       activeMenu: document.querySelector(".main-nav a.active")?.textContent.trim(),
       title: document.querySelector(".kpi-dashboard-header h1")?.textContent.trim(),
+      exportButton: document.querySelector("#kpi-export-dashboard")?.textContent.trim(),
       labels: Array.from(document.querySelectorAll(".main-nav a")).map((item) => item.textContent.trim()),
       groupHeadings: Array.from(document.querySelectorAll(".kpi-group-heading")).map((item) => item.textContent.trim()),
       cards: Array.from(document.querySelectorAll(".kpi-summary-card strong")).map((item) => item.textContent.trim()),
@@ -198,6 +199,57 @@ try {
         document.querySelector("#view-kpi").getBoundingClientRect().bottom <= window.innerHeight + 2,
       scrollHeight: document.scrollingElement.scrollHeight,
       viewportHeight: window.innerHeight
+    };
+
+    let capturedExport = null;
+    window.html2canvas = async (element, options) => {
+      const area = element.querySelector(".dashboard-export-area");
+      const rect = area?.getBoundingClientRect();
+      capturedExport = {
+        className: area?.className || "",
+        title: element.querySelector(".export-brand-block h1")?.textContent.trim(),
+        period: element.querySelector(".export-report-meta")?.textContent || "",
+        groupHeadings: Array.from(element.querySelectorAll(".export-column > h2")).map((item) => item.textContent.trim()),
+        hasSidebar: Boolean(element.querySelector(".app-sidebar")),
+        hasToolbar: Boolean(element.querySelector("#kpi-filter-month, #kpi-update-data, #kpi-export-dashboard")),
+        lowAspects: element.querySelectorAll(".export-aspect-row.is-low").length,
+        verticalBars: element.querySelectorAll(".export-revenue-bar").length,
+        width: Math.round(rect?.width || 0),
+        height: Math.round(rect?.height || 0),
+        fitsTemplate: area ? area.scrollWidth <= area.clientWidth && area.scrollHeight <= area.clientHeight : false,
+        canvasOptions: options
+      };
+      return {
+        width: 3840,
+        height: 2716,
+        toDataURL: () => "data:image/png;base64,"
+      };
+    };
+    window.jspdf = {
+      jsPDF: class {
+        constructor() {
+          this.internal = {
+            pageSize: {
+              getWidth: () => 297,
+              getHeight: () => 210
+            }
+          };
+          window.__kpiPdfCalls = [];
+        }
+        addImage(...args) {
+          window.__kpiPdfCalls.push({ action: "addImage", args });
+        }
+        save(name) {
+          window.__kpiPdfCalls.push({ action: "save", name });
+        }
+      }
+    };
+    document.querySelector("#kpi-export-dashboard").click();
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    const exportResult = {
+      ...capturedExport,
+      pdfCalls: window.__kpiPdfCalls,
+      hostRemoved: !document.querySelector(".dashboard-export-host")
     };
 
     document.querySelector("#kpi-filter-month").value = "1";
@@ -254,7 +306,7 @@ try {
       scrollable: document.scrollingElement.scrollHeight > window.innerHeight + 20
     };
 
-    return { dashboard, january, locked, formState };
+    return { dashboard, exportResult, january, locked, formState };
   })()`);
 
   await evaluate(`location.hash = "#kpi"; route();`, 250);
@@ -279,6 +331,7 @@ try {
   }
   if (
     result.dashboard.title !== "Dashboard KPI & HSE" ||
+    result.dashboard.exportButton !== "Export Dashboard" ||
     result.dashboard.groupHeadings.join("|") !== "KPI Performance|HSE Performance" ||
     !result.dashboard.kpiColumnLeft ||
     !result.dashboard.employeeInHse ||
@@ -292,10 +345,16 @@ try {
   ) {
     throw new Error("KPI summary cards did not render expected December data.");
   }
+  const expectedLowAspectCount = result.dashboard.aspects.filter((value) => {
+    const numericValue = Number.parseFloat(value.replace(",", "."));
+    return Number.isFinite(numericValue) && numericValue < 50;
+  }).length;
+
   if (
     !result.dashboard.aspects.includes("82%") ||
     !result.dashboard.aspects.includes("45%") ||
-    result.dashboard.lowAspectRows < 2 ||
+    result.dashboard.lowAspectRows !== expectedLowAspectCount ||
+    expectedLowAspectCount < 1 ||
     !result.dashboard.lowAspectColor.includes("220") ||
     result.dashboard.lowAspectColor === result.dashboard.normalAspectColor ||
     result.dashboard.revenueAchievement !== "96,2%" ||
@@ -310,6 +369,23 @@ try {
     result.dashboard.selectedTrendTotal !== "Total: 8.976 jam"
   ) {
     throw new Error("KPI charts or calculated values are incorrect.");
+  }
+  if (
+    result.exportResult.title !== "Dashboard KPI & HSE" ||
+    !result.exportResult.className.includes("dashboard-export-area") ||
+    result.exportResult.groupHeadings.join("|") !== "KPI Performance|HSE Performance" ||
+    result.exportResult.hasSidebar ||
+    result.exportResult.hasToolbar ||
+    result.exportResult.lowAspects !== expectedLowAspectCount ||
+    result.exportResult.verticalBars !== 2 ||
+    result.exportResult.width !== 1920 ||
+    result.exportResult.height !== 1358 ||
+    !result.exportResult.fitsTemplate ||
+    result.exportResult.canvasOptions.scale < 2 ||
+    result.exportResult.pdfCalls.at(-1)?.name !== "Dashboard-KPI-HSE-Desember-2025.pdf" ||
+    !result.exportResult.hostRemoved
+  ) {
+    throw new Error("KPI dashboard export did not use the clean report template.");
   }
   if (!result.dashboard.fitsDesktop) {
     throw new Error(

@@ -100,6 +100,7 @@ function bindKpiDashboardEvents() {
   $("#kpi-filter-month")?.addEventListener("change", handleKpiPeriodChange);
   $("#kpi-filter-year")?.addEventListener("change", handleKpiPeriodChange);
   $("#kpi-update-data")?.addEventListener("click", openKpiInputPage);
+  $("#kpi-export-dashboard")?.addEventListener("click", handleKpiDashboardExport);
   $("#kpi-data-form")?.addEventListener("submit", handleKpiDataSubmit);
   $("#kpi-data-form")?.addEventListener("input", handleKpiFormInput);
   $("#kpi-data-form")?.addEventListener("change", handleKpiFormChange);
@@ -379,6 +380,357 @@ function withKpiTrendFallback(values) {
   return values.map((value, index) =>
     value === null ? kpiRound(Math.min(100, anchor * curve[index]), 1) : value
   );
+}
+
+async function handleKpiDashboardExport() {
+  if (!window.html2canvas || !window.jspdf?.jsPDF) {
+    showToast(
+      "Library export belum siap. Periksa koneksi internet lalu coba lagi.",
+      true
+    );
+    return;
+  }
+
+  const exportArea = buildKpiDashboardExportArea();
+  document.body.appendChild(exportArea);
+  setLoading(true, "Menyiapkan export dashboard...");
+  try {
+    await new Promise((resolve) =>
+      requestAnimationFrame(() => requestAnimationFrame(resolve))
+    );
+    const canvas = await window.html2canvas(exportArea, {
+      backgroundColor: "#ffffff",
+      scale: 2,
+      useCORS: true,
+      logging: false,
+      windowWidth: 1920,
+      windowHeight: 1358
+    });
+    const pdf = new window.jspdf.jsPDF({
+      orientation: "landscape",
+      unit: "mm",
+      format: "a4"
+    });
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const margin = 7;
+    const imageRatio = canvas.width / canvas.height;
+    let imageWidth = pageWidth - margin * 2;
+    let imageHeight = imageWidth / imageRatio;
+    if (imageHeight > pageHeight - margin * 2) {
+      imageHeight = pageHeight - margin * 2;
+      imageWidth = imageHeight * imageRatio;
+    }
+    const imageX = (pageWidth - imageWidth) / 2;
+    const imageY = (pageHeight - imageHeight) / 2;
+    pdf.addImage(
+      canvas.toDataURL("image/png"),
+      "PNG",
+      imageX,
+      imageY,
+      imageWidth,
+      imageHeight,
+      undefined,
+      "FAST"
+    );
+    pdf.save(getKpiExportFileName());
+    showToast("Dashboard KPI & HSE berhasil diexport.");
+  } catch (error) {
+    showToast(`Gagal export dashboard: ${readableError(error)}`, true);
+  } finally {
+    exportArea.remove();
+    setLoading(false);
+  }
+}
+
+function buildKpiDashboardExportArea() {
+  const record = getSelectedKpiRecord();
+  const period = `${KPI_MONTHS[state.selectedKpiMonth - 1]} ${state.selectedKpiYear}`;
+  const exportedAt = new Date().toLocaleString("id-ID", {
+    dateStyle: "medium",
+    timeStyle: "short"
+  });
+  const revenueAchievement = calculateRevenueAchievement(record);
+  const targetValue = kpiNumberOrNull(record?.revenue_target);
+  const actualValue = kpiNumberOrNull(record?.revenue_actual);
+  const revenueMax = Math.max(targetValue || 0, actualValue || 0, 1);
+  const targetHeight = targetValue === null ? 0 : (targetValue / revenueMax) * 100;
+  const actualHeight = actualValue === null ? 0 : (actualValue / revenueMax) * 100;
+  const employees = getKpiEmployeeExportData(record);
+  const kpiTrendValues = getKpiYearValues("kpi_overall_score", true);
+  const workHourValues = getKpiYearValues("total_work_hours", false);
+
+  const wrapper = document.createElement("div");
+  wrapper.className = "dashboard-export-host";
+  wrapper.innerHTML = `
+    <section class="dashboard-export-area export-mode" aria-label="Dashboard KPI HSE export">
+      <header class="export-report-header">
+        <div class="export-brand-block">
+          <img src="assets/logo-aura.png" alt="AURA" />
+          <div>
+            <h1>Dashboard KPI &amp; HSE</h1>
+            <p>Ringkasan Kinerja Perusahaan dan Keselamatan Kerja</p>
+          </div>
+        </div>
+        <div class="export-report-meta">
+          <div class="export-company-row">
+            <span>Danantara Indonesia</span>
+            <span>IDSurvey</span>
+            <span>SUCOFINDO</span>
+          </div>
+          <p><strong>Periode Laporan</strong> ${escapeHtml(period)}</p>
+          <p><strong>Tanggal Export</strong> ${escapeHtml(exportedAt)}</p>
+        </div>
+      </header>
+
+      <main class="export-report-grid">
+        <section class="export-column export-kpi-column">
+          <h2>KPI Performance</h2>
+          <div class="export-summary-grid export-summary-grid-kpi">
+            ${buildKpiExportMetric("Skor KPI Keseluruhan", kpiFormatPercent(record?.kpi_overall_score), "YTD Target")}
+            ${buildKpiExportMetric("EBITDA Portofolio", kpiFormatMoneyMillion(record?.ebitda_portfolio), "YTD")}
+            ${buildKpiExportMetric("Pendapatan Portofolio", kpiFormatMoneyMillion(record?.portfolio_revenue), "YTD")}
+            ${buildKpiExportMetric("Customer Retention", kpiFormatPercent(record?.customer_retention), "Retention Rate")}
+          </div>
+
+          <div class="export-kpi-mid-grid">
+            <section class="export-card">
+              <h3>Capaian KPI per Aspek</h3>
+              <div class="export-aspect-list">
+                ${buildKpiExportAspectRows(record)}
+              </div>
+            </section>
+
+            <section class="export-card export-revenue-card">
+              <div class="export-card-heading">
+                <div>
+                  <h3>Pendapatan vs Target</h3>
+                  <p>${escapeHtml(period)}</p>
+                </div>
+                <div class="export-achievement">
+                  <strong>${kpiFormatPercent(revenueAchievement)}</strong>
+                  <span>Pencapaian</span>
+                </div>
+              </div>
+              <div class="export-revenue-bars">
+                ${buildKpiExportRevenueBar("Target Pendapatan", targetValue, targetHeight, "target")}
+                ${buildKpiExportRevenueBar("Realisasi Pendapatan", actualValue, actualHeight, "actual")}
+              </div>
+            </section>
+          </div>
+
+          <section class="export-card export-trend-card">
+            <div class="export-card-heading">
+              <h3>Tren KPI Keseluruhan</h3>
+              <strong>${kpiFormatPercent(kpiTrendValues[state.selectedKpiMonth - 1])}</strong>
+            </div>
+            ${buildKpiExportLineChart(kpiTrendValues, {
+              color: "#064f83",
+              max: 100,
+              suffix: "%",
+              aria: "Tren KPI keseluruhan"
+            })}
+          </section>
+        </section>
+
+        <section class="export-column export-hse-column">
+          <h2>HSE Performance</h2>
+          <div class="export-summary-grid export-summary-grid-hse">
+            ${buildKpiExportMetric("Total Jam Kerja", kpiFormatHours(record?.total_work_hours), "YTD")}
+            ${buildKpiExportMetric("Insiden HSE", kpiFormatIncidents(getKpiIncidentTotal(record)), "Kejadian")}
+          </div>
+
+          <div class="export-hse-mid-grid">
+            <section class="export-card">
+              <h3>Ringkasan HSE</h3>
+              <div class="export-hse-list">
+                ${buildKpiExportHseRows(record)}
+              </div>
+              <div class="export-rate-row">
+                <div><span>Frequency Rate</span><strong>${kpiFormatDecimal(record?.frequency_rate, 2)}</strong></div>
+                <div><span>Severity Rate</span><strong>${kpiFormatDecimal(record?.severity_rate, 2)}</strong></div>
+              </div>
+            </section>
+
+            <section class="export-card export-employee-card">
+              <h3>Komposisi Jumlah Pegawai</h3>
+              <div class="export-donut-layout">
+                <div class="export-donut" style="background:${employees.gradient}">
+                  <div><strong>${kpiFormatInteger(employees.total)}</strong><span>Pegawai</span></div>
+                </div>
+                <div class="export-legend">
+                  ${employees.items
+                    .map((item) => `
+                      <div>
+                        <i style="background:${item.color}"></i>
+                        <span>${escapeHtml(item.label)}</span>
+                        <strong>${kpiFormatInteger(item.value)}</strong>
+                      </div>
+                    `)
+                    .join("")}
+                </div>
+              </div>
+            </section>
+          </div>
+
+          <section class="export-card export-trend-card">
+            <div class="export-card-heading">
+              <h3>Tren Jam Kerja Bulanan</h3>
+              <strong>Total: ${kpiFormatHours(workHourValues[state.selectedKpiMonth - 1])}</strong>
+            </div>
+            ${buildKpiExportLineChart(workHourValues, {
+              color: "#008b8b",
+              suffix: "",
+              aria: "Tren jam kerja bulanan"
+            })}
+          </section>
+        </section>
+      </main>
+
+      <footer class="export-report-footer">
+        <span>SBU AEBT | HSE Performance Dashboard</span>
+        <strong>Kerja Aman, Tubuh Nyaman, Produktivitas Meningkat</strong>
+      </footer>
+    </section>
+  `;
+  return wrapper;
+}
+
+function buildKpiExportMetric(label, value, hint) {
+  return `
+    <article class="export-metric-card">
+      <span>${escapeHtml(label)}</span>
+      <strong>${escapeHtml(value)}</strong>
+      <small>${escapeHtml(hint)}</small>
+    </article>
+  `;
+}
+
+function buildKpiExportAspectRows(record) {
+  return KPI_ASPECTS.map(([label, key]) => {
+    const value = kpiNumberOrNull(record?.[key]);
+    const percent = value === null ? 0 : kpiClampPercent(value);
+    const lowClass = value !== null && value < 50 ? " is-low" : "";
+    return `
+      <div class="export-aspect-row${lowClass}">
+        <span>${escapeHtml(label)}</span>
+        <div><i style="width:${percent}%"></i></div>
+        <strong>${kpiFormatPercent(value)}</strong>
+      </div>
+    `;
+  }).join("");
+}
+
+function buildKpiExportRevenueBar(label, value, height, tone) {
+  return `
+    <div class="export-revenue-bar ${tone}">
+      <b>${kpiFormatCompact(value)}</b>
+      <div><i style="height:${Math.max(0, Math.min(100, height))}%"></i></div>
+      <span>${escapeHtml(label)}</span>
+    </div>
+  `;
+}
+
+function buildKpiExportHseRows(record) {
+  return KPI_HSE_ITEMS.map(([label, key]) => `
+    <div>
+      <span>${escapeHtml(label)}</span>
+      <strong>${kpiFormatPlain(record?.[key])}</strong>
+    </div>
+  `).join("");
+}
+
+function getKpiEmployeeExportData(record) {
+  const items = KPI_EMPLOYEE_ITEMS.map(([label, key, color]) => ({
+    label,
+    color,
+    value: kpiNumberOrNull(record?.[key])
+  }));
+  const total = items.reduce((sum, item) => sum + (item.value || 0), 0);
+  if (total <= 0) {
+    return { items, total: null, gradient: "#e2e8f0" };
+  }
+  let cursor = 0;
+  const stops = items.map((item) => {
+    const start = cursor;
+    const end = cursor + ((item.value || 0) / total) * 100;
+    cursor = end;
+    return `${item.color} ${start}% ${end}%`;
+  });
+  return { items, total, gradient: `conic-gradient(${stops.join(", ")})` };
+}
+
+function getKpiYearValues(field, useKpiFallback) {
+  const recordsByMonth = new Map(
+    safeKpiRecords()
+      .filter((record) => Number(record.year) === Number(state.selectedKpiYear))
+      .map((record) => [Number(record.month), record])
+  );
+  const values = Array.from({ length: 12 }, (_, index) =>
+    kpiNumberOrNull(recordsByMonth.get(index + 1)?.[field])
+  );
+  return useKpiFallback ? withKpiTrendFallback(values) : values;
+}
+
+function buildKpiExportLineChart(values, options = {}) {
+  const numericValues = values.filter((value) => value !== null);
+  if (!numericValues.length) {
+    return '<div class="export-chart-empty">Belum ada data untuk periode ini.</div>';
+  }
+  const width = 760;
+  const height = 230;
+  const padding = { top: 22, right: 24, bottom: 42, left: 54 };
+  const max = options.max || Math.max(...numericValues, 1);
+  const chartWidth = width - padding.left - padding.right;
+  const chartHeight = height - padding.top - padding.bottom;
+  const points = values.map((value, index) => {
+    const x = padding.left + (chartWidth / 11) * index;
+    const y =
+      value === null
+        ? null
+        : padding.top + chartHeight - (Math.min(max, value) / max) * chartHeight;
+    return { x, y, value, month: KPI_MONTHS[index].slice(0, 3) };
+  });
+  const path = points
+    .filter((point) => point.y !== null)
+    .map((point, index) => `${index === 0 ? "M" : "L"}${point.x},${point.y}`)
+    .join(" ");
+  const gridLines = [0, 0.25, 0.5, 0.75, 1]
+    .map((ratio) => {
+      const y = padding.top + chartHeight - ratio * chartHeight;
+      return `<line x1="${padding.left}" y1="${y}" x2="${width - padding.right}" y2="${y}" />`;
+    })
+    .join("");
+  const labels = points
+    .map((point, index) => `
+      <text x="${point.x}" y="${height - 16}" text-anchor="middle">${escapeHtml(point.month)}</text>
+      ${
+        point.y === null
+          ? ""
+          : `<circle cx="${point.x}" cy="${point.y}" r="${
+              index + 1 === state.selectedKpiMonth ? 6 : 4
+            }" />
+             <text class="export-point-label" x="${point.x}" y="${point.y - 10}" text-anchor="middle">${escapeHtml(
+               options.suffix === "%"
+                 ? kpiFormatPercent(point.value)
+                 : kpiFormatCompact(point.value)
+             )}</text>`
+      }
+    `)
+    .join("");
+  return `
+    <svg class="export-line-chart" viewBox="0 0 ${width} ${height}" role="img" aria-label="${escapeHtml(options.aria || "Tren bulanan")}">
+      <g class="export-grid-lines">${gridLines}</g>
+      <path class="export-chart-line" style="stroke:${options.color || "#008b8b"}" d="${path}" />
+      <g class="export-chart-points" style="--point-color:${options.color || "#008b8b"}">${labels}</g>
+    </svg>
+  `;
+}
+
+function getKpiExportFileName() {
+  const month = KPI_MONTHS[state.selectedKpiMonth - 1] || "Periode";
+  const year = state.selectedKpiYear || new Date().getFullYear();
+  return `Dashboard-KPI-HSE-${month}-${year}.pdf`;
 }
 
 function renderKpiWorkHoursTrend() {
