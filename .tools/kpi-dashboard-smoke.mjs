@@ -203,15 +203,18 @@ try {
 
     let capturedExport = null;
     window.html2canvas = async (element, options) => {
-      const area = element.querySelector(".dashboard-export-area");
+      const area = element.matches(".export-report")
+        ? element
+        : element.querySelector(".export-report");
       const rect = area?.getBoundingClientRect();
       capturedExport = {
         className: area?.className || "",
         title: element.querySelector(".export-brand-block h1")?.textContent.trim(),
         period: element.querySelector(".export-report-meta")?.textContent || "",
-        groupHeadings: Array.from(element.querySelectorAll(".export-column > h2")).map((item) => item.textContent.trim()),
+        groupHeadings: Array.from(element.querySelectorAll(".export-section > h2")).map((item) => item.textContent.trim()),
         hasSidebar: Boolean(element.querySelector(".app-sidebar")),
         hasToolbar: Boolean(element.querySelector("#kpi-filter-month, #kpi-update-data, #kpi-export-dashboard")),
+        hasFooter: Boolean(element.querySelector(".export-report-footer")),
         lowAspects: element.querySelectorAll(".export-aspect-row.is-low").length,
         verticalBars: element.querySelectorAll(".export-revenue-bar").length,
         width: Math.round(rect?.width || 0),
@@ -221,7 +224,7 @@ try {
       };
       return {
         width: 3840,
-        height: 2716,
+        height: 2160,
         toDataURL: () => "data:image/png;base64,"
       };
     };
@@ -372,14 +375,15 @@ try {
   }
   if (
     result.exportResult.title !== "Dashboard KPI & HSE" ||
-    !result.exportResult.className.includes("dashboard-export-area") ||
+    !result.exportResult.className.includes("export-report") ||
     result.exportResult.groupHeadings.join("|") !== "KPI Performance|HSE Performance" ||
     result.exportResult.hasSidebar ||
     result.exportResult.hasToolbar ||
+    result.exportResult.hasFooter ||
     result.exportResult.lowAspects !== expectedLowAspectCount ||
     result.exportResult.verticalBars !== 2 ||
     result.exportResult.width !== 1920 ||
-    result.exportResult.height !== 1358 ||
+    result.exportResult.height !== 1080 ||
     !result.exportResult.fitsTemplate ||
     result.exportResult.canvasOptions.scale < 2 ||
     result.exportResult.pdfCalls.at(-1)?.name !== "Dashboard-KPI-HSE-Desember-2025.pdf" ||

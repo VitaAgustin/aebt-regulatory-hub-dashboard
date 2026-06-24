@@ -302,7 +302,26 @@ code {
   display: flex;
   flex-direction: column;
   border-right: 1px solid var(--line);
-  background: var(--surface);
+  overflow: hidden;
+  background: #fff;
+}
+
+.app-sidebar::before {
+  content: "";
+  position: absolute;
+  inset: 140px -16px 0 0;
+  z-index: 0;
+  background-image: url("assets/refinery-watermark.svg");
+  background-repeat: no-repeat;
+  background-position: center bottom;
+  background-size: 118% auto;
+  opacity: 0.1;
+  pointer-events: none;
+}
+
+.app-sidebar > * {
+  position: relative;
+  z-index: 1;
 }
 
 .brand {
@@ -421,7 +440,8 @@ code {
   gap: 10px;
   border: 1px solid var(--line);
   border-radius: 12px;
-  background: var(--surface-soft);
+  background: rgba(248, 250, 252, 0.92);
+  backdrop-filter: blur(2px);
 }
 
 .account-avatar {
@@ -470,7 +490,8 @@ code {
   gap: 9px;
   border: 1px solid var(--line);
   border-radius: 10px;
-  background: #fff;
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(2px);
   color: #475569;
   font-size: 11px;
   font-weight: 700;
@@ -3647,15 +3668,15 @@ td .empty-state {
 }
 
 body.kpi-active .app-sidebar {
-  border-right-color: rgba(255, 255, 255, 0.12);
-  background: linear-gradient(180deg, #075e60 0%, #064e4f 100%);
-  color: #e6fffa;
+  border-right-color: var(--line);
+  background: #fff;
+  color: var(--text);
 }
 
 body.kpi-active .brand,
 body.kpi-active .brand:hover,
 body.kpi-active .main-nav a {
-  color: #d9fffb;
+  color: #475569;
 }
 
 body.kpi-active .brand-mark {
@@ -3665,25 +3686,25 @@ body.kpi-active .brand-mark {
 
 body.kpi-active .brand small,
 body.kpi-active .sidebar-account small {
-  color: #a7f3d0;
+  color: var(--muted);
 }
 
 body.kpi-active .main-nav a:hover {
-  background: rgba(255, 255, 255, 0.09);
-  color: #fff;
+  background: var(--surface-soft);
+  color: var(--teal);
 }
 
 body.kpi-active .main-nav a.active {
-  background: rgba(255, 255, 255, 0.14);
-  color: #fff;
-  box-shadow: inset 3px 0 0 #5eead4;
+  background: #e7f5f3;
+  color: var(--teal-dark);
+  box-shadow: inset 3px 0 0 var(--teal);
 }
 
 body.kpi-active .sidebar-account,
 body.kpi-active .sidebar-lock-button {
-  border-color: rgba(255, 255, 255, 0.16);
-  background: rgba(255, 255, 255, 0.08);
-  color: #e6fffa;
+  border-color: var(--line);
+  background: rgba(248, 250, 252, 0.92);
+  color: #475569;
 }
 
 body.kpi-active .account-avatar {
@@ -4192,35 +4213,37 @@ body.kpi-active .account-avatar {
   left: -10000px;
   z-index: -1;
   width: 1920px;
-  height: 1358px;
+  height: 1080px;
   overflow: hidden;
   background: #fff;
   pointer-events: none;
 }
 
-.dashboard-export-area,
-.dashboard-export-area * {
+.export-report,
+.export-report * {
   box-sizing: border-box;
 }
 
-.dashboard-export-area {
+.export-report {
   width: 1920px;
-  height: 1358px;
-  padding: 30px;
+  height: 1080px;
+  padding: 28px 34px;
   display: grid;
-  grid-template-rows: 120px minmax(0, 1fr) 42px;
+  grid-template-rows: 104px 900px;
   gap: 14px;
   background: #fff;
   color: #0f172a;
-  font-family: Inter, "Segoe UI", Arial, sans-serif;
+  overflow: hidden;
+  font-family: Arial, "Segoe UI", sans-serif;
 }
 
 .export-report-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 28px;
-  padding-bottom: 16px;
+  gap: 24px;
+  min-height: 0;
+  padding-bottom: 10px;
   border-bottom: 2px solid #d7e4ec;
 }
 
@@ -4228,80 +4251,104 @@ body.kpi-active .account-avatar {
   min-width: 0;
   display: flex;
   align-items: center;
-  gap: 22px;
+  gap: 18px;
 }
 
-.export-brand-block img {
-  width: 126px;
-  height: 82px;
+.export-aura-logo {
+  width: 130px;
+  height: 78px;
   object-fit: contain;
 }
 
 .export-brand-block h1 {
   margin: 0;
   color: #053b63;
-  font-size: 45px;
+  font-size: 42px;
   line-height: 1;
   letter-spacing: 0;
   text-transform: uppercase;
 }
 
 .export-brand-block p {
-  margin: 8px 0 0;
+  margin: 6px 0 0;
   color: #476174;
-  font-size: 18px;
+  font-size: 17px;
   font-weight: 700;
 }
 
 .export-report-meta {
-  min-width: 420px;
+  min-width: 620px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 9px;
   text-align: right;
 }
 
-.export-company-row {
-  margin-bottom: 12px;
+.export-company-logos {
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 24px;
+}
+
+.export-company-logos img {
+  display: block;
+  max-height: 46px;
+  object-fit: contain;
+}
+
+.export-company-logos img:nth-child(1) {
+  width: 156px;
+}
+
+.export-company-logos img:nth-child(2) {
+  width: 220px;
+}
+
+.export-company-logos img:nth-child(3) {
+  width: 140px;
+}
+
+.export-date-row {
   display: flex;
   justify-content: flex-end;
-  gap: 12px;
+  gap: 10px;
 }
 
-.export-company-row span {
-  padding: 8px 12px;
-  border-radius: 8px;
-  background: #f8fafc;
-  color: #063b65;
-  font-size: 16px;
-  font-weight: 850;
+.export-date-row span {
+  padding: 7px 10px;
+  border-radius: 7px;
+  background: #eff6ff;
+  color: #18364f;
+  font-size: 14px;
+  font-weight: 800;
 }
 
-.export-report-meta p {
-  margin: 5px 0;
-  color: #334155;
-  font-size: 16px;
-}
-
-.export-report-meta strong {
+.export-date-row strong {
   color: #007f78;
 }
 
-.export-report-grid {
+.export-body {
   min-height: 0;
+  height: 900px;
   display: grid;
   grid-template-columns: minmax(0, 1.08fr) minmax(0, 0.92fr);
   gap: 18px;
 }
 
-.export-column {
+.export-section {
   min-width: 0;
   min-height: 0;
   display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr) 286px;
+  grid-template-rows: 42px 116px 332px minmax(0, 1fr);
   gap: 12px;
 }
 
-.export-column > h2 {
+.export-section > h2 {
   margin: 0;
-  padding: 13px 18px;
+  padding: 12px 18px;
   border-radius: 8px;
   color: #fff;
   font-size: 19px;
@@ -4339,11 +4386,11 @@ body.kpi-active .account-avatar {
 }
 
 .export-metric-card {
-  min-height: 116px;
-  padding: 17px 18px;
+  min-height: 0;
+  padding: 14px 16px;
   display: grid;
   align-content: center;
-  gap: 9px;
+  gap: 8px;
 }
 
 .export-metric-card span,
@@ -4353,13 +4400,13 @@ body.kpi-active .account-avatar {
 .export-rate-row span,
 .export-revenue-bar span {
   color: #1e3a52;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 780;
 }
 
 .export-metric-card strong {
   color: #053b63;
-  font-size: 31px;
+  font-size: 30px;
   line-height: 1;
   letter-spacing: 0;
 }
@@ -4373,7 +4420,7 @@ body.kpi-active .account-avatar {
 .export-card {
   min-width: 0;
   min-height: 0;
-  padding: 16px 18px;
+  padding: 14px;
   overflow: hidden;
 }
 
@@ -4388,6 +4435,7 @@ body.kpi-active .account-avatar {
 .export-kpi-mid-grid,
 .export-hse-mid-grid {
   min-height: 0;
+  height: 332px;
   display: grid;
   gap: 12px;
 }
@@ -4402,18 +4450,18 @@ body.kpi-active .account-avatar {
 
 .export-aspect-list {
   display: grid;
-  gap: 13px;
+  gap: 11px;
 }
 
 .export-aspect-row {
   display: grid;
-  grid-template-columns: 182px minmax(0, 1fr) 54px;
+  grid-template-columns: 174px minmax(0, 1fr) 52px;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
 }
 
 .export-aspect-row div {
-  height: 18px;
+  height: 17px;
   overflow: hidden;
   background: #edf3f7;
 }
@@ -4457,14 +4505,14 @@ body.kpi-active .account-avatar {
 }
 
 .export-achievement {
-  min-width: 150px;
+  min-width: 132px;
   text-align: center;
 }
 
 .export-achievement strong {
   display: block;
   color: #047857;
-  font-size: 50px;
+  font-size: 48px;
   line-height: 1;
   letter-spacing: 0;
 }
@@ -4476,20 +4524,20 @@ body.kpi-active .account-avatar {
 }
 
 .export-revenue-bars {
-  height: 268px;
+  height: 238px;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   align-items: end;
-  gap: 40px;
-  padding: 8px 34px 0;
+  gap: 34px;
+  padding: 6px 30px 0;
 }
 
 .export-revenue-bar {
   min-width: 0;
   display: grid;
-  grid-template-rows: auto 190px auto;
+  grid-template-rows: auto 172px auto;
   justify-items: center;
-  gap: 9px;
+  gap: 8px;
 }
 
 .export-revenue-bar b {
@@ -4507,7 +4555,7 @@ body.kpi-active .account-avatar {
 }
 
 .export-revenue-bar i {
-  width: 76px;
+  width: 82px;
   display: block;
   border-radius: 8px 8px 0 0;
 }
@@ -4561,15 +4609,16 @@ body.kpi-active .account-avatar {
 }
 
 .export-donut-layout {
-  min-height: 260px;
+  min-height: 0;
+  height: 260px;
   display: grid;
-  grid-template-columns: 250px 1fr;
+  grid-template-columns: 218px 1fr;
   align-items: center;
-  gap: 20px;
+  gap: 18px;
 }
 
 .export-donut {
-  width: 240px;
+  width: 208px;
   aspect-ratio: 1;
   display: grid;
   place-items: center;
@@ -4577,7 +4626,7 @@ body.kpi-active .account-avatar {
 }
 
 .export-donut > div {
-  width: 126px;
+  width: 108px;
   aspect-ratio: 1;
   display: grid;
   place-items: center;
@@ -4589,7 +4638,7 @@ body.kpi-active .account-avatar {
 
 .export-donut strong {
   color: #053b63;
-  font-size: 38px;
+  font-size: 34px;
   line-height: 1;
 }
 
@@ -4601,7 +4650,7 @@ body.kpi-active .account-avatar {
 
 .export-legend {
   display: grid;
-  gap: 13px;
+  gap: 11px;
 }
 
 .export-legend > div {
@@ -4623,7 +4672,7 @@ body.kpi-active .account-avatar {
 }
 
 .export-trend-card {
-  padding-bottom: 10px;
+  padding-bottom: 12px;
 }
 
 .export-trend-card .export-card-heading {
@@ -4637,7 +4686,7 @@ body.kpi-active .account-avatar {
 
 .export-line-chart {
   width: 100%;
-  height: 226px;
+  height: 284px;
   display: block;
 }
 
@@ -4671,29 +4720,13 @@ body.kpi-active .account-avatar {
 }
 
 .export-chart-empty {
-  min-height: 220px;
+  min-height: 260px;
   display: grid;
   place-items: center;
   border: 1px dashed #dbe7ef;
   border-radius: 10px;
   color: #64748b;
   font-weight: 800;
-}
-
-.export-report-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 18px;
-  padding-top: 12px;
-  border-top: 2px solid #d7e4ec;
-  color: #476174;
-  font-size: 16px;
-  font-weight: 750;
-}
-
-.export-report-footer strong {
-  color: #008b8b;
 }
 
 @media (min-width: 1181px) and (min-height: 650px) {

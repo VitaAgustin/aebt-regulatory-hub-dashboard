@@ -391,45 +391,36 @@ async function handleKpiDashboardExport() {
     return;
   }
 
-  const exportArea = buildKpiDashboardExportArea();
-  document.body.appendChild(exportArea);
+  const exportHost = ExportDashboardReport();
+  document.body.appendChild(exportHost);
+  const exportReport = exportHost.querySelector(".export-report");
   setLoading(true, "Menyiapkan export dashboard...");
   try {
+    if (!exportReport) throw new Error("Template export dashboard tidak ditemukan.");
     await new Promise((resolve) =>
       requestAnimationFrame(() => requestAnimationFrame(resolve))
     );
-    const canvas = await window.html2canvas(exportArea, {
+    const canvas = await window.html2canvas(exportReport, {
       backgroundColor: "#ffffff",
       scale: 2,
       useCORS: true,
       logging: false,
       windowWidth: 1920,
-      windowHeight: 1358
+      windowHeight: 1080
     });
     const pdf = new window.jspdf.jsPDF({
       orientation: "landscape",
-      unit: "mm",
-      format: "a4"
+      unit: "px",
+      format: [1920, 1080],
+      hotfixes: ["px_scaling"]
     });
-    const pageWidth = pdf.internal.pageSize.getWidth();
-    const pageHeight = pdf.internal.pageSize.getHeight();
-    const margin = 7;
-    const imageRatio = canvas.width / canvas.height;
-    let imageWidth = pageWidth - margin * 2;
-    let imageHeight = imageWidth / imageRatio;
-    if (imageHeight > pageHeight - margin * 2) {
-      imageHeight = pageHeight - margin * 2;
-      imageWidth = imageHeight * imageRatio;
-    }
-    const imageX = (pageWidth - imageWidth) / 2;
-    const imageY = (pageHeight - imageHeight) / 2;
     pdf.addImage(
       canvas.toDataURL("image/png"),
       "PNG",
-      imageX,
-      imageY,
-      imageWidth,
-      imageHeight,
+      0,
+      0,
+      1920,
+      1080,
       undefined,
       "FAST"
     );
@@ -438,12 +429,12 @@ async function handleKpiDashboardExport() {
   } catch (error) {
     showToast(`Gagal export dashboard: ${readableError(error)}`, true);
   } finally {
-    exportArea.remove();
+    exportHost.remove();
     setLoading(false);
   }
 }
 
-function buildKpiDashboardExportArea() {
+function ExportDashboardReport() {
   const record = getSelectedKpiRecord();
   const period = `${KPI_MONTHS[state.selectedKpiMonth - 1]} ${state.selectedKpiYear}`;
   const exportedAt = new Date().toLocaleString("id-ID", {
@@ -463,28 +454,30 @@ function buildKpiDashboardExportArea() {
   const wrapper = document.createElement("div");
   wrapper.className = "dashboard-export-host";
   wrapper.innerHTML = `
-    <section class="dashboard-export-area export-mode" aria-label="Dashboard KPI HSE export">
+    <section class="export-report ExportDashboardReport" aria-label="Dashboard KPI HSE export">
       <header class="export-report-header">
         <div class="export-brand-block">
-          <img src="assets/logo-aura.png" alt="AURA" />
-          <div>
+          <img class="export-aura-logo" src="assets/logo-aura.png" alt="AURA" />
+          <div class="export-title-block">
             <h1>Dashboard KPI &amp; HSE</h1>
             <p>Ringkasan Kinerja Perusahaan dan Keselamatan Kerja</p>
           </div>
         </div>
         <div class="export-report-meta">
-          <div class="export-company-row">
-            <span>Danantara Indonesia</span>
-            <span>IDSurvey</span>
-            <span>SUCOFINDO</span>
+          <div class="export-company-logos" aria-label="Logo perusahaan">
+            <img src="assets/logo-danantara.png" alt="Danantara Indonesia" />
+            <img src="assets/logo-idsurvey.png" alt="IDSurvey" />
+            <img src="assets/logo-sucofindo.png" alt="SUCOFINDO" />
           </div>
-          <p><strong>Periode Laporan</strong> ${escapeHtml(period)}</p>
-          <p><strong>Tanggal Export</strong> ${escapeHtml(exportedAt)}</p>
+          <div class="export-date-row">
+            <span><strong>Periode Laporan</strong> ${escapeHtml(period)}</span>
+            <span><strong>Tanggal Export</strong> ${escapeHtml(exportedAt)}</span>
+          </div>
         </div>
       </header>
 
-      <main class="export-report-grid">
-        <section class="export-column export-kpi-column">
+      <main class="export-body">
+        <section class="export-section export-column export-kpi-column">
           <h2>KPI Performance</h2>
           <div class="export-summary-grid export-summary-grid-kpi">
             ${buildKpiExportMetric("Skor KPI Keseluruhan", kpiFormatPercent(record?.kpi_overall_score), "YTD Target")}
@@ -533,7 +526,7 @@ function buildKpiDashboardExportArea() {
           </section>
         </section>
 
-        <section class="export-column export-hse-column">
+        <section class="export-section export-column export-hse-column">
           <h2>HSE Performance</h2>
           <div class="export-summary-grid export-summary-grid-hse">
             ${buildKpiExportMetric("Total Jam Kerja", kpiFormatHours(record?.total_work_hours), "YTD")}
@@ -586,11 +579,6 @@ function buildKpiDashboardExportArea() {
           </section>
         </section>
       </main>
-
-      <footer class="export-report-footer">
-        <span>SBU AEBT | HSE Performance Dashboard</span>
-        <strong>Kerja Aman, Tubuh Nyaman, Produktivitas Meningkat</strong>
-      </footer>
     </section>
   `;
   return wrapper;
