@@ -383,8 +383,7 @@ function renderKpiOverallTrend() {
   const container = $("#kpi-overall-trend-chart");
   if (!container) return;
 
-  let values = getKpiQuarterTrendValues();
-  values = withKpiTrendFallback(values);
+  const values = getKpiQuarterTrendValues();
   const selectedQuarter = getQuarterFromMonth(state.selectedKpiMonth || 12);
   const selectedValue = values[selectedQuarter - 1];
   setText("#kpi-overall-trend-selected", kpiFormatPercent(selectedValue));
@@ -409,10 +408,9 @@ function renderKpiOverallTrend() {
         : padding.top + chartHeight - (kpiClampPercent(value) / 100) * chartHeight;
     return { x, y, value, label: KPI_QUARTERS[index]?.label || String(index + 1) };
   });
-  const path = points
-    .filter((point) => point.y !== null)
-    .map((point, index) => `${index === 0 ? "M" : "L"}${point.x},${point.y}`)
-    .join(" ");
+  const paths = buildSegmentedLinePaths(points)
+    .map((path) => `<path class="kpi-line" d="${path}" />`)
+    .join("");
   const gridLines = [0, 0.25, 0.5, 0.75, 1]
     .map((ratio) => {
       const y = padding.top + chartHeight - ratio * chartHeight;
@@ -434,24 +432,15 @@ function renderKpiOverallTrend() {
   container.innerHTML = `
     <svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Tren KPI keseluruhan">
       <g class="kpi-grid-lines">${gridLines}</g>
-      <path class="kpi-line" d="${path}" />
+      ${paths}
       <g class="kpi-points">${labels}</g>
     </svg>
+    ${
+      numericValues.length < 2
+        ? '<div class="kpi-chart-note">Belum cukup data untuk menampilkan tren.</div>'
+        : ""
+    }
   `;
-}
-
-function withKpiTrendFallback(values) {
-  const realValues = values.filter((value) => value !== null);
-  if (realValues.length > 1) return values;
-
-  const selectedRecordValue = getKpiOverallValue(getSelectedKpiRecord());
-  const anchor = selectedRecordValue ?? realValues[0];
-  if (anchor === null) return values;
-
-  const curve = [0.815, 0.938, 0.98, 1];
-  return values.map((value, index) =>
-    value === null ? kpiRound(Math.min(100, anchor * curve[index]), 1) : value
-  );
 }
 
 async function handleKpiDashboardExport() {
@@ -517,7 +506,7 @@ function ExportDashboardReport() {
   const kpiOverall = getKpiOverallValue(record);
   const kpiCategory = getKpiCategory(kpiOverall);
   const employees = getKpiEmployeeExportData(record);
-  const kpiTrendValues = withKpiTrendFallback(getKpiQuarterTrendValues());
+  const kpiTrendValues = getKpiQuarterTrendValues();
 
   const wrapper = document.createElement("div");
   wrapper.className = "dashboard-export-host";
@@ -556,7 +545,7 @@ function ExportDashboardReport() {
 
           <div class="export-kpi-mid-grid">
             <section class="export-card export-aspect-card">
-              <h3>Capaian KPI per Aspek</h3>
+              <h3>Capaian KPI per Indikator</h3>
               <div class="export-aspect-list">
                 ${buildKpiExportAspectRows(record)}
               </div>
@@ -595,7 +584,7 @@ function ExportDashboardReport() {
           <h2>HSE Performance</h2>
           <div class="export-summary-grid export-summary-grid-hse">
             ${buildKpiExportMetric("Total Jam Kerja", kpiFormatHours(record?.total_work_hours), "jam")}
-            ${buildKpiExportMetric("KPI KSE", kpiFormatPercent(getKpiKseValue(record)), "HSE")}
+            ${buildKpiExportMetric("HSE Performance", kpiFormatPercent(getKpiKseValue(record)), "HSE")}
           </div>
 
           <div class="export-hse-mid-grid">
@@ -757,16 +746,15 @@ function getKpiEmployeeExportData(record) {
   return { items, total };
 }
 
-function getKpiYearValues(field, useKpiFallback) {
+function getKpiYearValues(field) {
   const recordsByMonth = new Map(
     safeKpiRecords()
       .filter((record) => Number(record.year) === Number(state.selectedKpiYear))
       .map((record) => [Number(record.month), record])
   );
-  const values = Array.from({ length: 12 }, (_, index) =>
+  return Array.from({ length: 12 }, (_, index) =>
     kpiNumberOrNull(recordsByMonth.get(index + 1)?.[field])
   );
-  return useKpiFallback ? withKpiTrendFallback(values) : values;
 }
 
 function buildKpiExportLineChart(values, options = {}) {
@@ -793,10 +781,12 @@ function buildKpiExportLineChart(values, options = {}) {
         : padding.top + chartHeight - (Math.min(max, value) / max) * chartHeight;
     return { x, y, value, label: labelsSource[index] || String(index + 1) };
   });
-  const path = points
-    .filter((point) => point.y !== null)
-    .map((point, index) => `${index === 0 ? "M" : "L"}${point.x},${point.y}`)
-    .join(" ");
+  const paths = buildSegmentedLinePaths(points)
+    .map(
+      (path) =>
+        `<path class="export-chart-line" style="stroke:${options.color || "#008b8b"}" d="${path}" />`
+    )
+    .join("");
   const gridLines = [0, 0.25, 0.5, 0.75, 1]
     .map((ratio) => {
       const y = padding.top + chartHeight - ratio * chartHeight;
@@ -823,10 +813,34 @@ function buildKpiExportLineChart(values, options = {}) {
   return `
     <svg class="export-line-chart" viewBox="0 0 ${width} ${height}" role="img" aria-label="${escapeHtml(options.aria || "Tren bulanan")}">
       <g class="export-grid-lines">${gridLines}</g>
-      <path class="export-chart-line" style="stroke:${options.color || "#008b8b"}" d="${path}" />
+      ${paths}
       <g class="export-chart-points" style="--point-color:${options.color || "#008b8b"}">${labels}</g>
     </svg>
+    ${
+      numericValues.length < 2
+        ? '<div class="export-chart-note">Belum cukup data untuk menampilkan tren.</div>'
+        : ""
+    }
   `;
+}
+
+function buildSegmentedLinePaths(points) {
+  const segments = [];
+  let current = [];
+  points.forEach((point) => {
+    if (point.y === null) {
+      if (current.length > 1) segments.push(current);
+      current = [];
+      return;
+    }
+    current.push(point);
+  });
+  if (current.length > 1) segments.push(current);
+  return segments.map((segment) =>
+    segment
+      .map((point, index) => `${index === 0 ? "M" : "L"}${point.x},${point.y}`)
+      .join(" ")
+  );
 }
 
 function getKpiExportFileName() {

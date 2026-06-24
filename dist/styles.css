@@ -4318,6 +4318,14 @@ body.kpi-active .account-avatar {
   font-weight: 700;
 }
 
+.kpi-chart-note {
+  margin-top: -18px;
+  color: var(--kpi-muted);
+  font-size: 12px;
+  font-weight: 750;
+  text-align: center;
+}
+
 .dashboard-export-host {
   position: fixed;
   top: 0;
@@ -5014,6 +5022,14 @@ body.kpi-active .account-avatar {
   border-radius: 10px;
   color: #64748b;
   font-weight: 800;
+}
+
+.export-chart-note {
+  margin-top: -28px;
+  color: #64748b;
+  font-size: 15px;
+  font-weight: 800;
+  text-align: center;
 }
 
 @media (min-width: 1181px) and (min-height: 650px) {

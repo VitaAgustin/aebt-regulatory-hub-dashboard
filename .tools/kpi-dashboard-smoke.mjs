@@ -187,6 +187,8 @@ try {
       exportButton: document.querySelector("#kpi-export-dashboard")?.textContent.trim(),
       labels: Array.from(document.querySelectorAll(".main-nav a")).map((item) => item.textContent.trim()),
       groupHeadings: Array.from(document.querySelectorAll(".kpi-group-heading")).map((item) => item.textContent.trim()),
+      panelTitles: Array.from(document.querySelectorAll(".kpi-panel-heading h2")).map((item) => item.textContent.trim()),
+      summaryLabels: Array.from(document.querySelectorAll(".kpi-summary-card span")).map((item) => item.textContent.trim()),
       cards: Array.from(document.querySelectorAll(".kpi-summary-card strong")).map((item) => item.textContent.trim()),
       quarterFilter: document.querySelector("#kpi-filter-quarter")?.value,
       aspects: Array.from(document.querySelectorAll(".kpi-aspect-row strong")).map((item) => item.textContent.trim()),
@@ -239,6 +241,8 @@ try {
         hasToolbar: Boolean(element.querySelector("#kpi-filter-month, #kpi-update-data, #kpi-export-dashboard")),
         hasFooter: Boolean(element.querySelector(".export-report-footer")),
         lowAspects: element.querySelectorAll(".export-aspect-row.is-low").length,
+        exportCardTitles: Array.from(element.querySelectorAll(".export-card h3")).map((item) => item.textContent.trim()),
+        exportMetricLabels: Array.from(element.querySelectorAll(".export-metric-card span")).map((item) => item.textContent.trim()),
         verticalBars: element.querySelectorAll(".export-revenue-bar").length,
         overallCategory: element.querySelector(".export-category-chip")?.textContent.trim() || "",
         laggingRows: element.querySelectorAll(".export-hse-list > div").length,
@@ -295,6 +299,53 @@ try {
       hostRemoved: !document.querySelector(".dashboard-export-host")
     };
 
+    state.kpiRecords = [
+      {
+        id: "2026-05",
+        year: 2026,
+        month: 5,
+        triwulan: 2,
+        kpi_keseluruhan: 56,
+        kpi_kategori: "P5",
+        kpi_kse: 79,
+        total_work_hours: 7208,
+        created_at: now,
+        updated_at: now
+      }
+    ];
+    state.selectedKpiYear = 2026;
+    state.selectedKpiMonth = 5;
+    state.selectedKpiQuarter = 2;
+    renderKpiDashboard();
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    const sparseTrend = {
+      selectedValue: document.querySelector("#kpi-overall-trend-selected")?.textContent.trim(),
+      labels: Array.from(document.querySelectorAll("#kpi-overall-trend-chart svg > .kpi-points text:not(.kpi-point-label)")).map((item) => item.textContent.trim()),
+      pointLabels: Array.from(document.querySelectorAll("#kpi-overall-trend-chart svg .kpi-point-label")).map((item) => item.textContent.trim()),
+      circles: document.querySelectorAll("#kpi-overall-trend-chart svg circle").length,
+      lines: document.querySelectorAll("#kpi-overall-trend-chart svg .kpi-line").length,
+      note: document.querySelector("#kpi-overall-trend-chart .kpi-chart-note")?.textContent.trim() || "",
+      empty: Boolean(document.querySelector("#kpi-overall-trend-chart .kpi-chart-empty"))
+    };
+    const sparseExportHost = ExportDashboardReport();
+    document.body.appendChild(sparseExportHost);
+    const sparseExport = {
+      quarterLabels: Array.from(sparseExportHost.querySelectorAll(".export-trend-card .export-chart-points text:not(.export-point-label)")).map((item) => item.textContent.trim()),
+      pointLabels: Array.from(sparseExportHost.querySelectorAll(".export-trend-card .export-chart-points .export-point-label")).map((item) => item.textContent.trim()),
+      lines: sparseExportHost.querySelectorAll(".export-trend-card .export-chart-line").length,
+      note: sparseExportHost.querySelector(".export-trend-card .export-chart-note")?.textContent.trim() || ""
+    };
+    sparseExportHost.remove();
+
+    seedKpiRecords();
+    state.kpiLoaded = true;
+    state.kpiError = null;
+    state.selectedKpiMonth = 12;
+    state.selectedKpiYear = 2025;
+    state.selectedKpiQuarter = 4;
+    renderKpiDashboard();
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
     document.querySelector("#kpi-filter-month").value = "1";
     document.querySelector("#kpi-filter-month").dispatchEvent(new Event("change", { bubbles: true }));
     await new Promise((resolve) => setTimeout(resolve, 100));
@@ -349,7 +400,7 @@ try {
       scrollable: document.scrollingElement.scrollHeight > window.innerHeight + 20
     };
 
-    return { dashboard, exportResult, january, locked, formState };
+    return { dashboard, exportResult, sparseTrend, sparseExport, january, locked, formState };
   })()`);
 
   await evaluate(`location.hash = "#kpi"; route();`, 250);
@@ -376,6 +427,10 @@ try {
     result.dashboard.title !== "Dashboard KPI & HSE" ||
     result.dashboard.exportButton !== "Export Dashboard" ||
     result.dashboard.groupHeadings.join("|") !== "KPI Performance|HSE Performance" ||
+    !result.dashboard.panelTitles.includes("Capaian KPI per Indikator") ||
+    result.dashboard.panelTitles.includes("Capaian KPI per Aspek") ||
+    !result.dashboard.summaryLabels.includes("HSE Performance") ||
+    result.dashboard.summaryLabels.includes("KPI KSE") ||
     !result.dashboard.kpiColumnLeft ||
     !result.dashboard.employeeInHse ||
     !result.dashboard.workTrendMissing ||
@@ -426,6 +481,10 @@ try {
     result.exportResult.hasToolbar ||
     result.exportResult.hasFooter ||
     result.exportResult.lowAspects !== expectedLowAspectCount ||
+    !result.exportResult.exportCardTitles.includes("Capaian KPI per Indikator") ||
+    result.exportResult.exportCardTitles.includes("Capaian KPI per Aspek") ||
+    !result.exportResult.exportMetricLabels.includes("HSE Performance") ||
+    result.exportResult.exportMetricLabels.includes("KPI KSE") ||
     result.exportResult.verticalBars !== 0 ||
     result.exportResult.overallCategory !== "P5 (<80%)" ||
     result.exportResult.laggingRows !== 4 ||
@@ -448,6 +507,25 @@ try {
     !result.exportResult.hostRemoved
   ) {
     throw new Error("KPI dashboard export did not use the clean report template.");
+  }
+  if (
+    result.sparseTrend.selectedValue !== "56%" ||
+    result.sparseTrend.labels.join("|") !== "I|II|III|IV" ||
+    result.sparseTrend.pointLabels.join("|") !== "56%" ||
+    result.sparseTrend.circles !== 1 ||
+    result.sparseTrend.lines !== 0 ||
+    result.sparseTrend.note !== "Belum cukup data untuk menampilkan tren." ||
+    result.sparseTrend.empty
+  ) {
+    throw new Error("Sparse yearly KPI trend is still using fallback/dummy data.");
+  }
+  if (
+    result.sparseExport.quarterLabels.join("|") !== "I|II|III|IV" ||
+    result.sparseExport.pointLabels.join("|") !== "56%" ||
+    result.sparseExport.lines !== 0 ||
+    result.sparseExport.note !== "Belum cukup data untuk menampilkan tren."
+  ) {
+    throw new Error("Sparse export KPI trend is still using fallback/dummy data.");
   }
   if (!result.dashboard.fitsDesktop) {
     throw new Error(
