@@ -555,7 +555,7 @@ function ExportDashboardReport() {
           </div>
 
           <div class="export-kpi-mid-grid">
-            <section class="export-card">
+            <section class="export-card export-aspect-card">
               <h3>Capaian KPI per Aspek</h3>
               <div class="export-aspect-list">
                 ${buildKpiExportAspectRows(record)}
