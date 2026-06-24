@@ -309,13 +309,35 @@ code {
 .app-sidebar::before {
   content: "";
   position: absolute;
-  inset: 140px -16px 0 0;
+  inset: 0;
   z-index: 0;
-  background-image: url("assets/refinery-watermark.svg");
+  background-image: url("assets/sidebar-refinery.jpg");
   background-repeat: no-repeat;
-  background-position: center bottom;
-  background-size: 118% auto;
-  opacity: 0.1;
+  background-position: 62% bottom;
+  background-size: auto 100%;
+  opacity: 0.78;
+  pointer-events: none;
+}
+
+.app-sidebar::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background:
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.95) 0%,
+      rgba(255, 255, 255, 0.82) 28%,
+      rgba(255, 255, 255, 0.66) 58%,
+      rgba(255, 255, 255, 0.52) 100%
+    ),
+    linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.82) 0%,
+      rgba(255, 255, 255, 0.56) 54%,
+      rgba(255, 255, 255, 0.28) 100%
+    );
   pointer-events: none;
 }
 
