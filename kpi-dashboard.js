@@ -643,7 +643,6 @@ function buildKpiExportMetric(label, value, hint) {
     <article class="export-metric-card">
       <span>${escapeHtml(label)}</span>
       <strong>${escapeHtml(value)}</strong>
-      <small>${escapeHtml(hint)}</small>
     </article>
   `;
 }
@@ -683,12 +682,21 @@ function buildKpiExportLaggingRows(record) {
 }
 
 function buildKpiExportLeadingRows(record) {
-  return KPI_LEADING_ITEMS.map(([label, key]) => `
-    <div>
-      <span>${escapeHtml(label)}</span>
-      <strong>${kpiFormatPlain(record?.[key])}</strong>
-    </div>
-  `).join("");
+  const midpoint = Math.ceil(KPI_LEADING_ITEMS.length / 2);
+  return [KPI_LEADING_ITEMS.slice(0, midpoint), KPI_LEADING_ITEMS.slice(midpoint)]
+    .map((items) => `
+      <div class="export-leading-column">
+        ${items
+          .map(([label, key]) => `
+            <div>
+              <span>${escapeHtml(label)}</span>
+              <strong>${kpiFormatPlain(record?.[key])}</strong>
+            </div>
+          `)
+          .join("")}
+      </div>
+    `)
+    .join("");
 }
 
 function buildKpiExportEmployeeDonut(employees) {

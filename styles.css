@@ -4503,10 +4503,10 @@ body.kpi-active .account-avatar {
 
 .export-metric-card {
   min-height: 0;
-  padding: 14px 16px;
+  padding: 16px 16px;
   display: grid;
   align-content: center;
-  gap: 8px;
+  gap: 10px;
 }
 
 .export-metric-card span,
@@ -4793,21 +4793,35 @@ body.kpi-active .account-avatar {
 
 .export-leading-list {
   display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px 14px;
+  align-items: start;
+}
+
+.export-leading-column {
+  min-width: 0;
+  display: grid;
   gap: 5px;
 }
 
-.export-leading-list > div {
+.export-leading-column > div {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding-bottom: 4px;
+  gap: 10px;
+  padding-bottom: 5px;
   border-bottom: 1px solid #eef3f7;
 }
 
+.export-leading-column span {
+  min-width: 0;
+  line-height: 1.2;
+}
+
 .export-leading-list strong {
+  flex: 0 0 auto;
   color: #053b63;
-  font-size: 15px;
+  font-size: 14px;
 }
 
 .export-rate-row {

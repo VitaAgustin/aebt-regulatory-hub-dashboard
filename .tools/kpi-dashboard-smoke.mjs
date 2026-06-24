@@ -242,7 +242,9 @@ try {
         verticalBars: element.querySelectorAll(".export-revenue-bar").length,
         overallCategory: element.querySelector(".export-category-chip")?.textContent.trim() || "",
         laggingRows: element.querySelectorAll(".export-hse-list > div").length,
-        leadingRows: element.querySelectorAll(".export-leading-list > div").length,
+        leadingColumns: element.querySelectorAll(".export-leading-column").length,
+        leadingRows: element.querySelectorAll(".export-leading-column > div").length,
+        metricSubtexts: element.querySelectorAll(".export-metric-card small").length,
         hasWorkHoursTrend: Boolean(element.querySelector("[aria-label='Tren jam kerja bulanan']")),
         companyLogoCount: element.querySelectorAll(".export-company-logo").length,
         sucofindoLogoFit: sucofindoLogoStyle?.objectFit,
@@ -427,7 +429,9 @@ try {
     result.exportResult.verticalBars !== 0 ||
     result.exportResult.overallCategory !== "P5 (<80%)" ||
     result.exportResult.laggingRows !== 4 ||
+    result.exportResult.leadingColumns !== 2 ||
     result.exportResult.leadingRows !== 12 ||
+    result.exportResult.metricSubtexts !== 0 ||
     result.exportResult.hasWorkHoursTrend ||
     result.exportResult.companyLogoCount !== 3 ||
     result.exportResult.sucofindoLogoFit !== "contain" ||
