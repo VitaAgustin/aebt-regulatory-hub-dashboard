@@ -4315,22 +4315,27 @@ body.kpi-active .account-avatar {
   gap: 24px;
 }
 
-.export-company-logos img {
+.export-company-logo {
   display: block;
   max-height: 46px;
+  max-width: 180px;
+  width: auto;
+  height: auto;
   object-fit: contain;
+  object-position: center;
 }
 
-.export-company-logos img:nth-child(1) {
-  width: 156px;
+.export-logo-danantara {
+  max-width: 156px;
 }
 
-.export-company-logos img:nth-child(2) {
-  width: 220px;
+.export-logo-idsurvey {
+  max-width: 220px;
 }
 
-.export-company-logos img:nth-child(3) {
-  width: 140px;
+.export-logo-sucofindo {
+  max-width: 135px;
+  max-height: 50px;
 }
 
 .export-date-row {
@@ -4591,8 +4596,17 @@ body.kpi-active .account-avatar {
 }
 
 .export-hse-list {
-  display: grid;
-  gap: 8px;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.export-hse-summary-card {
+  display: flex;
+  flex-direction: column;
+  overflow: visible;
 }
 
 .export-hse-list > div {
@@ -4600,7 +4614,7 @@ body.kpi-active .account-avatar {
   align-items: center;
   justify-content: space-between;
   gap: 14px;
-  padding-bottom: 8px;
+  padding-bottom: 6px;
   border-bottom: 1px solid #eef3f7;
 }
 
@@ -4610,14 +4624,18 @@ body.kpi-active .account-avatar {
 }
 
 .export-rate-row {
-  margin-top: 13px;
+  flex-shrink: 0;
+  margin-top: 10px;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
 }
 
 .export-rate-row > div {
-  padding: 13px 10px;
+  min-height: 58px;
+  padding: 10px;
+  display: grid;
+  align-content: center;
   border-radius: 9px;
   background: #eefcf8;
   text-align: center;
@@ -4634,37 +4652,54 @@ body.kpi-active .account-avatar {
   min-height: 0;
   height: 260px;
   display: grid;
-  grid-template-columns: 218px 1fr;
+  grid-template-columns: 190px 1fr;
   align-items: center;
   gap: 18px;
 }
 
-.export-donut {
-  width: 208px;
-  aspect-ratio: 1;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
+.export-donut-wrapper {
+  position: relative;
+  width: 180px;
+  height: 180px;
 }
 
-.export-donut > div {
-  width: 108px;
-  aspect-ratio: 1;
-  display: grid;
-  place-items: center;
-  align-content: center;
+.export-donut-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.export-donut-track {
+  fill: none;
+  stroke: #edf3f7;
+  stroke-width: 30;
+}
+
+.export-donut-slice {
+  fill: none;
+  stroke-linecap: butt;
+}
+
+.export-donut-center {
+  position: absolute;
+  inset: 33px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
   border-radius: 50%;
   background: #fff;
   box-shadow: inset 0 0 0 1px #dbe7ef;
+  text-align: center;
 }
 
-.export-donut strong {
+.export-donut-center strong {
   color: #053b63;
   font-size: 34px;
   line-height: 1;
 }
 
-.export-donut span {
+.export-donut-center span {
   color: #64748b;
   font-size: 15px;
   font-weight: 800;

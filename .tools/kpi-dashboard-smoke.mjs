@@ -207,6 +207,12 @@ try {
         ? element
         : element.querySelector(".export-report");
       const rect = area?.getBoundingClientRect();
+      const sucofindoLogo = element.querySelector(".export-logo-sucofindo");
+      const sucofindoLogoStyle = sucofindoLogo ? getComputedStyle(sucofindoLogo) : null;
+      const rateRow = element.querySelector(".export-rate-row");
+      const hseSummaryCard = element.querySelector(".export-hse-summary-card");
+      const rateRect = rateRow?.getBoundingClientRect();
+      const hseRect = hseSummaryCard?.getBoundingClientRect();
       capturedExport = {
         className: area?.className || "",
         title: element.querySelector(".export-brand-block h1")?.textContent.trim(),
@@ -217,6 +223,18 @@ try {
         hasFooter: Boolean(element.querySelector(".export-report-footer")),
         lowAspects: element.querySelectorAll(".export-aspect-row.is-low").length,
         verticalBars: element.querySelectorAll(".export-revenue-bar").length,
+        companyLogoCount: element.querySelectorAll(".export-company-logo").length,
+        sucofindoLogoFit: sucofindoLogoStyle?.objectFit,
+        sucofindoLogoWidthRule: sucofindoLogoStyle?.width,
+        sucofindoLogoHeightRule: sucofindoLogoStyle?.height,
+        sucofindoLogoHasFixedAttrs: Boolean(
+          sucofindoLogo?.getAttribute("width") || sucofindoLogo?.getAttribute("height")
+        ),
+        donutSlices: element.querySelectorAll(".export-donut-slice").length,
+        donutCenter: element.querySelector(".export-donut-center")?.textContent.trim() || "",
+        donutLegend: element.querySelector(".export-legend")?.textContent || "",
+        rateBoxes: element.querySelectorAll(".export-rate-row > div").length,
+        rateFitsCard: Boolean(rateRect && hseRect && rateRect.bottom <= hseRect.bottom + 1),
         width: Math.round(rect?.width || 0),
         height: Math.round(rect?.height || 0),
         fitsTemplate: area ? area.scrollWidth <= area.clientWidth && area.scrollHeight <= area.clientHeight : false,
@@ -382,6 +400,14 @@ try {
     result.exportResult.hasFooter ||
     result.exportResult.lowAspects !== expectedLowAspectCount ||
     result.exportResult.verticalBars !== 2 ||
+    result.exportResult.companyLogoCount !== 3 ||
+    result.exportResult.sucofindoLogoFit !== "contain" ||
+    result.exportResult.sucofindoLogoHasFixedAttrs ||
+    result.exportResult.donutSlices !== 4 ||
+    !result.exportResult.donutCenter.includes("51") ||
+    !result.exportResult.donutLegend.includes("LS") ||
+    result.exportResult.rateBoxes !== 2 ||
+    !result.exportResult.rateFitsCard ||
     result.exportResult.width !== 1920 ||
     result.exportResult.height !== 1080 ||
     !result.exportResult.fitsTemplate ||

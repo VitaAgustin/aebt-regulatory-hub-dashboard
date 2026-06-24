@@ -465,9 +465,9 @@ function ExportDashboardReport() {
         </div>
         <div class="export-report-meta">
           <div class="export-company-logos" aria-label="Logo perusahaan">
-            <img src="assets/logo-danantara.png" alt="Danantara Indonesia" />
-            <img src="assets/logo-idsurvey.png" alt="IDSurvey" />
-            <img src="assets/logo-sucofindo.png" alt="SUCOFINDO" />
+            <img class="export-company-logo export-logo-danantara" src="assets/logo-danantara.png" alt="Danantara Indonesia" />
+            <img class="export-company-logo export-logo-idsurvey" src="assets/logo-idsurvey.png" alt="IDSurvey" />
+            <img class="export-company-logo export-logo-sucofindo" src="assets/logo-sucofindo.png" alt="SUCOFINDO" />
           </div>
           <div class="export-date-row">
             <span><strong>Periode Laporan</strong> ${escapeHtml(period)}</span>
@@ -534,7 +534,7 @@ function ExportDashboardReport() {
           </div>
 
           <div class="export-hse-mid-grid">
-            <section class="export-card">
+            <section class="export-card export-hse-summary-card">
               <h3>Ringkasan HSE</h3>
               <div class="export-hse-list">
                 ${buildKpiExportHseRows(record)}
@@ -548,9 +548,7 @@ function ExportDashboardReport() {
             <section class="export-card export-employee-card">
               <h3>Komposisi Jumlah Pegawai</h3>
               <div class="export-donut-layout">
-                <div class="export-donut" style="background:${employees.gradient}">
-                  <div><strong>${kpiFormatInteger(employees.total)}</strong><span>Pegawai</span></div>
-                </div>
+                ${buildKpiExportEmployeeDonut(employees)}
                 <div class="export-legend">
                   ${employees.items
                     .map((item) => `
@@ -628,24 +626,62 @@ function buildKpiExportHseRows(record) {
   `).join("");
 }
 
+function buildKpiExportEmployeeDonut(employees) {
+  const radius = 66;
+  const circumference = 100;
+  const strokeWidth = 30;
+  let offset = 0;
+  const total = employees.total || 0;
+  const slices =
+    total > 0
+      ? employees.items
+          .map((item) => {
+            const percent = ((item.value || 0) / total) * circumference;
+            const circle = `
+              <circle
+                class="export-donut-slice"
+                cx="90"
+                cy="90"
+                r="${radius}"
+                pathLength="${circumference}"
+                stroke="${item.color}"
+                stroke-width="${strokeWidth}"
+                stroke-dasharray="${percent} ${circumference - percent}"
+                stroke-dashoffset="${-offset}"
+              />`;
+            offset += percent;
+            return circle;
+          })
+          .join("")
+      : "";
+
+  return `
+    <div class="export-donut-wrapper" aria-label="Komposisi pegawai">
+      <svg class="export-donut-svg" viewBox="0 0 180 180" role="img" aria-label="Donut komposisi pegawai">
+        <circle class="export-donut-track" cx="90" cy="90" r="${radius}" pathLength="${circumference}" />
+        <g transform="rotate(-90 90 90)">
+          ${slices}
+        </g>
+      </svg>
+      <div class="export-donut-center">
+        <strong>${kpiFormatInteger(employees.total)}</strong>
+        <span>Pegawai</span>
+      </div>
+    </div>
+  `;
+}
+
 function getKpiEmployeeExportData(record) {
   const items = KPI_EMPLOYEE_ITEMS.map(([label, key, color]) => ({
-    label,
+    label: key === "third_party_employees" ? "LS" : label,
     color,
     value: kpiNumberOrNull(record?.[key])
   }));
   const total = items.reduce((sum, item) => sum + (item.value || 0), 0);
   if (total <= 0) {
-    return { items, total: null, gradient: "#e2e8f0" };
+    return { items, total: null };
   }
-  let cursor = 0;
-  const stops = items.map((item) => {
-    const start = cursor;
-    const end = cursor + ((item.value || 0) / total) * 100;
-    cursor = end;
-    return `${item.color} ${start}% ${end}%`;
-  });
-  return { items, total, gradient: `conic-gradient(${stops.join(", ")})` };
+  return { items, total };
 }
 
 function getKpiYearValues(field, useKpiFallback) {
