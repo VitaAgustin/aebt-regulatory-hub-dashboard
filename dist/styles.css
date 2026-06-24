@@ -315,7 +315,7 @@ code {
   background-repeat: no-repeat;
   background-position: 62% bottom;
   background-size: auto 100%;
-  opacity: 0.78;
+  opacity: 0.95;
   pointer-events: none;
 }
 
@@ -327,16 +327,16 @@ code {
   background:
     linear-gradient(
       180deg,
-      rgba(255, 255, 255, 0.95) 0%,
-      rgba(255, 255, 255, 0.82) 28%,
-      rgba(255, 255, 255, 0.66) 58%,
-      rgba(255, 255, 255, 0.52) 100%
+      rgba(255, 255, 255, 0.92) 0%,
+      rgba(255, 255, 255, 0.72) 28%,
+      rgba(255, 255, 255, 0.46) 58%,
+      rgba(255, 255, 255, 0.32) 100%
     ),
     linear-gradient(
       90deg,
-      rgba(255, 255, 255, 0.82) 0%,
-      rgba(255, 255, 255, 0.56) 54%,
-      rgba(255, 255, 255, 0.28) 100%
+      rgba(255, 255, 255, 0.72) 0%,
+      rgba(255, 255, 255, 0.38) 54%,
+      rgba(255, 255, 255, 0.12) 100%
     );
   pointer-events: none;
 }
