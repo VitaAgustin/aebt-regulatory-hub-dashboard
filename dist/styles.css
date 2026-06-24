@@ -3864,7 +3864,7 @@ body.kpi-active .account-avatar {
 }
 
 .kpi-hse-grid {
-  grid-template-columns: minmax(0, 0.86fr) minmax(0, 1.14fr);
+  grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
 }
 
 .kpi-summary-card,
@@ -3952,7 +3952,7 @@ body.kpi-active .account-avatar {
 
 .kpi-aspect-row span,
 .kpi-target-bars span,
-.kpi-k3l-list span,
+.kpi-indicator-list span,
 .kpi-legend span,
 .kpi-revenue-values span,
 .kpi-rate-row span {
@@ -4076,12 +4076,89 @@ body.kpi-active .account-avatar {
   background: linear-gradient(180deg, #0b4f8a, #083a6a);
 }
 
-.kpi-k3l-list {
+.kpi-overall-card {
+  min-height: 220px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 16px;
+  text-align: center;
+}
+
+.kpi-overall-card > strong {
+  color: #062b4f;
+  font-size: 58px;
+  line-height: 1;
+  letter-spacing: 0;
+}
+
+.kpi-overall-card > span {
+  color: #0f172a;
+  font-size: 20px;
+  font-weight: 850;
+}
+
+.kpi-category-chip {
+  min-width: 190px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 12px 18px;
+  border: 1px solid #99f6e4;
+  border-radius: 8px;
+  background: #f0fdfa;
+  color: #0f766e;
+}
+
+.kpi-category-chip i {
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  background: currentColor;
+}
+
+.kpi-category-chip b {
+  font-size: 16px;
+}
+
+.kpi-category-chip.is-p5 {
+  border-color: #fecaca;
+  background: #fff7f7;
+  color: #dc2626;
+}
+
+.kpi-category-chip.is-p4 {
+  border-color: #fed7aa;
+  background: #fff7ed;
+  color: #ea580c;
+}
+
+.kpi-category-chip.is-p3,
+.kpi-category-chip.is-p2 {
+  border-color: #fde68a;
+  background: #fffbeb;
+  color: #d97706;
+}
+
+.kpi-category-chip.is-p1 {
+  border-color: #99f6e4;
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.kpi-category-chip.is-empty {
+  border-color: #e2e8f0;
+  background: #f8fafc;
+  color: #64748b;
+}
+
+.kpi-indicator-list {
   display: grid;
   gap: 8px;
 }
 
-.kpi-k3l-list > div {
+.kpi-indicator-list > div {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -4090,9 +4167,21 @@ body.kpi-active .account-avatar {
   border-bottom: 1px solid #eef2f7;
 }
 
-.kpi-k3l-list strong {
+.kpi-indicator-list strong {
   color: var(--kpi-teal);
   font-size: 12px;
+}
+
+.kpi-leading-list {
+  gap: 5px;
+}
+
+.kpi-leading-list > div {
+  padding-bottom: 5px;
+}
+
+.kpi-leading-list span {
+  font-size: 10.5px;
 }
 
 .kpi-rate-row {
@@ -4423,6 +4512,7 @@ body.kpi-active .account-avatar {
 .export-metric-card span,
 .export-aspect-row span,
 .export-hse-list span,
+.export-leading-list span,
 .export-legend span,
 .export-rate-row span,
 .export-revenue-bar span {
@@ -4472,7 +4562,7 @@ body.kpi-active .account-avatar {
 }
 
 .export-hse-mid-grid {
-  grid-template-columns: 0.88fr 1.12fr;
+  grid-template-columns: 0.86fr 1.14fr;
 }
 
 .export-aspect-list {
@@ -4595,6 +4685,84 @@ body.kpi-active .account-avatar {
   background: linear-gradient(180deg, #0b4f8a, #073a6a);
 }
 
+.export-overall-card {
+  display: grid;
+  align-content: center;
+}
+
+.export-overall-content {
+  display: grid;
+  place-items: center;
+  gap: 18px;
+  min-height: 250px;
+  text-align: center;
+}
+
+.export-overall-content > strong {
+  color: #053b63;
+  font-size: 76px;
+  line-height: 1;
+  letter-spacing: 0;
+}
+
+.export-overall-content > span {
+  color: #0f172a;
+  font-size: 30px;
+  font-weight: 900;
+}
+
+.export-category-chip {
+  min-width: 280px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 16px 22px;
+  border: 2px solid #99f6e4;
+  border-radius: 10px;
+  background: #f0fdfa;
+  color: #0f766e;
+  font-size: 28px;
+  font-weight: 900;
+}
+
+.export-category-chip i {
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  background: currentColor;
+}
+
+.export-overall-card.is-p5 .export-overall-content > span,
+.export-overall-card.is-p5 .export-category-chip {
+  border-color: #fca5a5;
+  background: #fff7f7;
+  color: #dc2626;
+}
+
+.export-overall-card.is-p4 .export-overall-content > span,
+.export-overall-card.is-p4 .export-category-chip {
+  border-color: #fdba74;
+  background: #fff7ed;
+  color: #ea580c;
+}
+
+.export-overall-card.is-p3 .export-overall-content > span,
+.export-overall-card.is-p2 .export-overall-content > span,
+.export-overall-card.is-p3 .export-category-chip,
+.export-overall-card.is-p2 .export-category-chip {
+  border-color: #fde68a;
+  background: #fffbeb;
+  color: #d97706;
+}
+
+.export-overall-card.is-p1 .export-overall-content > span,
+.export-overall-card.is-p1 .export-category-chip {
+  border-color: #99f6e4;
+  background: #ecfdf5;
+  color: #047857;
+}
+
 .export-hse-list {
   flex: 1;
   min-height: 0;
@@ -4621,6 +4789,25 @@ body.kpi-active .account-avatar {
 .export-hse-list strong {
   color: #008b8b;
   font-size: 16px;
+}
+
+.export-leading-list {
+  display: grid;
+  gap: 5px;
+}
+
+.export-leading-list > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid #eef3f7;
+}
+
+.export-leading-list strong {
+  color: #053b63;
+  font-size: 15px;
 }
 
 .export-rate-row {
@@ -4931,49 +5118,47 @@ body.kpi-active .account-avatar {
     height: 12px;
   }
 
-  body.kpi-active .kpi-revenue-values {
+  body.kpi-active .kpi-overall-card {
+    min-height: 150px;
     gap: 8px;
-    margin-bottom: 6px;
   }
 
-  body.kpi-active .kpi-revenue-values strong {
-    font-size: 15px;
+  body.kpi-active .kpi-overall-card > strong {
+    font-size: 42px;
   }
 
-  body.kpi-active .kpi-revenue-highlight {
-    margin-bottom: 6px;
+  body.kpi-active .kpi-overall-card > span {
+    font-size: 16px;
   }
 
-  body.kpi-active .kpi-revenue-highlight strong {
-    font-size: 32px;
+  body.kpi-active .kpi-category-chip {
+    min-width: 150px;
+    padding: 8px 12px;
   }
 
-  body.kpi-active .kpi-target-bars {
-    min-height: 148px;
-    gap: 10px;
+  body.kpi-active .kpi-category-chip b {
+    font-size: 13px;
   }
 
-  body.kpi-active .kpi-target-bars > div {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto minmax(112px, 1fr) auto;
-    gap: 5px;
-  }
-
-  body.kpi-active .kpi-vertical-track {
-    height: 118px;
-  }
-
-  body.kpi-active .kpi-target-bars b,
-  body.kpi-active .kpi-target-bars span {
-    font-size: 9px;
-  }
-
-  body.kpi-active .kpi-k3l-list {
+  body.kpi-active .kpi-indicator-list {
     gap: 4px;
   }
 
-  body.kpi-active .kpi-k3l-list > div {
+  body.kpi-active .kpi-indicator-list > div {
     padding-bottom: 4px;
+  }
+
+  body.kpi-active .kpi-leading-list {
+    gap: 2px;
+  }
+
+  body.kpi-active .kpi-leading-list > div {
+    padding-bottom: 2px;
+  }
+
+  body.kpi-active .kpi-leading-list span,
+  body.kpi-active .kpi-leading-list strong {
+    font-size: 9px;
   }
 
   body.kpi-active .kpi-rate-row {
@@ -5072,8 +5257,8 @@ body.kpi-active .account-avatar {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .kpi-panel-k3l,
-  .kpi-panel-trend {
+  .kpi-panel-lagging,
+  .kpi-panel-leading {
     grid-column: auto;
   }
 }
@@ -5101,14 +5286,13 @@ body.kpi-active .account-avatar {
   .kpi-performance-grid,
   .kpi-kpi-grid,
   .kpi-hse-grid,
-  .kpi-revenue-values,
-  .kpi-rate-row,
-  .kpi-donut-layout {
+    .kpi-rate-row,
+    .kpi-donut-layout {
     grid-template-columns: 1fr;
   }
 
-  .kpi-panel-k3l,
-  .kpi-panel-trend {
+  .kpi-panel-lagging,
+  .kpi-panel-leading {
     grid-column: span 1;
   }
 

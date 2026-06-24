@@ -119,37 +119,47 @@ try {
         id: "seed-" + (index + 1),
         year: 2025,
         month: index + 1,
+        triwulan: Math.ceil((index + 1) / 3),
         total_work_hours: hours,
         created_at: now,
         updated_at: now
       }));
+      Object.assign(state.kpiRecords[2], { kpi_keseluruhan: 64 });
+      Object.assign(state.kpiRecords[5], { kpi_keseluruhan: 73.6 });
+      Object.assign(state.kpiRecords[8], { kpi_keseluruhan: 76.9 });
       Object.assign(state.kpiRecords[11], {
-        kpi_overall_score: 78.5,
+        piutang_pad_hari: 45,
+        kpi_keseluruhan: 78.5,
+        kpi_kategori: "P5",
+        kpi_kse: 92,
         ebitda_portfolio: 97.2,
         portfolio_revenue: 529,
         customer_retention: 89,
-        revenue_target: 550,
-        revenue_actual: 529,
         economic_social_score: 82,
         business_innovation_score: 70,
-        technology_leadership_score: 68,
+        technology_leadership_score: 45,
         investment_score: 74,
-        talent_development_score: 45,
-        k3l_score: 35,
+        talent_development_score: 61,
         permanent_employees: 33,
         temporary_employees: 7,
         project_employees: 5,
-        third_party_employees: 6,
-        lost_work_hours: 0,
-        fatality: 0,
-        medical_treatment: 0,
-        first_aid: 0,
-        environmental_incident: 0,
-        near_miss: 0,
-        unsafe_condition: 0,
-        unsafe_action: 0,
-        frequency_rate: 0,
-        severity_rate: 0
+        pegawai_ls: 6,
+        lagging_kematian: 0,
+        lagging_penanganan_medis: 0,
+        lagging_p3k: 0,
+        lagging_kejadian_berdampak_lingkungan: 0,
+        leading_tinjauan_manajemen: 12,
+        leading_hse_talk: 28,
+        leading_hse_visit: 18,
+        leading_po_terintegrasi_k3l: 24,
+        leading_pro_shot: 36,
+        leading_tinjauan_ipprk3l: 8,
+        leading_promosi_edukasi_k3l: 15,
+        leading_pelatihan_safety_leadership: 120,
+        leading_brevet_k3: 45,
+        leading_hse_orientation: 90,
+        leading_jsa: 340,
+        leading_mcu: 210
       });
     };
     seedKpiRecords();
@@ -161,6 +171,14 @@ try {
     location.hash = "#kpi";
     route();
     await new Promise((resolve) => setTimeout(resolve, 250));
+    seedKpiRecords();
+    state.kpiLoaded = true;
+    state.kpiError = null;
+    state.selectedKpiMonth = 12;
+    state.selectedKpiYear = 2025;
+    state.selectedKpiQuarter = 4;
+    renderKpiDashboard();
+    await new Promise((resolve) => setTimeout(resolve, 100));
 
     const dashboard = {
       visible: !document.querySelector("#view-kpi").classList.contains("hidden"),
@@ -170,30 +188,33 @@ try {
       labels: Array.from(document.querySelectorAll(".main-nav a")).map((item) => item.textContent.trim()),
       groupHeadings: Array.from(document.querySelectorAll(".kpi-group-heading")).map((item) => item.textContent.trim()),
       cards: Array.from(document.querySelectorAll(".kpi-summary-card strong")).map((item) => item.textContent.trim()),
+      quarterFilter: document.querySelector("#kpi-filter-quarter")?.value,
       aspects: Array.from(document.querySelectorAll(".kpi-aspect-row strong")).map((item) => item.textContent.trim()),
+      aspectLabels: Array.from(document.querySelectorAll(".kpi-aspect-row span")).map((item) => item.textContent.trim()),
       lowAspectRows: document.querySelectorAll(".kpi-aspect-row.kpi-aspect-low").length,
       lowAspectColor: getComputedStyle(document.querySelector(".kpi-aspect-row.kpi-aspect-low strong")).color,
       normalAspectColor: getComputedStyle(document.querySelector(".kpi-aspect-row:not(.kpi-aspect-low) strong")).color,
-      revenueAchievement: document.querySelector("#kpi-revenue-achievement").textContent.trim(),
-      revenueAchievementSize: Number.parseFloat(getComputedStyle(document.querySelector("#kpi-revenue-achievement")).fontSize),
-      targetBarHeight: document.querySelector("#kpi-target-bar").style.height,
-      actualBarHeight: document.querySelector("#kpi-actual-bar").style.height,
-      targetBarLabel: document.querySelector("#kpi-target-label").textContent.trim(),
-      actualBarLabel: document.querySelector("#kpi-actual-label").textContent.trim(),
+      kpiOverall: document.querySelector("#kpi-overall-value").textContent.trim(),
+      kpiOverallSize: Number.parseFloat(getComputedStyle(document.querySelector("#kpi-overall-value")).fontSize),
+      kpiCategory: document.querySelector("#kpi-category-label").textContent.trim(),
+      kpiCategoryRange: document.querySelector("#kpi-category-range").textContent.trim(),
       employeeTotal: document.querySelector("#kpi-employee-total").textContent.trim(),
-      k3lValues: Array.from(document.querySelectorAll(".kpi-k3l-list strong")).map((item) => item.textContent.trim()),
+      laggingValues: Array.from(document.querySelectorAll("#kpi-lagging-list strong")).map((item) => item.textContent.trim()),
+      leadingValues: Array.from(document.querySelectorAll("#kpi-leading-list strong")).map((item) => item.textContent.trim()),
+      leadingLabels: Array.from(document.querySelectorAll("#kpi-leading-list span")).map((item) => item.textContent.trim()),
       trendSvg: Boolean(document.querySelector("#kpi-work-hours-chart svg")),
       overallTrendSvg: Boolean(document.querySelector("#kpi-overall-trend-chart svg")),
-      selectedTrendTotal: document.querySelector("#kpi-trend-selected-total").textContent.trim(),
+      overallTrendLabels: Array.from(document.querySelectorAll("#kpi-overall-trend-chart svg > .kpi-points text:not(.kpi-point-label)")).map((item) => item.textContent.trim()),
       bodyKpi: document.body.classList.contains("kpi-active"),
       bodyDashboard: document.body.classList.contains("kpi-dashboard-active"),
       kpiColumnLeft:
         document.querySelector(".kpi-performance-kpi").getBoundingClientRect().left <
         document.querySelector(".kpi-performance-hse").getBoundingClientRect().left,
       employeeInHse: document.querySelector(".kpi-performance-hse .kpi-panel-employees") !== null,
-      workTrendBelowEmployees:
-        document.querySelector(".kpi-panel-trend").getBoundingClientRect().top >
-        document.querySelector(".kpi-panel-employees").getBoundingClientRect().top,
+      workTrendMissing: document.querySelector(".kpi-panel-trend") === null,
+      employeeBelowIndicators:
+        document.querySelector(".kpi-panel-employees").getBoundingClientRect().top >
+        document.querySelector(".kpi-hse-grid").getBoundingClientRect().top,
       fitsDesktop:
         document.scrollingElement.scrollHeight <= window.innerHeight + 2 &&
         document.querySelector("#view-kpi").getBoundingClientRect().bottom <= window.innerHeight + 2,
@@ -209,10 +230,6 @@ try {
       const rect = area?.getBoundingClientRect();
       const sucofindoLogo = element.querySelector(".export-logo-sucofindo");
       const sucofindoLogoStyle = sucofindoLogo ? getComputedStyle(sucofindoLogo) : null;
-      const rateRow = element.querySelector(".export-rate-row");
-      const hseSummaryCard = element.querySelector(".export-hse-summary-card");
-      const rateRect = rateRow?.getBoundingClientRect();
-      const hseRect = hseSummaryCard?.getBoundingClientRect();
       capturedExport = {
         className: area?.className || "",
         title: element.querySelector(".export-brand-block h1")?.textContent.trim(),
@@ -223,6 +240,10 @@ try {
         hasFooter: Boolean(element.querySelector(".export-report-footer")),
         lowAspects: element.querySelectorAll(".export-aspect-row.is-low").length,
         verticalBars: element.querySelectorAll(".export-revenue-bar").length,
+        overallCategory: element.querySelector(".export-category-chip")?.textContent.trim() || "",
+        laggingRows: element.querySelectorAll(".export-hse-list > div").length,
+        leadingRows: element.querySelectorAll(".export-leading-list > div").length,
+        hasWorkHoursTrend: Boolean(element.querySelector("[aria-label='Tren jam kerja bulanan']")),
         companyLogoCount: element.querySelectorAll(".export-company-logo").length,
         sucofindoLogoFit: sucofindoLogoStyle?.objectFit,
         sucofindoLogoWidthRule: sucofindoLogoStyle?.width,
@@ -233,8 +254,7 @@ try {
         donutSlices: element.querySelectorAll(".export-donut-slice").length,
         donutCenter: element.querySelector(".export-donut-center")?.textContent.trim() || "",
         donutLegend: element.querySelector(".export-legend")?.textContent || "",
-        rateBoxes: element.querySelectorAll(".export-rate-row > div").length,
-        rateFitsCard: Boolean(rateRect && hseRect && rateRect.bottom <= hseRect.bottom + 1),
+        quarterLabels: Array.from(element.querySelectorAll(".export-trend-card .export-chart-points text:not(.export-point-label)")).map((item) => item.textContent.trim()),
         width: Math.round(rect?.width || 0),
         height: Math.round(rect?.height || 0),
         fitsTemplate: area ? area.scrollWidth <= area.clientWidth && area.scrollHeight <= area.clientHeight : false,
@@ -278,7 +298,8 @@ try {
     await new Promise((resolve) => setTimeout(resolve, 100));
     const january = {
       workHours: document.querySelector("#kpi-card-work-hours").textContent.trim(),
-      score: document.querySelector("#kpi-card-score").textContent.trim()
+      score: document.querySelector("#kpi-card-score").textContent.trim(),
+      quarter: document.querySelector("#kpi-filter-quarter").value
     };
 
     location.hash = "#kpi-input";
@@ -302,24 +323,23 @@ try {
     form.elements.year.value = "2025";
     form.elements.month.dispatchEvent(new Event("change", { bubbles: true }));
     await new Promise((resolve) => setTimeout(resolve, 100));
-    form.elements.revenue_target.value = "600";
-    form.elements.revenue_actual.value = "540";
-    form.elements.revenue_actual.dispatchEvent(new Event("input", { bubbles: true }));
-    form.elements.permanent_work_hours.value = "100";
-    form.elements.temporary_work_hours.value = "50";
-    form.elements.permanent_work_hours.dispatchEvent(new Event("input", { bubbles: true }));
-    form.elements.temporary_work_hours.dispatchEvent(new Event("input", { bubbles: true }));
+    form.elements.kpi_keseluruhan.value = "78.5";
+    form.elements.kpi_keseluruhan.dispatchEvent(new Event("input", { bubbles: true }));
+    form.elements.total_work_hours.value = "8976";
+    form.elements.total_work_hours.dispatchEvent(new Event("input", { bubbles: true }));
     const payload = buildKpiPayload(form);
     const validation = validateKpiPayload(payload);
     const formState = {
       visible: !document.querySelector("#view-kpi-input").classList.contains("hidden"),
       lockedHidden: document.querySelector("#kpi-input-locked").classList.contains("hidden"),
       saveLabel: document.querySelector("#kpi-save-data").textContent.trim(),
-      revenueAuto: document.querySelector("#kpi-form-revenue-achievement").value,
+      categoryAuto: document.querySelector("#kpi-form-kpi-category").value,
       totalAuto: form.elements.total_work_hours.value,
+      payloadQuarter: payload.triwulan,
       payloadMonth: payload.month,
       payloadYear: payload.year,
-      payloadTarget: payload.revenue_target,
+      payloadKpi: payload.kpi_keseluruhan,
+      payloadCategory: payload.kpi_kategori,
       validation,
       dashboardClass: document.body.classList.contains("kpi-dashboard-active"),
       bodyOverflow: getComputedStyle(document.body).overflowY,
@@ -356,13 +376,14 @@ try {
     result.dashboard.groupHeadings.join("|") !== "KPI Performance|HSE Performance" ||
     !result.dashboard.kpiColumnLeft ||
     !result.dashboard.employeeInHse ||
-    !result.dashboard.workTrendBelowEmployees
+    !result.dashboard.workTrendMissing ||
+    !result.dashboard.employeeBelowIndicators
   ) {
     throw new Error("KPI/HSE split layout did not render as requested.");
   }
   if (
     result.dashboard.cards.join("|") !==
-    "78,5%|Rp 97,2 M|Rp 529 M|89%|8.976 jam|0 kejadian"
+    "45 hari|Rp 97,2 M|Rp 529 M|89%|8.976 jam|92%"
   ) {
     throw new Error("KPI summary cards did not render expected December data.");
   }
@@ -372,22 +393,26 @@ try {
   }).length;
 
   if (
+    result.dashboard.quarterFilter !== "4" ||
     !result.dashboard.aspects.includes("82%") ||
     !result.dashboard.aspects.includes("45%") ||
+    result.dashboard.aspectLabels.includes("HSE") ||
+    result.dashboard.aspectLabels.length !== 5 ||
     result.dashboard.lowAspectRows !== expectedLowAspectCount ||
     expectedLowAspectCount < 1 ||
     !result.dashboard.lowAspectColor.includes("220") ||
     result.dashboard.lowAspectColor === result.dashboard.normalAspectColor ||
-    result.dashboard.revenueAchievement !== "96,2%" ||
-    result.dashboard.revenueAchievementSize < 30 ||
-    result.dashboard.targetBarHeight !== "100%" ||
-    !result.dashboard.actualBarHeight.startsWith("96.") ||
-    result.dashboard.targetBarLabel !== "Target: 550" ||
-    result.dashboard.actualBarLabel !== "Realisasi: 529" ||
+    result.dashboard.kpiOverall !== "78,5%" ||
+    result.dashboard.kpiOverallSize < 36 ||
+    result.dashboard.kpiCategory !== "Kategori: P5" ||
+    result.dashboard.kpiCategoryRange !== "P5 (<80%)" ||
     result.dashboard.employeeTotal !== "51" ||
-    !result.dashboard.trendSvg ||
+    result.dashboard.laggingValues.join("|") !== "0|0|0|0" ||
+    result.dashboard.leadingLabels.length !== 12 ||
+    !result.dashboard.leadingValues.includes("340") ||
+    result.dashboard.trendSvg ||
     !result.dashboard.overallTrendSvg ||
-    result.dashboard.selectedTrendTotal !== "Total: 8.976 jam"
+    result.dashboard.overallTrendLabels.join("|") !== "I|II|III|IV"
   ) {
     throw new Error("KPI charts or calculated values are incorrect.");
   }
@@ -399,15 +424,18 @@ try {
     result.exportResult.hasToolbar ||
     result.exportResult.hasFooter ||
     result.exportResult.lowAspects !== expectedLowAspectCount ||
-    result.exportResult.verticalBars !== 2 ||
+    result.exportResult.verticalBars !== 0 ||
+    result.exportResult.overallCategory !== "P5 (<80%)" ||
+    result.exportResult.laggingRows !== 4 ||
+    result.exportResult.leadingRows !== 12 ||
+    result.exportResult.hasWorkHoursTrend ||
     result.exportResult.companyLogoCount !== 3 ||
     result.exportResult.sucofindoLogoFit !== "contain" ||
     result.exportResult.sucofindoLogoHasFixedAttrs ||
     result.exportResult.donutSlices !== 4 ||
     !result.exportResult.donutCenter.includes("51") ||
     !result.exportResult.donutLegend.includes("LS") ||
-    result.exportResult.rateBoxes !== 2 ||
-    !result.exportResult.rateFitsCard ||
+    result.exportResult.quarterLabels.join("|") !== "I|II|III|IV" ||
     result.exportResult.width !== 1920 ||
     result.exportResult.height !== 1080 ||
     !result.exportResult.fitsTemplate ||
@@ -425,6 +453,9 @@ try {
   if (result.january.workHours !== "7.448 jam" || result.january.score !== "-") {
     throw new Error("Monthly filter did not switch to January data safely.");
   }
+  if (result.january.quarter !== "1") {
+    throw new Error("Quarter filter did not sync with the selected month.");
+  }
   if (result.locked.hash !== "#admin" || !result.locked.adminVisible) {
     throw new Error("Input / Update Data was not guarded for public viewers.");
   }
@@ -432,11 +463,13 @@ try {
     !result.formState.visible ||
     !result.formState.lockedHidden ||
     result.formState.saveLabel !== "Update Data" ||
-    result.formState.revenueAuto !== "90,0%" ||
+    result.formState.categoryAuto !== "P5 (<80%)" ||
     result.formState.totalAuto !== "8976" ||
+    result.formState.payloadQuarter !== 4 ||
     result.formState.payloadMonth !== 12 ||
     result.formState.payloadYear !== 2025 ||
-    result.formState.payloadTarget !== 600 ||
+    result.formState.payloadKpi !== 78.5 ||
+    result.formState.payloadCategory !== "P5" ||
     result.formState.dashboardClass ||
     result.formState.bodyOverflow === "hidden" ||
     result.formState.appMainOverflow === "hidden" ||

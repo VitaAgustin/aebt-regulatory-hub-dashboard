@@ -15,58 +15,79 @@ const KPI_MONTHS = [
   "Desember"
 ];
 
+const KPI_QUARTERS = [
+  { value: 1, label: "I", months: [1, 2, 3] },
+  { value: 2, label: "II", months: [4, 5, 6] },
+  { value: 3, label: "III", months: [7, 8, 9] },
+  { value: 4, label: "IV", months: [10, 11, 12] }
+];
+
 const KPI_PERCENT_FIELDS = [
-  "kpi_overall_score",
   "customer_retention",
+  "kpi_keseluruhan",
+  "kpi_kse",
   "economic_social_score",
   "business_innovation_score",
   "technology_leadership_score",
   "investment_score",
-  "talent_development_score",
-  "k3l_score"
+  "talent_development_score"
 ];
 
+const KPI_BOUNDED_PERCENT_FIELDS = KPI_PERCENT_FIELDS.filter(
+  (field) => field !== "kpi_keseluruhan"
+);
+
 const KPI_NON_NEGATIVE_FIELDS = [
+  "piutang_pad_hari",
   "ebitda_portfolio",
   "portfolio_revenue",
-  "revenue_target",
-  "revenue_actual",
   "permanent_employees",
   "temporary_employees",
   "project_employees",
-  "third_party_employees",
-  "permanent_work_hours",
-  "temporary_work_hours",
-  "project_work_hours",
-  "third_party_work_hours",
-  "overtime_hours",
+  "pegawai_ls",
   "total_work_hours",
-  "lost_work_hours",
-  "fatality",
-  "medical_treatment",
-  "first_aid",
-  "environmental_incident",
-  "near_miss",
-  "unsafe_condition",
-  "unsafe_action",
-  "frequency_rate",
-  "severity_rate"
+  "lagging_kematian",
+  "lagging_penanganan_medis",
+  "lagging_p3k",
+  "lagging_kejadian_berdampak_lingkungan",
+  "leading_tinjauan_manajemen",
+  "leading_hse_talk",
+  "leading_hse_visit",
+  "leading_po_terintegrasi_k3l",
+  "leading_pro_shot",
+  "leading_tinjauan_ipprk3l",
+  "leading_promosi_edukasi_k3l",
+  "leading_pelatihan_safety_leadership",
+  "leading_brevet_k3",
+  "leading_hse_orientation",
+  "leading_jsa",
+  "leading_mcu"
 ];
 
 const KPI_INTEGER_FIELDS = [
   "year",
   "month",
+  "triwulan",
   "permanent_employees",
   "temporary_employees",
   "project_employees",
-  "third_party_employees",
-  "fatality",
-  "medical_treatment",
-  "first_aid",
-  "environmental_incident",
-  "near_miss",
-  "unsafe_condition",
-  "unsafe_action"
+  "pegawai_ls",
+  "lagging_kematian",
+  "lagging_penanganan_medis",
+  "lagging_p3k",
+  "lagging_kejadian_berdampak_lingkungan",
+  "leading_tinjauan_manajemen",
+  "leading_hse_talk",
+  "leading_hse_visit",
+  "leading_po_terintegrasi_k3l",
+  "leading_pro_shot",
+  "leading_tinjauan_ipprk3l",
+  "leading_promosi_edukasi_k3l",
+  "leading_pelatihan_safety_leadership",
+  "leading_brevet_k3",
+  "leading_hse_orientation",
+  "leading_jsa",
+  "leading_mcu"
 ];
 
 const KPI_ASPECTS = [
@@ -74,29 +95,46 @@ const KPI_ASPECTS = [
   ["Inovasi Model Bisnis", "business_innovation_score"],
   ["Kepemimpinan Teknologi", "technology_leadership_score"],
   ["Peningkatan Investasi", "investment_score"],
-  ["Pengembangan Talenta", "talent_development_score"],
-  ["HSE", "k3l_score"]
+  ["Pengembangan Talenta", "talent_development_score"]
 ];
 
-const KPI_HSE_ITEMS = [
-  ["Fatality", "fatality"],
-  ["Medical Treatment", "medical_treatment"],
-  ["First Aid", "first_aid"],
-  ["Near Miss", "near_miss"],
-  ["Kondisi Tidak Aman", "unsafe_condition"],
-  ["Jam Hilang / LTI", "lost_work_hours"]
+const KPI_LAGGING_ITEMS = [
+  ["Kematian", "lagging_kematian", "fatality"],
+  ["Penanganan Medis", "lagging_penanganan_medis", "medical_treatment"],
+  ["P3K", "lagging_p3k", "first_aid"],
+  [
+    "Kejadian Berdampak Lingkungan",
+    "lagging_kejadian_berdampak_lingkungan",
+    "environmental_incident"
+  ]
+];
+
+const KPI_LEADING_ITEMS = [
+  ["Tinjauan Manajemen", "leading_tinjauan_manajemen"],
+  ["HSE Talk", "leading_hse_talk"],
+  ["HSE Visit", "leading_hse_visit"],
+  ["PO Terintegrasi K3L", "leading_po_terintegrasi_k3l"],
+  ["PRO-SHOT", "leading_pro_shot"],
+  ["Tinjauan IPPRK3L", "leading_tinjauan_ipprk3l"],
+  ["Promosi & Edukasi K3L", "leading_promosi_edukasi_k3l"],
+  ["Pelatihan Safety Leadership", "leading_pelatihan_safety_leadership"],
+  ["Brevet K3", "leading_brevet_k3"],
+  ["HSE Orientation", "leading_hse_orientation"],
+  ["JSA", "leading_jsa"],
+  ["MCU", "leading_mcu"]
 ];
 
 const KPI_EMPLOYEE_ITEMS = [
   ["Pegawai Tetap", "permanent_employees", "#008b8b"],
   ["Pegawai Tidak Tetap", "temporary_employees", "#f97316"],
   ["PTT Proyek / Non-NPP", "project_employees", "#1d9bf0"],
-  ["Tenaga Kerja Pihak Ketiga", "third_party_employees", "#cbd5e1"]
+  ["LS", "pegawai_ls", "#cbd5e1", "third_party_employees"]
 ];
 
 function bindKpiDashboardEvents() {
   populateKpiPeriodControls();
 
+  $("#kpi-filter-quarter")?.addEventListener("change", handleKpiQuarterChange);
   $("#kpi-filter-month")?.addEventListener("change", handleKpiPeriodChange);
   $("#kpi-filter-year")?.addEventListener("change", handleKpiPeriodChange);
   $("#kpi-update-data")?.addEventListener("click", openKpiInputPage);
@@ -145,6 +183,13 @@ async function loadKpiDashboardData({ force = false } = {}) {
 }
 
 function populateKpiPeriodControls() {
+  const selectedQuarter =
+    normalizeKpiQuarter(state.selectedKpiQuarter, state.selectedKpiMonth) ||
+    getQuarterFromMonth(state.selectedKpiMonth || 12);
+  state.selectedKpiQuarter = selectedQuarter;
+
+  populateKpiQuarterSelect($("#kpi-filter-quarter"), selectedQuarter);
+  populateKpiQuarterSelect($("#kpi-data-form select[name='triwulan']"), selectedQuarter);
   populateKpiMonthSelect($("#kpi-filter-month"), state.selectedKpiMonth);
   populateKpiMonthSelect($("#kpi-data-form select[name='month']"), state.selectedKpiMonth);
 
@@ -160,9 +205,19 @@ function populateKpiPeriodControls() {
   if (formYear && !formYear.value) formYear.value = state.selectedKpiYear;
 }
 
+function populateKpiQuarterSelect(select, selectedQuarter) {
+  if (!select) return;
+  const currentValue = normalizeKpiQuarter(selectedQuarter, state.selectedKpiMonth) || 4;
+  select.innerHTML = KPI_QUARTERS.map(
+    (quarter) =>
+      `<option value="${quarter.value}">${escapeHtml(quarter.label)}</option>`
+  ).join("");
+  select.value = String(currentValue);
+}
+
 function populateKpiMonthSelect(select, selectedMonth) {
   if (!select) return;
-  const currentValue = Number(select.value || selectedMonth || 12);
+  const currentValue = Number(selectedMonth || select.value || 12);
   select.innerHTML = KPI_MONTHS.map(
     (month, index) =>
       `<option value="${index + 1}">${escapeHtml(month)}</option>`
@@ -178,11 +233,31 @@ function populateKpiYearSelect(select, years, selectedYear) {
   select.value = String(selectedYear || years[0] || 2025);
 }
 
+function handleKpiQuarterChange() {
+  const quarter = normalizeKpiQuarter($("#kpi-filter-quarter")?.value, state.selectedKpiMonth);
+  const month = Number($("#kpi-filter-month")?.value || state.selectedKpiMonth || 12);
+  const year = Number($("#kpi-filter-year")?.value);
+  if (quarter) state.selectedKpiQuarter = quarter;
+  if (year >= 2020 && year <= 2100) state.selectedKpiYear = year;
+  if (quarter && getQuarterFromMonth(month) !== quarter) {
+    state.selectedKpiMonth = KPI_QUARTERS.find((item) => item.value === quarter)?.months[0] || month;
+    const monthSelect = $("#kpi-filter-month");
+    if (monthSelect) monthSelect.value = String(state.selectedKpiMonth);
+  } else if (month >= 1 && month <= 12) {
+    state.selectedKpiMonth = month;
+  }
+  renderKpiDashboard();
+  if (location.hash.replace(/^#/, "") === "kpi-input") loadKpiRecordIntoForm();
+}
+
 function handleKpiPeriodChange() {
   const month = Number($("#kpi-filter-month")?.value);
   const year = Number($("#kpi-filter-year")?.value);
   if (month >= 1 && month <= 12) state.selectedKpiMonth = month;
   if (year >= 2020 && year <= 2100) state.selectedKpiYear = year;
+  state.selectedKpiQuarter = getQuarterFromMonth(state.selectedKpiMonth);
+  const quarterSelect = $("#kpi-filter-quarter");
+  if (quarterSelect) quarterSelect.value = String(state.selectedKpiQuarter);
   renderKpiDashboard();
   if (location.hash.replace(/^#/, "") === "kpi-input") loadKpiRecordIntoForm();
 }
@@ -196,39 +271,31 @@ function renderKpiDashboard() {
   if (migrationAlert) {
     migrationAlert.classList.toggle("hidden", !state.kpiError);
     migrationAlert.textContent = state.kpiError
-      ? "Dashboard belum tersedia. Jalankan supabase-dashboard-kpi-k3l.sql di Supabase SQL Editor."
+      ? "Dashboard belum tersedia. Jalankan supabase-dashboard-kpi-hse-update.sql di Supabase SQL Editor."
       : "";
   }
 
-  setText("#kpi-card-score", kpiFormatPercent(record?.kpi_overall_score));
+  const kpiOverall = getKpiOverallValue(record);
+  const kpiCategory = getKpiCategory(kpiOverall);
+  setText("#kpi-card-score", kpiFormatDays(record?.piutang_pad_hari));
   setText("#kpi-card-ebitda", kpiFormatMoneyMillion(record?.ebitda_portfolio));
   setText("#kpi-card-revenue", kpiFormatMoneyMillion(record?.portfolio_revenue));
   setText("#kpi-card-retention", kpiFormatPercent(record?.customer_retention));
   setText("#kpi-card-work-hours", kpiFormatHours(record?.total_work_hours));
-  setText("#kpi-card-incidents", kpiFormatIncidents(getKpiIncidentTotal(record)));
-
-  setText(
-    "#kpi-revenue-period",
-    `${KPI_MONTHS[state.selectedKpiMonth - 1]} ${state.selectedKpiYear}`
-  );
-  const revenueAchievement = calculateRevenueAchievement(record);
-  setText("#kpi-revenue-achievement", kpiFormatPercent(revenueAchievement));
-  setText("#kpi-revenue-target", kpiFormatMoneyMillion(record?.revenue_target));
-  setText("#kpi-revenue-actual", kpiFormatMoneyMillion(record?.revenue_actual));
-  setText("#kpi-target-label", `Target: ${kpiFormatCompact(record?.revenue_target)}`);
-  setText("#kpi-actual-label", `Realisasi: ${kpiFormatCompact(record?.revenue_actual)}`);
-
-  const targetValue = kpiNumberOrNull(record?.revenue_target);
-  const actualValue = kpiNumberOrNull(record?.revenue_actual);
-  const revenueMax = Math.max(targetValue || 0, actualValue || 0, 1);
-  setVerticalBar("#kpi-target-bar", targetValue === null ? 0 : (targetValue / revenueMax) * 100);
-  setVerticalBar("#kpi-actual-bar", actualValue === null ? 0 : (actualValue / revenueMax) * 100);
+  setText("#kpi-card-kse", kpiFormatPercent(getKpiKseValue(record)));
+  setText("#kpi-overall-value", kpiFormatPercent(kpiOverall));
+  setText("#kpi-category-label", kpiCategory ? `Kategori: ${kpiCategory.label}` : "Kategori: -");
+  setText("#kpi-category-range", kpiCategory ? `${kpiCategory.label} (${kpiCategory.range})` : "-");
+  const categoryChip = $("#kpi-category-chip");
+  if (categoryChip) {
+    categoryChip.className = `kpi-category-chip ${kpiCategory?.tone || "is-empty"}`;
+  }
 
   renderKpiAspectBars(record);
-  renderKpiSummary(record);
+  renderKpiLaggingIndicators(record);
+  renderKpiLeadingIndicators(record);
   renderKpiEmployeeDonut(record);
   renderKpiOverallTrend();
-  renderKpiWorkHoursTrend();
 }
 
 function renderKpiAspectBars(record) {
@@ -249,10 +316,23 @@ function renderKpiAspectBars(record) {
   }).join("");
 }
 
-function renderKpiSummary(record) {
-  const container = $("#kpi-k3l-list");
+function renderKpiLaggingIndicators(record) {
+  const container = $("#kpi-lagging-list");
   if (!container) return;
-  container.innerHTML = KPI_HSE_ITEMS.map(
+  container.innerHTML = KPI_LAGGING_ITEMS.map(
+    ([label, key, fallbackKey]) => `
+      <div>
+        <span>${escapeHtml(label)}</span>
+        <strong>${kpiFormatPlain(getKpiIndicatorValue(record, key, fallbackKey))}</strong>
+      </div>
+    `
+  ).join("");
+}
+
+function renderKpiLeadingIndicators(record) {
+  const container = $("#kpi-leading-list");
+  if (!container) return;
+  container.innerHTML = KPI_LEADING_ITEMS.map(
     ([label, key]) => `
       <div>
         <span>${escapeHtml(label)}</span>
@@ -260,8 +340,6 @@ function renderKpiSummary(record) {
       </div>
     `
   ).join("");
-  setText("#kpi-frequency-rate", kpiFormatDecimal(record?.frequency_rate, 2));
-  setText("#kpi-severity-rate", kpiFormatDecimal(record?.severity_rate, 2));
 }
 
 function renderKpiEmployeeDonut(record) {
@@ -269,10 +347,10 @@ function renderKpiEmployeeDonut(record) {
   const legend = $("#kpi-employee-legend");
   if (!donut || !legend) return;
 
-  const values = KPI_EMPLOYEE_ITEMS.map(([, key, color]) => ({
+  const values = KPI_EMPLOYEE_ITEMS.map(([, key, color, fallbackKey]) => ({
     key,
     color,
-    value: kpiNumberOrNull(record?.[key])
+    value: getKpiIndicatorValue(record, key, fallbackKey)
   }));
   const hasData = values.some((item) => item.value !== null);
   const total = values.reduce((sum, item) => sum + (item.value || 0), 0);
@@ -292,11 +370,11 @@ function renderKpiEmployeeDonut(record) {
     setText("#kpi-employee-total", kpiFormatInteger(total));
   }
 
-  legend.innerHTML = KPI_EMPLOYEE_ITEMS.map(([label, key, color]) => `
+  legend.innerHTML = KPI_EMPLOYEE_ITEMS.map(([label, key, color, fallbackKey]) => `
     <div>
       <i style="background:${color}"></i>
       <span>${escapeHtml(label)}</span>
-      <strong>${kpiFormatInteger(record?.[key])}</strong>
+      <strong>${kpiFormatInteger(getKpiIndicatorValue(record, key, fallbackKey))}</strong>
     </div>
   `).join("");
 }
@@ -305,16 +383,10 @@ function renderKpiOverallTrend() {
   const container = $("#kpi-overall-trend-chart");
   if (!container) return;
 
-  const recordsByMonth = new Map(
-    safeKpiRecords()
-      .filter((record) => Number(record.year) === Number(state.selectedKpiYear))
-      .map((record) => [Number(record.month), record])
-  );
-  let values = Array.from({ length: 12 }, (_, index) =>
-    kpiNumberOrNull(recordsByMonth.get(index + 1)?.kpi_overall_score)
-  );
+  let values = getKpiQuarterTrendValues();
   values = withKpiTrendFallback(values);
-  const selectedValue = values[state.selectedKpiMonth - 1];
+  const selectedQuarter = getQuarterFromMonth(state.selectedKpiMonth || 12);
+  const selectedValue = values[selectedQuarter - 1];
   setText("#kpi-overall-trend-selected", kpiFormatPercent(selectedValue));
 
   const numericValues = values.filter((value) => value !== null);
@@ -330,12 +402,12 @@ function renderKpiOverallTrend() {
   const chartWidth = width - padding.left - padding.right;
   const chartHeight = height - padding.top - padding.bottom;
   const points = values.map((value, index) => {
-    const x = padding.left + (chartWidth / 11) * index;
+    const x = padding.left + (chartWidth / 3) * index;
     const y =
       value === null
         ? null
         : padding.top + chartHeight - (kpiClampPercent(value) / 100) * chartHeight;
-    return { x, y, value, month: KPI_MONTHS[index].slice(0, 3) };
+    return { x, y, value, label: KPI_QUARTERS[index]?.label || String(index + 1) };
   });
   const path = points
     .filter((point) => point.y !== null)
@@ -348,12 +420,12 @@ function renderKpiOverallTrend() {
     })
     .join("");
   const labels = points.map((point, index) => `
-    <text x="${point.x}" y="${height - 14}" text-anchor="middle">${escapeHtml(point.month)}</text>
+    <text x="${point.x}" y="${height - 14}" text-anchor="middle">${escapeHtml(point.label)}</text>
     ${
       point.y === null
         ? ""
         : `<circle cx="${point.x}" cy="${point.y}" r="${
-            index + 1 === state.selectedKpiMonth ? 5 : 4
+            index + 1 === selectedQuarter ? 5 : 4
           }" />
            <text class="kpi-point-label" x="${point.x}" y="${point.y - 10}" text-anchor="middle">${kpiFormatPercent(point.value)}</text>`
     }
@@ -372,11 +444,11 @@ function withKpiTrendFallback(values) {
   const realValues = values.filter((value) => value !== null);
   if (realValues.length > 1) return values;
 
-  const selectedRecordValue = kpiNumberOrNull(getSelectedKpiRecord()?.kpi_overall_score);
+  const selectedRecordValue = getKpiOverallValue(getSelectedKpiRecord());
   const anchor = selectedRecordValue ?? realValues[0];
   if (anchor === null) return values;
 
-  const curve = [0.815, 0.869, 0.883, 0.915, 0.938, 0.967, 0.98, 0.991, 0.995, 0.997, 0.992, 1];
+  const curve = [0.815, 0.938, 0.98, 1];
   return values.map((value, index) =>
     value === null ? kpiRound(Math.min(100, anchor * curve[index]), 1) : value
   );
@@ -436,20 +508,16 @@ async function handleKpiDashboardExport() {
 
 function ExportDashboardReport() {
   const record = getSelectedKpiRecord();
-  const period = `${KPI_MONTHS[state.selectedKpiMonth - 1]} ${state.selectedKpiYear}`;
+  const selectedQuarter = getQuarterFromMonth(state.selectedKpiMonth || 12);
+  const period = `Triwulan ${KPI_QUARTERS[selectedQuarter - 1]?.label || "-"} - ${KPI_MONTHS[state.selectedKpiMonth - 1]} ${state.selectedKpiYear}`;
   const exportedAt = new Date().toLocaleString("id-ID", {
     dateStyle: "medium",
     timeStyle: "short"
   });
-  const revenueAchievement = calculateRevenueAchievement(record);
-  const targetValue = kpiNumberOrNull(record?.revenue_target);
-  const actualValue = kpiNumberOrNull(record?.revenue_actual);
-  const revenueMax = Math.max(targetValue || 0, actualValue || 0, 1);
-  const targetHeight = targetValue === null ? 0 : (targetValue / revenueMax) * 100;
-  const actualHeight = actualValue === null ? 0 : (actualValue / revenueMax) * 100;
+  const kpiOverall = getKpiOverallValue(record);
+  const kpiCategory = getKpiCategory(kpiOverall);
   const employees = getKpiEmployeeExportData(record);
-  const kpiTrendValues = getKpiYearValues("kpi_overall_score", true);
-  const workHourValues = getKpiYearValues("total_work_hours", false);
+  const kpiTrendValues = withKpiTrendFallback(getKpiQuarterTrendValues());
 
   const wrapper = document.createElement("div");
   wrapper.className = "dashboard-export-host";
@@ -480,7 +548,7 @@ function ExportDashboardReport() {
         <section class="export-section export-column export-kpi-column">
           <h2>KPI Performance</h2>
           <div class="export-summary-grid export-summary-grid-kpi">
-            ${buildKpiExportMetric("Skor KPI Keseluruhan", kpiFormatPercent(record?.kpi_overall_score), "YTD Target")}
+            ${buildKpiExportMetric("Piutang & PAD", kpiFormatDays(record?.piutang_pad_hari), "hari")}
             ${buildKpiExportMetric("EBITDA Portofolio", kpiFormatMoneyMillion(record?.ebitda_portfolio), "YTD")}
             ${buildKpiExportMetric("Pendapatan Portofolio", kpiFormatMoneyMillion(record?.portfolio_revenue), "YTD")}
             ${buildKpiExportMetric("Customer Retention", kpiFormatPercent(record?.customer_retention), "Retention Rate")}
@@ -494,20 +562,15 @@ function ExportDashboardReport() {
               </div>
             </section>
 
-            <section class="export-card export-revenue-card">
-              <div class="export-card-heading">
-                <div>
-                  <h3>Pendapatan vs Target</h3>
-                  <p>${escapeHtml(period)}</p>
+            <section class="export-card export-overall-card ${kpiCategory?.tone || "is-empty"}">
+              <h3>KPI Keseluruhan</h3>
+              <div class="export-overall-content">
+                <strong>${kpiFormatPercent(kpiOverall)}</strong>
+                <span>${escapeHtml(kpiCategory ? `Kategori: ${kpiCategory.label}` : "Kategori: -")}</span>
+                <div class="export-category-chip">
+                  <i></i>
+                  <b>${escapeHtml(kpiCategory ? `${kpiCategory.label} (${kpiCategory.range})` : "-")}</b>
                 </div>
-                <div class="export-achievement">
-                  <strong>${kpiFormatPercent(revenueAchievement)}</strong>
-                  <span>Pencapaian</span>
-                </div>
-              </div>
-              <div class="export-revenue-bars">
-                ${buildKpiExportRevenueBar("Target Pendapatan", targetValue, targetHeight, "target")}
-                ${buildKpiExportRevenueBar("Realisasi Pendapatan", actualValue, actualHeight, "actual")}
               </div>
             </section>
           </div>
@@ -515,13 +578,15 @@ function ExportDashboardReport() {
           <section class="export-card export-trend-card">
             <div class="export-card-heading">
               <h3>Tren KPI Keseluruhan</h3>
-              <strong>${kpiFormatPercent(kpiTrendValues[state.selectedKpiMonth - 1])}</strong>
+              <strong>${kpiFormatPercent(kpiTrendValues[selectedQuarter - 1])}</strong>
             </div>
             ${buildKpiExportLineChart(kpiTrendValues, {
               color: "#064f83",
               max: 100,
               suffix: "%",
-              aria: "Tren KPI keseluruhan"
+              labels: KPI_QUARTERS.map((item) => item.label),
+              selectedIndex: selectedQuarter - 1,
+              aria: "Tren KPI keseluruhan per triwulan"
             })}
           </section>
         </section>
@@ -529,51 +594,42 @@ function ExportDashboardReport() {
         <section class="export-section export-column export-hse-column">
           <h2>HSE Performance</h2>
           <div class="export-summary-grid export-summary-grid-hse">
-            ${buildKpiExportMetric("Total Jam Kerja", kpiFormatHours(record?.total_work_hours), "YTD")}
-            ${buildKpiExportMetric("Insiden HSE", kpiFormatIncidents(getKpiIncidentTotal(record)), "Kejadian")}
+            ${buildKpiExportMetric("Total Jam Kerja", kpiFormatHours(record?.total_work_hours), "jam")}
+            ${buildKpiExportMetric("KPI KSE", kpiFormatPercent(getKpiKseValue(record)), "HSE")}
           </div>
 
           <div class="export-hse-mid-grid">
             <section class="export-card export-hse-summary-card">
-              <h3>Ringkasan HSE</h3>
+              <h3>Lagging Indicator</h3>
               <div class="export-hse-list">
-                ${buildKpiExportHseRows(record)}
-              </div>
-              <div class="export-rate-row">
-                <div><span>Frequency Rate</span><strong>${kpiFormatDecimal(record?.frequency_rate, 2)}</strong></div>
-                <div><span>Severity Rate</span><strong>${kpiFormatDecimal(record?.severity_rate, 2)}</strong></div>
+                ${buildKpiExportLaggingRows(record)}
               </div>
             </section>
 
-            <section class="export-card export-employee-card">
-              <h3>Komposisi Jumlah Pegawai</h3>
-              <div class="export-donut-layout">
-                ${buildKpiExportEmployeeDonut(employees)}
-                <div class="export-legend">
-                  ${employees.items
-                    .map((item) => `
-                      <div>
-                        <i style="background:${item.color}"></i>
-                        <span>${escapeHtml(item.label)}</span>
-                        <strong>${kpiFormatInteger(item.value)}</strong>
-                      </div>
-                    `)
-                    .join("")}
-                </div>
+            <section class="export-card export-leading-card">
+              <h3>Leading Indicator</h3>
+              <div class="export-leading-list">
+                ${buildKpiExportLeadingRows(record)}
               </div>
             </section>
           </div>
 
-          <section class="export-card export-trend-card">
-            <div class="export-card-heading">
-              <h3>Tren Jam Kerja Bulanan</h3>
-              <strong>Total: ${kpiFormatHours(workHourValues[state.selectedKpiMonth - 1])}</strong>
+          <section class="export-card export-employee-card">
+            <h3>Komposisi Jumlah Pegawai</h3>
+            <div class="export-donut-layout">
+              ${buildKpiExportEmployeeDonut(employees)}
+              <div class="export-legend">
+                ${employees.items
+                  .map((item) => `
+                    <div>
+                      <i style="background:${item.color}"></i>
+                      <span>${escapeHtml(item.label)}</span>
+                      <strong>${kpiFormatInteger(item.value)}</strong>
+                    </div>
+                  `)
+                  .join("")}
+              </div>
             </div>
-            ${buildKpiExportLineChart(workHourValues, {
-              color: "#008b8b",
-              suffix: "",
-              aria: "Tren jam kerja bulanan"
-            })}
           </section>
         </section>
       </main>
@@ -617,8 +673,17 @@ function buildKpiExportRevenueBar(label, value, height, tone) {
   `;
 }
 
-function buildKpiExportHseRows(record) {
-  return KPI_HSE_ITEMS.map(([label, key]) => `
+function buildKpiExportLaggingRows(record) {
+  return KPI_LAGGING_ITEMS.map(([label, key, fallbackKey]) => `
+    <div>
+      <span>${escapeHtml(label)}</span>
+      <strong>${kpiFormatPlain(getKpiIndicatorValue(record, key, fallbackKey))}</strong>
+    </div>
+  `).join("");
+}
+
+function buildKpiExportLeadingRows(record) {
+  return KPI_LEADING_ITEMS.map(([label, key]) => `
     <div>
       <span>${escapeHtml(label)}</span>
       <strong>${kpiFormatPlain(record?.[key])}</strong>
@@ -672,10 +737,10 @@ function buildKpiExportEmployeeDonut(employees) {
 }
 
 function getKpiEmployeeExportData(record) {
-  const items = KPI_EMPLOYEE_ITEMS.map(([label, key, color]) => ({
-    label: key === "third_party_employees" ? "LS" : label,
+  const items = KPI_EMPLOYEE_ITEMS.map(([label, key, color, fallbackKey]) => ({
+    label,
     color,
-    value: kpiNumberOrNull(record?.[key])
+    value: getKpiIndicatorValue(record, key, fallbackKey)
   }));
   const total = items.reduce((sum, item) => sum + (item.value || 0), 0);
   if (total <= 0) {
@@ -707,13 +772,18 @@ function buildKpiExportLineChart(values, options = {}) {
   const max = options.max || Math.max(...numericValues, 1);
   const chartWidth = width - padding.left - padding.right;
   const chartHeight = height - padding.top - padding.bottom;
+  const labelsSource = options.labels || KPI_MONTHS.map((month) => month.slice(0, 3));
+  const selectedIndex = Number.isInteger(options.selectedIndex)
+    ? options.selectedIndex
+    : state.selectedKpiMonth - 1;
+  const step = values.length > 1 ? chartWidth / (values.length - 1) : chartWidth;
   const points = values.map((value, index) => {
-    const x = padding.left + (chartWidth / 11) * index;
+    const x = padding.left + step * index;
     const y =
       value === null
         ? null
         : padding.top + chartHeight - (Math.min(max, value) / max) * chartHeight;
-    return { x, y, value, month: KPI_MONTHS[index].slice(0, 3) };
+    return { x, y, value, label: labelsSource[index] || String(index + 1) };
   });
   const path = points
     .filter((point) => point.y !== null)
@@ -727,12 +797,12 @@ function buildKpiExportLineChart(values, options = {}) {
     .join("");
   const labels = points
     .map((point, index) => `
-      <text x="${point.x}" y="${height - 16}" text-anchor="middle">${escapeHtml(point.month)}</text>
+      <text x="${point.x}" y="${height - 16}" text-anchor="middle">${escapeHtml(point.label)}</text>
       ${
         point.y === null
           ? ""
           : `<circle cx="${point.x}" cy="${point.y}" r="${
-              index + 1 === state.selectedKpiMonth ? 6 : 4
+              index === selectedIndex ? 6 : 4
             }" />
              <text class="export-point-label" x="${point.x}" y="${point.y - 10}" text-anchor="middle">${escapeHtml(
                options.suffix === "%"
@@ -842,12 +912,16 @@ function loadKpiRecordIntoForm() {
 
   const month = Number($("#kpi-filter-month")?.value || state.selectedKpiMonth || 12);
   const year = Number($("#kpi-filter-year")?.value || state.selectedKpiYear || 2025);
+  const quarter =
+    normalizeKpiQuarter($("#kpi-filter-quarter")?.value, month) || getQuarterFromMonth(month);
   state.selectedKpiMonth = month;
   state.selectedKpiYear = year;
+  state.selectedKpiQuarter = quarter;
 
   const record = getSelectedKpiRecord();
   form.reset();
   form.elements.id.value = record?.id || "";
+  form.elements.triwulan.value = String(quarter);
   form.elements.month.value = String(month);
   form.elements.year.value = String(year);
 
@@ -861,6 +935,12 @@ function loadKpiRecordIntoForm() {
     if (!input) return;
     input.value = record?.[field] ?? "";
   });
+  setKpiFormValue(form, "kpi_keseluruhan", getKpiOverallValue(record));
+  setKpiFormValue(form, "kpi_kse", getKpiKseValue(record));
+  setKpiFormValue(form, "pegawai_ls", getKpiIndicatorValue(record, "pegawai_ls", "third_party_employees"));
+  KPI_LAGGING_ITEMS.forEach(([, key, fallbackKey]) =>
+    setKpiFormValue(form, key, getKpiIndicatorValue(record, key, fallbackKey))
+  );
 
   state.editingKpiRecordId = record?.id || null;
   $("#kpi-save-data").textContent = record ? "Update Data" : "Simpan Data";
@@ -874,11 +954,22 @@ function loadKpiRecordIntoForm() {
 }
 
 function handleKpiFormChange(event) {
-  if (event.target.name === "month" || event.target.name === "year") {
+  if (event.target.name === "triwulan" || event.target.name === "month" || event.target.name === "year") {
     const form = $("#kpi-data-form");
-    state.selectedKpiMonth = Number(form.elements.month.value) || 12;
+    const month = Number(form.elements.month.value) || 12;
+    const quarter =
+      event.target.name === "triwulan"
+        ? normalizeKpiQuarter(form.elements.triwulan.value, month)
+        : getQuarterFromMonth(month);
+    state.selectedKpiQuarter = quarter || getQuarterFromMonth(month);
+    state.selectedKpiMonth =
+      event.target.name === "triwulan" && getQuarterFromMonth(month) !== state.selectedKpiQuarter
+        ? KPI_QUARTERS.find((item) => item.value === state.selectedKpiQuarter)?.months[0] || month
+        : month;
     state.selectedKpiYear = Number(form.elements.year.value) || 2025;
+    $("#kpi-filter-quarter").value = String(state.selectedKpiQuarter);
     $("#kpi-filter-month").value = String(state.selectedKpiMonth);
+    form.elements.month.value = String(state.selectedKpiMonth);
     populateKpiPeriodControls();
     $("#kpi-filter-year").value = String(state.selectedKpiYear);
     loadKpiRecordIntoForm();
@@ -886,9 +977,6 @@ function handleKpiFormChange(event) {
 }
 
 function handleKpiFormInput(event) {
-  if (event.target.name === "total_work_hours") {
-    event.target.dataset.autoTotal = "false";
-  }
   syncKpiCalculatedFields();
 }
 
@@ -896,40 +984,18 @@ function syncKpiCalculatedFields({ resetAutoTotal = false } = {}) {
   const form = $("#kpi-data-form");
   if (!form) return;
 
-  const target = kpiInputNumber(form.elements.revenue_target);
-  const actual = kpiInputNumber(form.elements.revenue_actual);
-  const achievement = target > 0 && actual !== null ? (actual / target) * 100 : null;
-  $("#kpi-form-revenue-achievement").value =
-    achievement === null ? "-" : `${kpiFormatDecimal(achievement, 1)}%`;
+  const category = getKpiCategory(kpiInputNumber(form.elements.kpi_keseluruhan));
+  $("#kpi-form-kpi-category").value =
+    category === null ? "-" : `${category.label} (${category.range})`;
 
   const employeeTotal = [
     "permanent_employees",
     "temporary_employees",
     "project_employees",
-    "third_party_employees"
+    "pegawai_ls"
   ].reduce((sum, field) => sum + (kpiInputNumber(form.elements[field]) || 0), 0);
   $("#kpi-form-total-employees").value =
     employeeTotal > 0 ? kpiFormatInteger(employeeTotal) : "-";
-
-  const workHourFields = [
-    "permanent_work_hours",
-    "temporary_work_hours",
-    "project_work_hours",
-    "third_party_work_hours",
-    "overtime_hours"
-  ];
-  const componentTotal = workHourFields.reduce(
-    (sum, field) => sum + (kpiInputNumber(form.elements[field]) || 0),
-    0
-  );
-  const totalInput = form.elements.total_work_hours;
-  if (resetAutoTotal) {
-    totalInput.dataset.autoTotal = totalInput.value ? "false" : "true";
-  }
-  if (componentTotal > 0 && totalInput.dataset.autoTotal !== "false") {
-    totalInput.value = kpiRound(componentTotal, 2);
-    totalInput.dataset.autoTotal = "true";
-  }
 }
 
 async function handleKpiDataSubmit(event) {
@@ -971,6 +1037,7 @@ async function handleKpiDataSubmit(event) {
     }
     if (result.error) throw result.error;
     await loadKpiDashboardData({ force: true });
+    state.selectedKpiQuarter = payload.triwulan;
     state.selectedKpiMonth = payload.month;
     state.selectedKpiYear = payload.year;
     populateKpiPeriodControls();
@@ -987,6 +1054,7 @@ async function handleKpiDataSubmit(event) {
 function buildKpiPayload(form) {
   const formData = new FormData(form);
   const payload = {
+    triwulan: kpiIntegerOrNull(formData.get("triwulan")),
     year: kpiIntegerOrNull(formData.get("year")),
     month: kpiIntegerOrNull(formData.get("month")),
     notes: cleanText(formData.get("notes")),
@@ -1001,16 +1069,8 @@ function buildKpiPayload(form) {
       : kpiNumberOrNull(formData.get(field));
   });
 
-  if (payload.total_work_hours === null) {
-    const componentTotal = [
-      "permanent_work_hours",
-      "temporary_work_hours",
-      "project_work_hours",
-      "third_party_work_hours",
-      "overtime_hours"
-    ].reduce((sum, field) => sum + (payload[field] || 0), 0);
-    payload.total_work_hours = componentTotal > 0 ? componentTotal : null;
-  }
+  const category = getKpiCategory(payload.kpi_keseluruhan);
+  payload.kpi_kategori = category?.label || null;
 
   return payload;
 }
@@ -1019,14 +1079,20 @@ function validateKpiPayload(payload) {
   if (!Number.isInteger(payload.month) || payload.month < 1 || payload.month > 12) {
     return "Bulan wajib diisi.";
   }
+  if (!Number.isInteger(payload.triwulan) || payload.triwulan < 1 || payload.triwulan > 4) {
+    return "Triwulan wajib diisi.";
+  }
   if (!Number.isInteger(payload.year) || payload.year < 2020 || payload.year > 2100) {
     return "Tahun wajib diisi dengan nilai yang valid.";
   }
-  for (const field of KPI_PERCENT_FIELDS) {
+  for (const field of KPI_BOUNDED_PERCENT_FIELDS) {
     const value = payload[field];
     if (value !== null && (value < 0 || value > 100)) {
       return "Nilai persentase harus berada antara 0 dan 100.";
     }
+  }
+  if (payload.kpi_keseluruhan !== null && payload.kpi_keseluruhan < 0) {
+    return "Nilai KPI keseluruhan tidak boleh negatif.";
   }
   for (const field of KPI_NON_NEGATIVE_FIELDS) {
     const value = payload[field];
@@ -1055,6 +1121,60 @@ function getKpiRecord(year, month) {
 
 function safeKpiRecords() {
   return Array.isArray(state.kpiRecords) ? state.kpiRecords : [];
+}
+
+function getQuarterFromMonth(month) {
+  const value = Number(month);
+  if (!Number.isInteger(value) || value < 1 || value > 12) return 4;
+  return Math.ceil(value / 3);
+}
+
+function normalizeKpiQuarter(value, fallbackMonth) {
+  const number = Number(value);
+  if (Number.isInteger(number) && number >= 1 && number <= 4) return number;
+  return getQuarterFromMonth(fallbackMonth || state.selectedKpiMonth || 12);
+}
+
+function getKpiOverallValue(record) {
+  return kpiNumberOrNull(record?.kpi_keseluruhan) ?? kpiNumberOrNull(record?.kpi_overall_score);
+}
+
+function getKpiKseValue(record) {
+  return kpiNumberOrNull(record?.kpi_kse) ?? kpiNumberOrNull(record?.k3l_score);
+}
+
+function getKpiIndicatorValue(record, key, fallbackKey) {
+  return kpiNumberOrNull(record?.[key]) ?? kpiNumberOrNull(record?.[fallbackKey]);
+}
+
+function setKpiFormValue(form, field, value) {
+  const input = form?.elements?.namedItem(field);
+  if (!input) return;
+  input.value = value ?? "";
+}
+
+function getKpiQuarterTrendValues() {
+  return KPI_QUARTERS.map((quarter) => {
+    const records = safeKpiRecords()
+      .filter((record) => Number(record.year) === Number(state.selectedKpiYear))
+      .filter(
+        (record) =>
+          normalizeKpiQuarter(record.triwulan, record.month) === Number(quarter.value)
+      )
+      .sort((a, b) => Number(a.month || 0) - Number(b.month || 0));
+    const latestRecord = records.at(-1);
+    return getKpiOverallValue(latestRecord);
+  });
+}
+
+function getKpiCategory(value) {
+  const score = kpiNumberOrNull(value);
+  if (score === null) return null;
+  if (score > 106) return { label: "P1", range: ">106%", tone: "is-p1" };
+  if (score > 101) return { label: "P2", range: ">101% - 106%", tone: "is-p2" };
+  if (score > 95) return { label: "P3", range: ">95% - 101%", tone: "is-p3" };
+  if (score > 80) return { label: "P4", range: ">80% - 95%", tone: "is-p4" };
+  return { label: "P5", range: "<80%", tone: "is-p5" };
 }
 
 function calculateRevenueAchievement(record) {
@@ -1123,6 +1243,11 @@ function kpiFormatMoneyMillion(value) {
 function kpiFormatHours(value) {
   const number = kpiNumberOrNull(value);
   return number === null ? "-" : `${kpiFormatInteger(number)} jam`;
+}
+
+function kpiFormatDays(value) {
+  const number = kpiNumberOrNull(value);
+  return number === null ? "-" : `${kpiFormatDecimal(number, number % 1 ? 1 : 0)} hari`;
 }
 
 function kpiFormatIncidents(value) {
