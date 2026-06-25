@@ -31,9 +31,6 @@ const KPI_PERCENT_FIELDS = [
   "technology_leadership_score",
   "investment_score",
   "talent_development_score",
-  "lagging_penanganan_medis",
-  "lagging_p3k",
-  "lagging_kejadian_berdampak_lingkungan",
   "leading_po_terintegrasi_k3l",
   "leading_pro_shot",
   "leading_tinjauan_ipprk3l",
@@ -252,9 +249,6 @@ const KPI_LEADING_ITEMS = [
 ];
 
 const KPI_INDICATOR_PERCENT_FIELDS = new Set([
-  "lagging_penanganan_medis",
-  "lagging_p3k",
-  "lagging_kejadian_berdampak_lingkungan",
   "leading_po_terintegrasi_k3l",
   "leading_pro_shot",
   "leading_tinjauan_ipprk3l",
@@ -865,7 +859,7 @@ function ExportDashboardReport() {
         <section class="export-section export-column export-hse-column">
           <h2>HSE Performance</h2>
           <div class="export-summary-grid export-summary-grid-hse">
-            ${buildKpiExportMetric("Total Jam Kerja", kpiFormatHours(record?.total_work_hours), "jam")}
+            ${buildKpiExportMetric("Safety Man Hours", kpiFormatHours(record?.total_work_hours), "jam")}
             ${buildKpiExportMetric("HSE Performance", kpiFormatPercent(getKpiKseValue(record)), "HSE")}
           </div>
 
