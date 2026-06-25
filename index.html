@@ -723,9 +723,9 @@
               <legend>Lagging Indicator</legend>
               <div class="form-grid">
                 <label><span>Kematian</span><input name="lagging_kematian" type="number" min="0" step="1" /></label>
-                <label><span>Penanganan Medis</span><input name="lagging_penanganan_medis" type="number" min="0" step="1" /></label>
-                <label><span>P3K</span><input name="lagging_p3k" type="number" min="0" step="1" /></label>
-                <label><span>Kejadian Berdampak Lingkungan</span><input name="lagging_kejadian_berdampak_lingkungan" type="number" min="0" step="1" /></label>
+                <label><span>Penanganan Medis (%)</span><input name="lagging_penanganan_medis" type="number" min="0" max="100" step="1" /></label>
+                <label><span>P3K (%)</span><input name="lagging_p3k" type="number" min="0" max="100" step="1" /></label>
+                <label><span>Kejadian Berdampak Lingkungan (%)</span><input name="lagging_kejadian_berdampak_lingkungan" type="number" min="0" max="100" step="1" /></label>
               </div>
             </fieldset>
 
@@ -735,15 +735,15 @@
                 <label><span>Tinjauan Manajemen</span><input name="leading_tinjauan_manajemen" type="number" min="0" step="1" /></label>
                 <label><span>HSE Talk</span><input name="leading_hse_talk" type="number" min="0" step="1" /></label>
                 <label><span>HSE Visit</span><input name="leading_hse_visit" type="number" min="0" step="1" /></label>
-                <label><span>PO Terintegrasi K3L</span><input name="leading_po_terintegrasi_k3l" type="number" min="0" step="1" /></label>
-                <label><span>PRO-SHOT</span><input name="leading_pro_shot" type="number" min="0" step="1" /></label>
-                <label><span>Tinjauan IPPRK3L</span><input name="leading_tinjauan_ipprk3l" type="number" min="0" step="1" /></label>
+                <label><span>PO Terintegrasi K3L (%)</span><input name="leading_po_terintegrasi_k3l" type="number" min="0" max="100" step="1" /></label>
+                <label><span>PRO-SHOT (%)</span><input name="leading_pro_shot" type="number" min="0" max="100" step="1" /></label>
+                <label><span>Tinjauan IPPRK3L (%)</span><input name="leading_tinjauan_ipprk3l" type="number" min="0" max="100" step="1" /></label>
                 <label><span>Promosi &amp; Edukasi K3L</span><input name="leading_promosi_edukasi_k3l" type="number" min="0" step="1" /></label>
-                <label><span>Pelatihan Safety Leadership</span><input name="leading_pelatihan_safety_leadership" type="number" min="0" step="1" /></label>
-                <label><span>Brevet K3</span><input name="leading_brevet_k3" type="number" min="0" step="1" /></label>
-                <label><span>HSE Orientation</span><input name="leading_hse_orientation" type="number" min="0" step="1" /></label>
-                <label><span>JSA</span><input name="leading_jsa" type="number" min="0" step="1" /></label>
-                <label><span>MCU</span><input name="leading_mcu" type="number" min="0" step="1" /></label>
+                <label><span>Pelatihan Safety Leadership (%)</span><input name="leading_pelatihan_safety_leadership" type="number" min="0" max="100" step="1" /></label>
+                <label><span>Brevet K3 (nilai dari 7)</span><input name="leading_brevet_k3" type="number" min="0" max="7" step="1" /></label>
+                <label><span>HSE Orientation (%)</span><input name="leading_hse_orientation" type="number" min="0" max="100" step="1" /></label>
+                <label><span>JSA (%)</span><input name="leading_jsa" type="number" min="0" max="100" step="1" /></label>
+                <label><span>MCU (%)</span><input name="leading_mcu" type="number" min="0" max="100" step="1" /></label>
                 <label class="span-2"><span>Catatan</span><textarea name="notes"></textarea></label>
               </div>
             </fieldset>

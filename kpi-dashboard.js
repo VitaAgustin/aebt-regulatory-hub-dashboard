@@ -30,7 +30,17 @@ const KPI_PERCENT_FIELDS = [
   "business_innovation_score",
   "technology_leadership_score",
   "investment_score",
-  "talent_development_score"
+  "talent_development_score",
+  "lagging_penanganan_medis",
+  "lagging_p3k",
+  "lagging_kejadian_berdampak_lingkungan",
+  "leading_po_terintegrasi_k3l",
+  "leading_pro_shot",
+  "leading_tinjauan_ipprk3l",
+  "leading_pelatihan_safety_leadership",
+  "leading_hse_orientation",
+  "leading_jsa",
+  "leading_mcu"
 ];
 
 const KPI_BOUNDED_PERCENT_FIELDS = KPI_PERCENT_FIELDS.filter(
@@ -123,6 +133,19 @@ const KPI_LEADING_ITEMS = [
   ["JSA", "leading_jsa"],
   ["MCU", "leading_mcu"]
 ];
+
+const KPI_INDICATOR_PERCENT_FIELDS = new Set([
+  "lagging_penanganan_medis",
+  "lagging_p3k",
+  "lagging_kejadian_berdampak_lingkungan",
+  "leading_po_terintegrasi_k3l",
+  "leading_pro_shot",
+  "leading_tinjauan_ipprk3l",
+  "leading_pelatihan_safety_leadership",
+  "leading_hse_orientation",
+  "leading_jsa",
+  "leading_mcu"
+]);
 
 const KPI_EMPLOYEE_ITEMS = [
   ["Pegawai Tetap", "permanent_employees", "#008b8b"],
@@ -323,7 +346,7 @@ function renderKpiLaggingIndicators(record) {
     ([label, key, fallbackKey]) => `
       <div>
         <span>${escapeHtml(label)}</span>
-        <strong>${kpiFormatPlain(getKpiIndicatorValue(record, key, fallbackKey))}</strong>
+        <strong>${formatKpiIndicatorValue(key, getKpiIndicatorValue(record, key, fallbackKey))}</strong>
       </div>
     `
   ).join("");
@@ -336,7 +359,7 @@ function renderKpiLeadingIndicators(record) {
     ([label, key]) => `
       <div>
         <span>${escapeHtml(label)}</span>
-        <strong>${kpiFormatPlain(record?.[key])}</strong>
+        <strong>${formatKpiIndicatorValue(key, record?.[key])}</strong>
       </div>
     `
   ).join("");
@@ -665,7 +688,7 @@ function buildKpiExportLaggingRows(record) {
   return KPI_LAGGING_ITEMS.map(([label, key, fallbackKey]) => `
     <div>
       <span>${escapeHtml(label)}</span>
-      <strong>${kpiFormatPlain(getKpiIndicatorValue(record, key, fallbackKey))}</strong>
+      <strong>${formatKpiIndicatorValue(key, getKpiIndicatorValue(record, key, fallbackKey))}</strong>
     </div>
   `).join("");
 }
@@ -679,7 +702,7 @@ function buildKpiExportLeadingRows(record) {
           .map(([label, key]) => `
             <div>
               <span>${escapeHtml(label)}</span>
-              <strong>${kpiFormatPlain(record?.[key])}</strong>
+              <strong>${formatKpiIndicatorValue(key, record?.[key])}</strong>
             </div>
           `)
           .join("")}
@@ -1122,6 +1145,9 @@ function validateKpiPayload(payload) {
       return "Data jumlah, pendapatan, jam kerja, dan kejadian tidak boleh negatif.";
     }
   }
+  if (payload.leading_brevet_k3 !== null && payload.leading_brevet_k3 > 7) {
+    return "Brevet K3 diisi sebagai capaian dari 7, jadi nilainya maksimal 7.";
+  }
   return "";
 }
 
@@ -1280,6 +1306,14 @@ function kpiFormatIncidents(value) {
 function kpiFormatPlain(value) {
   const number = kpiNumberOrNull(value);
   return number === null ? "-" : kpiFormatInteger(number);
+}
+
+function formatKpiIndicatorValue(key, value) {
+  const number = kpiNumberOrNull(value);
+  if (number === null) return "-";
+  if (key === "leading_brevet_k3") return `${kpiFormatInteger(number)}/7`;
+  if (KPI_INDICATOR_PERCENT_FIELDS.has(key)) return kpiFormatPercent(number);
+  return kpiFormatPlain(number);
 }
 
 function kpiFormatInteger(value) {

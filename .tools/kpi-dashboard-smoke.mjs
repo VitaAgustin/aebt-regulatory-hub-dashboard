@@ -153,13 +153,13 @@ try {
         leading_hse_visit: 18,
         leading_po_terintegrasi_k3l: 24,
         leading_pro_shot: 36,
-        leading_tinjauan_ipprk3l: 8,
-        leading_promosi_edukasi_k3l: 15,
-        leading_pelatihan_safety_leadership: 120,
-        leading_brevet_k3: 45,
-        leading_hse_orientation: 90,
-        leading_jsa: 340,
-        leading_mcu: 210
+        leading_tinjauan_ipprk3l: 10,
+        leading_promosi_edukasi_k3l: 22,
+        leading_pelatihan_safety_leadership: 16,
+        leading_brevet_k3: 3,
+        leading_hse_orientation: 30,
+        leading_jsa: 45,
+        leading_mcu: 38
       });
     };
     seedKpiRecords();
@@ -245,6 +245,8 @@ try {
         exportMetricLabels: Array.from(element.querySelectorAll(".export-metric-card span")).map((item) => item.textContent.trim()),
         verticalBars: element.querySelectorAll(".export-revenue-bar").length,
         overallCategory: element.querySelector(".export-category-chip")?.textContent.trim() || "",
+        exportLaggingValues: Array.from(element.querySelectorAll(".export-hse-list strong")).map((item) => item.textContent.trim()),
+        exportLeadingValues: Array.from(element.querySelectorAll(".export-leading-column strong")).map((item) => item.textContent.trim()),
         laggingRows: element.querySelectorAll(".export-hse-list > div").length,
         leadingColumns: element.querySelectorAll(".export-leading-column").length,
         leadingRows: element.querySelectorAll(".export-leading-column > div").length,
@@ -464,9 +466,14 @@ try {
     result.dashboard.kpiCategory !== "Kategori: P5" ||
     result.dashboard.kpiCategoryRange !== "P5 (<80%)" ||
     result.dashboard.employeeTotal !== "51" ||
-    result.dashboard.laggingValues.join("|") !== "0|0|0|0" ||
+    result.dashboard.laggingValues.join("|") !== "0|0%|0%|0%" ||
     result.dashboard.leadingLabels.length !== 12 ||
-    !result.dashboard.leadingValues.includes("340") ||
+    !result.dashboard.leadingValues.includes("24%") ||
+    !result.dashboard.leadingValues.includes("3/7") ||
+    !result.dashboard.leadingValues.includes("45%") ||
+    result.dashboard.leadingValues[0] !== "12" ||
+    result.dashboard.leadingValues[1] !== "28" ||
+    result.dashboard.leadingValues[6] !== "22" ||
     result.dashboard.trendSvg ||
     !result.dashboard.overallTrendSvg ||
     result.dashboard.overallTrendLabels.join("|") !== "I|II|III|IV"
@@ -487,6 +494,13 @@ try {
     result.exportResult.exportMetricLabels.includes("KPI KSE") ||
     result.exportResult.verticalBars !== 0 ||
     result.exportResult.overallCategory !== "P5 (<80%)" ||
+    result.exportResult.exportLaggingValues.join("|") !== "0|0%|0%|0%" ||
+    !result.exportResult.exportLeadingValues.includes("24%") ||
+    !result.exportResult.exportLeadingValues.includes("3/7") ||
+    !result.exportResult.exportLeadingValues.includes("45%") ||
+    result.exportResult.exportLeadingValues[0] !== "12" ||
+    result.exportResult.exportLeadingValues[1] !== "28" ||
+    result.exportResult.exportLeadingValues[6] !== "22" ||
     result.exportResult.laggingRows !== 4 ||
     result.exportResult.leadingColumns !== 2 ||
     result.exportResult.leadingRows !== 12 ||
