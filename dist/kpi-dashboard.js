@@ -100,13 +100,130 @@ const KPI_INTEGER_FIELDS = [
   "leading_mcu"
 ];
 
-const KPI_ASPECTS = [
-  ["Ekonomi dan Sosial", "economic_social_score"],
-  ["Inovasi Model Bisnis", "business_innovation_score"],
-  ["Kepemimpinan Teknologi", "technology_leadership_score"],
-  ["Peningkatan Investasi", "investment_score"],
-  ["Pengembangan Talenta", "talent_development_score"]
+const KPI_INDICATOR_BREAKDOWN = [
+  {
+    key: "ekonomi_sosial",
+    label: "Ekonomi dan Sosial",
+    totalField: "economic_social_score",
+    groups: [
+      {
+        name: "Financial",
+        items: [
+          { key: "ebitda_portofolio", label: "EBITDA Portofolio" },
+          { key: "laba_operasi_portofolio", label: "Laba Operasi Portofolio" },
+          { key: "piutang_pad_berkualitas", label: "Piutang & PAD Berkualitas" },
+          {
+            key: "pendapatan_eksisting_portofolio",
+            label: "Pendapatan dari Eksisting Portofolio"
+          },
+          { key: "growth_acceleration", label: "Growth Acceleration" }
+        ]
+      },
+      {
+        name: "Operational",
+        items: [
+          {
+            key: "jumlah_titik_layanan_target",
+            label: "Jumlah Titik Layanan yang Mencapai Target"
+          },
+          {
+            key: "akurasi_sertifikat_laporan",
+            label: "Tingkat Akurasi Sertifikat dan Laporan"
+          },
+          { key: "cross_selling_upselling", label: "Cross Selling & Upselling" },
+          { key: "account_planning", label: "Account Planning" },
+          { key: "taksonomi_jasa", label: "Taksonomi Jasa" }
+        ]
+      },
+      {
+        name: "Sosial",
+        items: [
+          { key: "employee_esg_participation", label: "Employee ESG Participation" }
+        ]
+      }
+    ]
+  },
+  {
+    key: "inovasi_model_bisnis",
+    label: "Inovasi Model Bisnis",
+    totalField: "business_innovation_score",
+    groups: [
+      {
+        name: "Sub-poin",
+        items: [
+          {
+            key: "pemenuhan_sistem_manajemen",
+            label: "Pemenuhan Sistem Manajemen Perusahaan"
+          },
+          { key: "sla_unit_kerja", label: "SLA Unit Kerja / Service Delivery Time" },
+          {
+            key: "ketercapaian_program_inisiatif",
+            label: "Ketercapaian Program Inisiatif"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    key: "kepemimpinan_teknologi",
+    label: "Kepemimpinan Teknologi",
+    totalField: "technology_leadership_score",
+    groups: [
+      {
+        name: "Sub-poin",
+        items: [
+          { key: "kepatuhan_keamanan_siber", label: "Kepatuhan Keamanan Siber" }
+        ]
+      }
+    ]
+  },
+  {
+    key: "peningkatan_investasi",
+    label: "Peningkatan Investasi",
+    totalField: "investment_score",
+    groups: [
+      {
+        name: "Sub-poin",
+        items: [
+          {
+            key: "utilisasi_peralatan_operasi",
+            label: "Utilisasi Peralatan Operasi Portofolio"
+          },
+          {
+            key: "percepatan_investasi_peralatan",
+            label: "Percepatan Investasi Peralatan Operasi"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    key: "pengembangan_talenta",
+    label: "Pengembangan Talenta",
+    totalField: "talent_development_score",
+    groups: [
+      {
+        name: "Sub-poin",
+        items: [
+          {
+            key: "employee_equivalent_expertise",
+            label: "Employee with Equivalent Expertise"
+          },
+          {
+            key: "produktivitas_pegawai_portofolio",
+            label: "Produktivitas Pegawai Portofolio"
+          }
+        ]
+      }
+    ]
+  }
 ];
+
+const KPI_ASPECTS = KPI_INDICATOR_BREAKDOWN.map((indicator) => [
+  indicator.label,
+  indicator.totalField,
+  indicator.key
+]);
 
 const KPI_LAGGING_ITEMS = [
   ["Kematian", "lagging_kematian", "fatality"],
@@ -156,6 +273,7 @@ const KPI_EMPLOYEE_ITEMS = [
 
 function bindKpiDashboardEvents() {
   populateKpiPeriodControls();
+  renderKpiBreakdownInputs();
 
   $("#kpi-filter-quarter")?.addEventListener("change", handleKpiQuarterChange);
   $("#kpi-filter-month")?.addEventListener("change", handleKpiPeriodChange);
@@ -165,9 +283,11 @@ function bindKpiDashboardEvents() {
   $("#kpi-data-form")?.addEventListener("submit", handleKpiDataSubmit);
   $("#kpi-data-form")?.addEventListener("input", handleKpiFormInput);
   $("#kpi-data-form")?.addEventListener("change", handleKpiFormChange);
+  $("#kpi-aspect-bars")?.addEventListener("click", handleKpiIndicatorClick);
   $("#kpi-cancel-edit")?.addEventListener("click", () =>
     loadKpiRecordIntoForm()
   );
+  document.addEventListener("click", handleKpiModalDocumentClick);
 }
 
 async function loadKpiDashboardData({ force = false } = {}) {
@@ -325,18 +445,157 @@ function renderKpiAspectBars(record) {
   const container = $("#kpi-aspect-bars");
   if (!container) return;
 
-  container.innerHTML = KPI_ASPECTS.map(([label, key]) => {
-    const value = kpiNumberOrNull(record?.[key]);
+  container.innerHTML = KPI_ASPECTS.map(([label, key, indicatorKey]) => {
+    const value = getKpiAspectValue(record, key, indicatorKey);
     const width = value === null ? 0 : kpiClampPercent(value);
     const lowClass = value !== null && value < 50 ? " kpi-aspect-low" : "";
     return `
-      <div class="kpi-aspect-row${lowClass}">
+      <button
+        class="kpi-aspect-row${lowClass}"
+        type="button"
+        data-kpi-indicator="${escapeHtml(indicatorKey)}"
+        title="Lihat rincian ${escapeHtml(label)}"
+        aria-label="Lihat rincian ${escapeHtml(label)}"
+      >
         <span>${escapeHtml(label)}</span>
         <div class="kpi-track"><i style="width:${width}%"></i></div>
         <strong>${kpiFormatPercent(value)}</strong>
-      </div>
+      </button>
     `;
   }).join("");
+
+  container.querySelectorAll("[data-kpi-indicator]").forEach((button) => {
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      openKpiIndicatorModal(button.dataset.kpiIndicator);
+    });
+  });
+}
+
+function renderKpiBreakdownInputs() {
+  const container = $("#kpi-breakdown-inputs");
+  if (!container || container.dataset.rendered === "true") return;
+
+  container.innerHTML = KPI_INDICATOR_BREAKDOWN.map((indicator) => `
+    <details class="kpi-breakdown-section" open>
+      <summary>
+        <span>${escapeHtml(indicator.label)}</span>
+        <strong data-kpi-breakdown-total="${escapeHtml(indicator.key)}">Total: -</strong>
+      </summary>
+      <div class="kpi-breakdown-groups">
+        ${indicator.groups
+          .map((group) => `
+            <section class="kpi-breakdown-group">
+              <h4>${escapeHtml(group.name)}</h4>
+              <div class="form-grid">
+                ${group.items
+                  .map((item) => `
+                    <label>
+                      <span>${escapeHtml(item.label)}</span>
+                      <input
+                        name="${escapeHtml(kpiBreakdownInputName(indicator.key, item.key))}"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        data-kpi-breakdown-input="${escapeHtml(indicator.key)}"
+                      />
+                    </label>
+                  `)
+                  .join("")}
+              </div>
+            </section>
+          `)
+          .join("")}
+      </div>
+    </details>
+  `).join("");
+  container.dataset.rendered = "true";
+}
+
+function handleKpiIndicatorClick(event) {
+  const button = event.target.closest("[data-kpi-indicator]");
+  if (!button) return;
+  openKpiIndicatorModal(button.dataset.kpiIndicator);
+}
+
+function handleKpiModalDocumentClick(event) {
+  const modal = $("#kpi-indicator-modal");
+  if (!modal || modal.classList.contains("hidden")) return;
+  if (
+    event.target.matches("[data-kpi-modal-close]") ||
+    event.target.id === "kpi-indicator-modal"
+  ) {
+    closeKpiIndicatorModal();
+  }
+}
+
+function openKpiIndicatorModal(indicatorKey) {
+  const indicator = getKpiIndicatorDefinition(indicatorKey);
+  if (!indicator) return;
+  const record = getSelectedKpiRecord();
+  const breakdown = getKpiIndicatorBreakdown(record);
+  const hasBreakdown = hasKpiIndicatorBreakdownValue(breakdown, indicator.key);
+  const total = getKpiAspectValue(record, indicator.totalField, indicator.key);
+  const lowClass = total !== null && total < 50 ? " is-low" : "";
+
+  let modal = $("#kpi-indicator-modal");
+  if (!modal) {
+    modal = document.createElement("div");
+    modal.id = "kpi-indicator-modal";
+    modal.className = "kpi-modal hidden";
+    document.body.appendChild(modal);
+  }
+
+  modal.innerHTML = `
+    <div class="kpi-modal-card" role="dialog" aria-modal="true" aria-labelledby="kpi-modal-title">
+      <button class="kpi-modal-close" type="button" data-kpi-modal-close aria-label="Tutup modal">&times;</button>
+      <div class="kpi-modal-heading">
+        <p>Breakdown sub-poin KPI</p>
+        <h2 id="kpi-modal-title">${escapeHtml(indicator.label)}</h2>
+      </div>
+      ${
+        hasBreakdown
+          ? buildKpiIndicatorModalGroups(indicator, breakdown)
+          : `<div class="kpi-modal-empty">Belum ada breakdown untuk indikator ini.</div>`
+      }
+      <div class="kpi-modal-total${lowClass}">
+        <span>Total ${escapeHtml(indicator.label)}</span>
+        <strong>${kpiFormatPercent(total)}</strong>
+      </div>
+      <div class="kpi-modal-actions">
+        <button class="button secondary" type="button" data-kpi-modal-close>Tutup</button>
+      </div>
+    </div>
+  `;
+  modal.classList.remove("hidden");
+}
+
+function buildKpiIndicatorModalGroups(indicator, breakdown) {
+  return indicator.groups
+    .map((group) => `
+      <section class="kpi-modal-group">
+        <h3>${escapeHtml(group.name)}</h3>
+        <div>
+          ${group.items
+            .map((item) => {
+              const value = getKpiBreakdownItemValue(breakdown, indicator.key, item.key);
+              return `
+                <div class="kpi-modal-row">
+                  <span>${escapeHtml(item.label)}</span>
+                  <strong>${kpiFormatBreakdownValue(value)}</strong>
+                </div>
+              `;
+            })
+            .join("")}
+        </div>
+      </section>
+    `)
+    .join("");
+}
+
+function closeKpiIndicatorModal() {
+  $("#kpi-indicator-modal")?.classList.add("hidden");
 }
 
 function renderKpiLaggingIndicators(record) {
@@ -660,8 +919,8 @@ function buildKpiExportMetric(label, value, hint) {
 }
 
 function buildKpiExportAspectRows(record) {
-  return KPI_ASPECTS.map(([label, key]) => {
-    const value = kpiNumberOrNull(record?.[key]);
+  return KPI_ASPECTS.map(([label, key, indicatorKey]) => {
+    const value = getKpiAspectValue(record, key, indicatorKey);
     const percent = value === null ? 0 : kpiClampPercent(value);
     const lowClass = value !== null && value < 50 ? " is-low" : "";
     return `
@@ -965,6 +1224,7 @@ function loadKpiRecordIntoForm() {
 
   const record = getSelectedKpiRecord();
   form.reset();
+  renderKpiBreakdownInputs();
   form.elements.id.value = record?.id || "";
   form.elements.triwulan.value = String(quarter);
   form.elements.month.value = String(month);
@@ -986,6 +1246,7 @@ function loadKpiRecordIntoForm() {
   KPI_LAGGING_ITEMS.forEach(([, key, fallbackKey]) =>
     setKpiFormValue(form, key, getKpiIndicatorValue(record, key, fallbackKey))
   );
+  setKpiBreakdownFormValues(form, record);
 
   state.editingKpiRecordId = record?.id || null;
   $("#kpi-save-data").textContent = record ? "Update Data" : "Simpan Data";
@@ -1041,6 +1302,20 @@ function syncKpiCalculatedFields({ resetAutoTotal = false } = {}) {
   ].reduce((sum, field) => sum + (kpiInputNumber(form.elements[field]) || 0), 0);
   $("#kpi-form-total-employees").value =
     employeeTotal > 0 ? kpiFormatInteger(employeeTotal) : "-";
+
+  const breakdown = buildKpiBreakdownFromForm(form);
+  const totals = calculateKpiIndicatorTotals(breakdown);
+  KPI_INDICATOR_BREAKDOWN.forEach((indicator) => {
+    const totalElement = document.querySelector(
+      `[data-kpi-breakdown-total="${indicator.key}"]`
+    );
+    if (!totalElement) return;
+    totalElement.textContent = `Total: ${kpiFormatPercent(totals[indicator.key])}`;
+    totalElement.classList.toggle(
+      "is-low",
+      totals[indicator.key] !== null && totals[indicator.key] < 50
+    );
+  });
 }
 
 async function handleKpiDataSubmit(event) {
@@ -1114,6 +1389,13 @@ function buildKpiPayload(form) {
       : kpiNumberOrNull(formData.get(field));
   });
 
+  const breakdown = buildKpiBreakdownFromForm(form);
+  const totals = calculateKpiIndicatorTotals(breakdown);
+  payload.kpi_indicator_breakdown = hasAnyKpiBreakdownValue(breakdown) ? breakdown : null;
+  KPI_INDICATOR_BREAKDOWN.forEach((indicator) => {
+    payload[indicator.totalField] = totals[indicator.key];
+  });
+
   const category = getKpiCategory(payload.kpi_keseluruhan);
   payload.kpi_kategori = category?.label || null;
 
@@ -1143,6 +1425,11 @@ function validateKpiPayload(payload) {
     const value = payload[field];
     if (value !== null && value < 0) {
       return "Data jumlah, pendapatan, jam kerja, dan kejadian tidak boleh negatif.";
+    }
+  }
+  for (const value of listKpiBreakdownValues(payload.kpi_indicator_breakdown)) {
+    if (value !== null && value < 0) {
+      return "Nilai sub-poin KPI tidak boleh negatif.";
     }
   }
   if (payload.leading_brevet_k3 !== null && payload.leading_brevet_k3 > 7) {
@@ -1193,6 +1480,125 @@ function getKpiKseValue(record) {
 
 function getKpiIndicatorValue(record, key, fallbackKey) {
   return kpiNumberOrNull(record?.[key]) ?? kpiNumberOrNull(record?.[fallbackKey]);
+}
+
+function getKpiIndicatorDefinition(indicatorKey) {
+  return KPI_INDICATOR_BREAKDOWN.find((indicator) => indicator.key === indicatorKey) || null;
+}
+
+function kpiBreakdownInputName(indicatorKey, itemKey) {
+  return `kpi_breakdown__${indicatorKey}__${itemKey}`;
+}
+
+function getKpiIndicatorBreakdown(record) {
+  const raw = record?.kpi_indicator_breakdown;
+  if (!raw) return null;
+  if (typeof raw === "string") {
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return null;
+    }
+  }
+  return typeof raw === "object" ? raw : null;
+}
+
+function buildKpiBreakdownFromForm(form) {
+  const breakdown = {};
+  KPI_INDICATOR_BREAKDOWN.forEach((indicator) => {
+    breakdown[indicator.key] = {
+      label: indicator.label,
+      groups: {}
+    };
+    indicator.groups.forEach((group) => {
+      breakdown[indicator.key].groups[group.name] = group.items.map((item) => {
+        const input = form.elements.namedItem(kpiBreakdownInputName(indicator.key, item.key));
+        return {
+          key: item.key,
+          name: item.label,
+          value: kpiNumberOrNull(input?.value)
+        };
+      });
+    });
+  });
+  return breakdown;
+}
+
+function setKpiBreakdownFormValues(form, record) {
+  renderKpiBreakdownInputs();
+  const breakdown = getKpiIndicatorBreakdown(record);
+  KPI_INDICATOR_BREAKDOWN.forEach((indicator) => {
+    indicator.groups.forEach((group) => {
+      group.items.forEach((item) => {
+        const input = form.elements.namedItem(kpiBreakdownInputName(indicator.key, item.key));
+        if (!input) return;
+        const value = getKpiBreakdownItemValue(breakdown, indicator.key, item.key);
+        input.value = value ?? "";
+      });
+    });
+  });
+}
+
+function getKpiBreakdownItemValue(breakdown, indicatorKey, itemKey) {
+  const groups = breakdown?.[indicatorKey]?.groups;
+  if (!groups || typeof groups !== "object") return null;
+  for (const items of Object.values(groups)) {
+    if (!Array.isArray(items)) continue;
+    const found = items.find((item) => item?.key === itemKey || item?.name === itemKey);
+    if (found) return kpiNumberOrNull(found.value);
+  }
+  return null;
+}
+
+function sumSubIndicators(items) {
+  if (!Array.isArray(items)) return null;
+  const validValues = items
+    .map((item) => kpiNumberOrNull(item?.value))
+    .filter((value) => value !== null);
+  if (!validValues.length) return null;
+  return validValues.reduce((sum, value) => sum + value, 0);
+}
+
+function sumKpiIndicatorGroups(indicatorBreakdown) {
+  const groups = indicatorBreakdown?.groups;
+  if (!groups || typeof groups !== "object") return null;
+  const groupTotals = Object.values(groups)
+    .map((items) => sumSubIndicators(items))
+    .filter((value) => value !== null);
+  if (!groupTotals.length) return null;
+  return groupTotals.reduce((sum, value) => sum + value, 0);
+}
+
+function calculateKpiIndicatorTotals(breakdown) {
+  return KPI_INDICATOR_BREAKDOWN.reduce((totals, indicator) => {
+    totals[indicator.key] = sumKpiIndicatorGroups(breakdown?.[indicator.key]);
+    return totals;
+  }, {});
+}
+
+function hasKpiIndicatorBreakdownValue(breakdown, indicatorKey) {
+  return calculateKpiIndicatorTotals(breakdown)[indicatorKey] !== null;
+}
+
+function hasAnyKpiBreakdownValue(breakdown) {
+  return Object.values(calculateKpiIndicatorTotals(breakdown)).some((value) => value !== null);
+}
+
+function getKpiAspectValue(record, totalField, indicatorKey) {
+  const breakdown = getKpiIndicatorBreakdown(record);
+  const total = calculateKpiIndicatorTotals(breakdown)[indicatorKey];
+  return total ?? kpiNumberOrNull(record?.[totalField]);
+}
+
+function listKpiBreakdownValues(breakdown) {
+  if (!breakdown || typeof breakdown !== "object") return [];
+  return KPI_INDICATOR_BREAKDOWN.flatMap((indicator) =>
+    indicator.groups.flatMap((group) =>
+      group.items.map((item) =>
+        getKpiBreakdownItemValue(breakdown, indicator.key, item.key)
+      )
+    )
+  );
 }
 
 function setKpiFormValue(form, field, value) {
@@ -1314,6 +1720,11 @@ function formatKpiIndicatorValue(key, value) {
   if (key === "leading_brevet_k3") return `${kpiFormatInteger(number)}/7`;
   if (KPI_INDICATOR_PERCENT_FIELDS.has(key)) return kpiFormatPercent(number);
   return kpiFormatPlain(number);
+}
+
+function kpiFormatBreakdownValue(value) {
+  const number = kpiNumberOrNull(value);
+  return number === null ? "-" : kpiFormatDecimal(number, number % 1 ? 1 : 0);
 }
 
 function kpiFormatInteger(value) {
