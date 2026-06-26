@@ -265,6 +265,58 @@ const KPI_EMPLOYEE_ITEMS = [
   ["LS", "pegawai_ls", "#cbd5e1", "third_party_employees"]
 ];
 
+const KPI_EXCEL_SHEET_ALIASES = {
+  period: ["period", "periode"],
+  summary: ["kpi summary", "summary", "ringkasan kpi", "data ringkasan kpi"],
+  breakdown: [
+    "kpi indicator breakdown",
+    "capaian kpi per indikator",
+    "breakdown kpi",
+    "kpi breakdown"
+  ],
+  hse: ["hse performance", "hse", "k3l", "k3"],
+  employees: [
+    "employee composition",
+    "komposisi pegawai",
+    "jumlah pegawai",
+    "data jumlah pegawai"
+  ]
+};
+
+const KPI_IMPORT_FIELD_ALIASES = {
+  piutang_pad_hari: ["piutang & pad", "piutang pad", "piutang pad hari", "piutang & pad hari"],
+  ebitda_portfolio: ["ebitda portofolio", "ebitda"],
+  portfolio_revenue: ["pendapatan portofolio", "revenue portofolio"],
+  customer_retention: ["customer retention"],
+  kpi_keseluruhan: ["kpi keseluruhan", "skor kpi keseluruhan"],
+  total_work_hours: ["safety man hours", "total jam kerja", "jam kerja"],
+  kpi_kse: ["hse performance", "kpi hse", "kpi kse"],
+  lagging_kematian: ["kematian", "fatality"],
+  lagging_penanganan_medis: ["penanganan medis", "medical treatment"],
+  lagging_p3k: ["p3k", "first aid"],
+  lagging_kejadian_berdampak_lingkungan: [
+    "kejadian berdampak lingkungan",
+    "kejadian lingkungan",
+    "environmental incident"
+  ],
+  leading_tinjauan_manajemen: ["tinjauan manajemen"],
+  leading_hse_talk: ["hse talk"],
+  leading_hse_visit: ["hse visit"],
+  leading_po_terintegrasi_k3l: ["po terintegrasi k3l", "po training gas k3l"],
+  leading_pro_shot: ["pro-shot", "pro shot"],
+  leading_tinjauan_ipprk3l: ["tinjauan ipprk3l", "tinjauan pippik3l"],
+  leading_promosi_edukasi_k3l: ["promosi & edukasi k3l", "promosi edukasi k3l"],
+  leading_pelatihan_safety_leadership: ["pelatihan safety leadership"],
+  leading_brevet_k3: ["brevet k3"],
+  leading_hse_orientation: ["hse orientation"],
+  leading_jsa: ["jsa"],
+  leading_mcu: ["mcu"],
+  permanent_employees: ["pegawai tetap"],
+  temporary_employees: ["pegawai tidak tetap"],
+  project_employees: ["ptt proyek / non-npp", "ptt proyek non npp"],
+  pegawai_ls: ["ls", "tenaga kerja pihak ketiga"]
+};
+
 function bindKpiDashboardEvents() {
   populateKpiPeriodControls();
   renderKpiBreakdownInputs();
@@ -278,6 +330,10 @@ function bindKpiDashboardEvents() {
   $("#kpi-data-form")?.addEventListener("input", handleKpiFormInput);
   $("#kpi-data-form")?.addEventListener("change", handleKpiFormChange);
   $("#kpi-aspect-bars")?.addEventListener("click", handleKpiIndicatorClick);
+  $("#kpi-excel-file")?.addEventListener("change", handleKpiExcelFileChange);
+  $("#kpi-download-template")?.addEventListener("click", handleKpiTemplateDownload);
+  $("#kpi-import-reset")?.addEventListener("click", resetKpiImportState);
+  $("#kpi-import-save")?.addEventListener("click", handleKpiImportSave);
   $("#kpi-cancel-edit")?.addEventListener("click", () =>
     loadKpiRecordIntoForm()
   );
@@ -418,7 +474,10 @@ function renderKpiDashboard() {
   setText("#kpi-card-ebitda", kpiFormatMoneyMillion(record?.ebitda_portfolio));
   setText("#kpi-card-revenue", kpiFormatMoneyMillion(record?.portfolio_revenue));
   setText("#kpi-card-retention", kpiFormatPercent(record?.customer_retention));
-  setText("#kpi-card-work-hours", kpiFormatHours(record?.total_work_hours));
+  setText(
+    "#kpi-card-work-hours",
+    kpiFormatHours(getCumulativeSafetyManHours(state.selectedKpiYear, state.selectedKpiMonth))
+  );
   setText("#kpi-card-kse", kpiFormatPercent(getKpiKseValue(record)));
   setText("#kpi-overall-value", kpiFormatPercent(kpiOverall));
   setText("#kpi-category-label", kpiCategory ? `Kategori: ${kpiCategory.label}` : "Kategori: -");
@@ -590,6 +649,712 @@ function buildKpiIndicatorModalGroups(indicator, breakdown) {
 
 function closeKpiIndicatorModal() {
   $("#kpi-indicator-modal")?.classList.add("hidden");
+}
+
+async function handleKpiExcelFileChange(event) {
+  if (!requireAdmin()) return;
+  const file = event.target.files?.[0];
+  if (!file) return;
+  resetKpiImportState({ keepFileInput: true });
+
+  const extension = file.name.split(".").pop()?.toLowerCase();
+  if (!["xlsx", "xls"].includes(extension)) {
+    setKpiImportStatus("Format file harus .xlsx atau .xls.", true);
+    return;
+  }
+  if (!window.XLSX) {
+    setKpiImportStatus(
+      "Library pembaca Excel belum termuat. Refresh halaman lalu coba lagi.",
+      true
+    );
+    return;
+  }
+
+  setKpiImportStatus("Reading file...");
+  try {
+    const buffer = await file.arrayBuffer();
+    const workbook = window.XLSX.read(buffer, { type: "array" });
+    const parsed = parseKpiImportWorkbook(workbook, file.name);
+    state.kpiImportPayload = parsed.payload;
+    state.kpiImportFileName = file.name;
+    state.kpiImportErrors = parsed.errors;
+    state.kpiImportWarnings = parsed.warnings;
+    renderKpiImportPreview(parsed);
+    $("#kpi-import-reset").disabled = false;
+    $("#kpi-import-save").disabled = parsed.errors.length > 0;
+    setKpiImportStatus(
+      parsed.errors.length
+        ? "Preview memiliki error. Perbaiki file Excel sebelum simpan."
+        : "Preview ready. Periksa data lalu klik Simpan ke Dashboard.",
+      parsed.errors.length > 0
+    );
+  } catch (error) {
+    state.kpiImportPayload = null;
+    renderKpiImportPreview(null);
+    setKpiImportStatus(`Gagal membaca Excel: ${readableError(error)}`, true);
+    $("#kpi-import-reset").disabled = false;
+    $("#kpi-import-save").disabled = true;
+  }
+}
+
+function handleKpiTemplateDownload() {
+  if (!window.XLSX) {
+    showToast("Library Excel belum termuat. Refresh halaman lalu coba lagi.", true);
+    return;
+  }
+  const workbook = window.XLSX.utils.book_new();
+  const selectedMonth = state.selectedKpiMonth || 12;
+  const selectedQuarter = normalizeKpiQuarter(state.selectedKpiQuarter, selectedMonth);
+  const selectedYear = state.selectedKpiYear || new Date().getFullYear();
+
+  window.XLSX.utils.book_append_sheet(
+    workbook,
+    window.XLSX.utils.json_to_sheet([
+      {
+        Triwulan: KPI_QUARTERS[selectedQuarter - 1]?.label || selectedQuarter,
+        Bulan: KPI_MONTHS[selectedMonth - 1] || selectedMonth,
+        Tahun: selectedYear
+      }
+    ]),
+    "Period"
+  );
+  window.XLSX.utils.book_append_sheet(
+    workbook,
+    window.XLSX.utils.json_to_sheet([
+      {
+        "Piutang & PAD": null,
+        "EBITDA Portofolio": null,
+        "Pendapatan Portofolio": null,
+        "Customer Retention": null,
+        "KPI Keseluruhan": null
+      }
+    ]),
+    "KPI Summary"
+  );
+  window.XLSX.utils.book_append_sheet(
+    workbook,
+    window.XLSX.utils.json_to_sheet(buildKpiTemplateBreakdownRows()),
+    "KPI Indicator Breakdown"
+  );
+  window.XLSX.utils.book_append_sheet(
+    workbook,
+    window.XLSX.utils.json_to_sheet([
+      {
+        "Safety Man Hours": null,
+        "HSE Performance": null,
+        Kematian: null,
+        "Penanganan Medis": null,
+        P3K: null,
+        "Kejadian Berdampak Lingkungan": null,
+        "Tinjauan Manajemen": null,
+        "HSE Talk": null,
+        "HSE Visit": null,
+        "PO Terintegrasi K3L": null,
+        "PRO-SHOT": null,
+        "Tinjauan IPPRK3L": null,
+        "Promosi & Edukasi K3L": null,
+        "Pelatihan Safety Leadership": null,
+        "Brevet K3": null,
+        "HSE Orientation": null,
+        JSA: null,
+        MCU: null
+      }
+    ]),
+    "HSE Performance"
+  );
+  window.XLSX.utils.book_append_sheet(
+    workbook,
+    window.XLSX.utils.json_to_sheet([
+      {
+        "Pegawai Tetap": null,
+        "Pegawai Tidak Tetap": null,
+        "PTT Proyek / Non-NPP": null,
+        LS: null
+      }
+    ]),
+    "Employee Composition"
+  );
+  window.XLSX.writeFile(
+    workbook,
+    `Template-Dashboard-KPI-HSE-AURA-${selectedYear}.xlsx`
+  );
+}
+
+async function handleKpiImportSave() {
+  if (!requireAdmin()) return;
+  const payload = state.kpiImportPayload;
+  if (!payload) {
+    showToast("Belum ada data Excel valid untuk disimpan.", true);
+    return;
+  }
+  const validationError = validateKpiPayload(payload);
+  if (validationError) {
+    showToast(validationError, true);
+    return;
+  }
+
+  await loadKpiDashboardData({ force: true });
+  const existing = getKpiRecord(payload.year, payload.month);
+  if (existing) {
+    const confirmed = window.confirm(
+      `Data untuk periode ${KPI_MONTHS[payload.month - 1]} ${payload.year} sudah ada. Apakah ingin menimpa data lama?`
+    );
+    if (!confirmed) return;
+  }
+
+  setLoading(true, existing ? "Mengupdate data dari Excel..." : "Menyimpan data dari Excel...");
+  setKpiImportStatus("Saving...");
+  try {
+    const result = existing?.id
+      ? await db
+          .from(DASHBOARD_MONTHLY_TABLE)
+          .update(payload)
+          .eq("id", existing.id)
+          .select()
+          .single()
+      : await db
+          .from(DASHBOARD_MONTHLY_TABLE)
+          .insert(payload)
+          .select()
+          .single();
+    if (result.error) throw result.error;
+
+    await loadKpiDashboardData({ force: true });
+    state.selectedKpiQuarter = payload.triwulan;
+    state.selectedKpiMonth = payload.month;
+    state.selectedKpiYear = payload.year;
+    populateKpiPeriodControls();
+    renderKpiDashboard();
+    loadKpiRecordIntoForm();
+    setKpiImportStatus("Success. Data Excel berhasil disimpan ke Dashboard.");
+    showToast(`Import Excel ${KPI_MONTHS[payload.month - 1]} ${payload.year} berhasil.`);
+  } catch (error) {
+    setKpiImportStatus(`Error saat menyimpan: ${readableError(error)}`, true);
+    showToast(`Gagal menyimpan import Excel: ${readableError(error)}`, true);
+  } finally {
+    setLoading(false);
+  }
+}
+
+function resetKpiImportState({ keepFileInput = false } = {}) {
+  state.kpiImportPayload = null;
+  state.kpiImportFileName = null;
+  state.kpiImportErrors = [];
+  state.kpiImportWarnings = [];
+  if (!keepFileInput && $("#kpi-excel-file")) $("#kpi-excel-file").value = "";
+  if ($("#kpi-import-save")) $("#kpi-import-save").disabled = true;
+  if ($("#kpi-import-reset")) $("#kpi-import-reset").disabled = true;
+  renderKpiImportPreview(null);
+  setKpiImportStatus("Belum ada file dipilih.");
+}
+
+function setKpiImportStatus(message, isError = false) {
+  const element = $("#kpi-import-status");
+  if (!element) return;
+  element.textContent = message;
+  element.classList.toggle("is-error", Boolean(isError));
+}
+
+function buildKpiTemplateBreakdownRows() {
+  return KPI_INDICATOR_BREAKDOWN.flatMap((indicator) =>
+    indicator.groups.flatMap((group) =>
+      group.items.map((item) => ({
+        "Indicator Key": indicator.key,
+        "Indicator Name": indicator.label,
+        "Group Name": group.name,
+        "Sub Indicator Name": item.label,
+        Value: null
+      }))
+    )
+  );
+}
+
+function parseKpiImportWorkbook(workbook, fileName) {
+  const sheetNames = workbook.SheetNames || [];
+  if (!sheetNames.length) throw new Error("Workbook Excel tidak memiliki sheet.");
+
+  const templateSheetCount = Object.values(KPI_EXCEL_SHEET_ALIASES).filter((aliases) =>
+    findKpiSheetName(workbook, aliases)
+  ).length;
+  const parsed =
+    templateSheetCount >= 2
+      ? parseKpiTemplateWorkbook(workbook)
+      : parseKpiSingleSheetWorkbook(workbook);
+  parsed.payload = normalizeKpiImportPayload(parsed.payload, fileName);
+  parsed.errors.push(...validateKpiImportPreview(parsed.payload));
+
+  return parsed;
+}
+
+function parseKpiTemplateWorkbook(workbook) {
+  const errors = [];
+  const warnings = [];
+  const requiredSheets = [
+    ["Period", "period"],
+    ["KPI Summary", "summary"],
+    ["KPI Indicator Breakdown", "breakdown"],
+    ["HSE Performance", "hse"],
+    ["Employee Composition", "employees"]
+  ];
+  const sheetMap = {};
+  requiredSheets.forEach(([label, key]) => {
+    const sheetName = findKpiSheetName(workbook, KPI_EXCEL_SHEET_ALIASES[key]);
+    if (!sheetName) errors.push(`Sheet ${label} belum ditemukan.`);
+    sheetMap[key] = sheetName;
+  });
+  if (errors.length) return { payload: {}, errors, warnings, format: "Template AURA" };
+
+  const period = parseKpiPeriodSheet(workbook.Sheets[sheetMap.period]);
+  const summary = parseKpiWideSheet(workbook.Sheets[sheetMap.summary]);
+  const hse = parseKpiWideSheet(workbook.Sheets[sheetMap.hse]);
+  const employees = parseKpiWideSheet(workbook.Sheets[sheetMap.employees]);
+  const breakdown = parseKpiBreakdownSheet(workbook.Sheets[sheetMap.breakdown]);
+  const totals = calculateKpiIndicatorTotals(breakdown);
+
+  const payload = {
+    triwulan: period.triwulan,
+    month: period.month,
+    year: period.year,
+    piutang_pad_hari: getKpiWideValue(summary, "piutang_pad_hari"),
+    ebitda_portfolio: getKpiWideValue(summary, "ebitda_portfolio"),
+    portfolio_revenue: getKpiWideValue(summary, "portfolio_revenue"),
+    customer_retention: getKpiWideValue(summary, "customer_retention"),
+    kpi_keseluruhan: getKpiWideValue(summary, "kpi_keseluruhan"),
+    total_work_hours: getKpiWideValue(hse, "total_work_hours"),
+    kpi_kse: getKpiWideValue(hse, "kpi_kse"),
+    lagging_kematian: getKpiWideValue(hse, "lagging_kematian"),
+    lagging_penanganan_medis: getKpiWideValue(hse, "lagging_penanganan_medis"),
+    lagging_p3k: getKpiWideValue(hse, "lagging_p3k"),
+    lagging_kejadian_berdampak_lingkungan: getKpiWideValue(
+      hse,
+      "lagging_kejadian_berdampak_lingkungan"
+    ),
+    leading_tinjauan_manajemen: getKpiWideValue(hse, "leading_tinjauan_manajemen"),
+    leading_hse_talk: getKpiWideValue(hse, "leading_hse_talk"),
+    leading_hse_visit: getKpiWideValue(hse, "leading_hse_visit"),
+    leading_po_terintegrasi_k3l: getKpiWideValue(hse, "leading_po_terintegrasi_k3l"),
+    leading_pro_shot: getKpiWideValue(hse, "leading_pro_shot"),
+    leading_tinjauan_ipprk3l: getKpiWideValue(hse, "leading_tinjauan_ipprk3l"),
+    leading_promosi_edukasi_k3l: getKpiWideValue(hse, "leading_promosi_edukasi_k3l"),
+    leading_pelatihan_safety_leadership: getKpiWideValue(
+      hse,
+      "leading_pelatihan_safety_leadership"
+    ),
+    leading_brevet_k3: getKpiWideValue(hse, "leading_brevet_k3"),
+    leading_hse_orientation: getKpiWideValue(hse, "leading_hse_orientation"),
+    leading_jsa: getKpiWideValue(hse, "leading_jsa"),
+    leading_mcu: getKpiWideValue(hse, "leading_mcu"),
+    permanent_employees: getKpiWideValue(employees, "permanent_employees"),
+    temporary_employees: getKpiWideValue(employees, "temporary_employees"),
+    project_employees: getKpiWideValue(employees, "project_employees"),
+    pegawai_ls: getKpiWideValue(employees, "pegawai_ls"),
+    kpi_indicator_breakdown: hasAnyKpiBreakdownValue(breakdown) ? breakdown : null
+  };
+  KPI_INDICATOR_BREAKDOWN.forEach((indicator) => {
+    payload[indicator.totalField] = totals[indicator.key];
+  });
+
+  return { payload, errors, warnings, format: "Template AURA" };
+}
+
+function parseKpiSingleSheetWorkbook(workbook) {
+  const sheet = workbook.Sheets[workbook.SheetNames[0]];
+  const rows = sheetToJsonRows(sheet);
+  const warnings = ["Format single sheet terdeteksi. Pastikan kolom kategori/indikator/nilai sudah benar."];
+  if (!rows.length) {
+    return {
+      payload: {},
+      errors: ["Sheet pertama kosong."],
+      warnings,
+      format: "Single Sheet"
+    };
+  }
+
+  const payload = {};
+  const breakdown = buildEmptyKpiBreakdown();
+  const firstRow = rows[0];
+  payload.triwulan = parseKpiQuarterValue(getRowValue(firstRow, ["triwulan", "quarter"]));
+  payload.month = parseKpiMonthValue(getRowValue(firstRow, ["bulan", "month"]));
+  payload.year = kpiIntegerOrNull(parseExcelNumber(getRowValue(firstRow, ["tahun", "year"])));
+
+  const looksWide = Object.keys(KPI_IMPORT_FIELD_ALIASES).some(
+    (field) => getKpiWideValue(firstRow, field) !== null
+  );
+  if (looksWide) {
+    Object.keys(KPI_IMPORT_FIELD_ALIASES).forEach((field) => {
+      payload[field] = getKpiWideValue(firstRow, field);
+    });
+  } else {
+    rows.forEach((row) => {
+      const nameParts = [
+        getRowValue(row, ["kategori", "category"]),
+        getRowValue(row, ["indikator", "indicator"]),
+        getRowValue(row, ["sub_indikator", "sub indicator", "sub indikator", "sub_indicator"])
+      ].filter(Boolean);
+      const label = normalizeExcelLabel(nameParts.join(" "));
+      const value = parseExcelNumber(getRowValue(row, ["nilai", "value"]));
+      if (!label) return;
+
+      const directField = findKpiFieldByLabel(label);
+      if (directField) {
+        payload[directField] = value;
+        return;
+      }
+      assignKpiBreakdownByLabel(breakdown, label, value);
+    });
+  }
+
+  const totals = calculateKpiIndicatorTotals(breakdown);
+  payload.kpi_indicator_breakdown = hasAnyKpiBreakdownValue(breakdown) ? breakdown : null;
+  KPI_INDICATOR_BREAKDOWN.forEach((indicator) => {
+    if (payload[indicator.totalField] === undefined) {
+      payload[indicator.totalField] = totals[indicator.key];
+    }
+  });
+
+  return { payload, errors: [], warnings, format: "Single Sheet" };
+}
+
+function normalizeKpiImportPayload(payload, fileName) {
+  const normalized = {
+    triwulan: kpiIntegerOrNull(payload.triwulan),
+    month: kpiIntegerOrNull(payload.month),
+    year: kpiIntegerOrNull(payload.year),
+    notes: `Import Excel: ${fileName}`,
+    updated_by: state.session?.user?.email || null,
+    updated_at: new Date().toISOString()
+  };
+  [...KPI_PERCENT_FIELDS, ...KPI_NON_NEGATIVE_FIELDS].forEach((field) => {
+    if (field in normalized) return;
+    normalized[field] = KPI_INTEGER_FIELDS.includes(field)
+      ? kpiIntegerOrNull(payload[field])
+      : kpiNumberOrNull(payload[field]);
+  });
+  normalized.kpi_keseluruhan =
+    kpiNumberOrNull(payload.kpi_keseluruhan) ?? kpiNumberOrNull(payload.kpi_overall_score);
+  normalized.kpi_kse = kpiNumberOrNull(payload.kpi_kse) ?? kpiNumberOrNull(payload.k3l_score);
+  normalized.kpi_indicator_breakdown = payload.kpi_indicator_breakdown || null;
+
+  const totals = calculateKpiIndicatorTotals(normalized.kpi_indicator_breakdown);
+  KPI_INDICATOR_BREAKDOWN.forEach((indicator) => {
+    normalized[indicator.totalField] =
+      totals[indicator.key] ?? kpiNumberOrNull(payload[indicator.totalField]);
+  });
+  normalized.kpi_kategori = getKpiCategory(normalized.kpi_keseluruhan)?.label || null;
+  return normalized;
+}
+
+function validateKpiImportPreview(payload) {
+  const errors = [];
+  if (!Number.isInteger(payload.triwulan) || payload.triwulan < 1 || payload.triwulan > 4) {
+    errors.push("Triwulan belum ditemukan atau tidak valid.");
+  }
+  if (!Number.isInteger(payload.month) || payload.month < 1 || payload.month > 12) {
+    errors.push("Bulan belum ditemukan atau tidak valid.");
+  }
+  if (!Number.isInteger(payload.year) || payload.year < 2020 || payload.year > 2100) {
+    errors.push("Kolom Tahun belum ditemukan atau tidak valid.");
+  }
+  const validation = validateKpiPayload({
+    ...payload,
+    month: payload.month,
+    triwulan: payload.triwulan,
+    year: payload.year
+  });
+  if (validation) errors.push(validation);
+  return [...new Set(errors)];
+}
+
+function renderKpiImportPreview(parsed) {
+  const container = $("#kpi-import-preview");
+  if (!container) return;
+  if (!parsed) {
+    container.classList.add("hidden");
+    container.innerHTML = "";
+    return;
+  }
+  const { payload, errors, warnings, format } = parsed;
+  const breakdownTotals = calculateKpiIndicatorTotals(payload.kpi_indicator_breakdown);
+  const blankCount = countKpiImportBlankValues(payload);
+  container.classList.remove("hidden");
+  container.innerHTML = `
+    <div class="kpi-import-alerts">
+      ${errors.map((error) => `<div class="kpi-import-error">${escapeHtml(error)}</div>`).join("")}
+      ${warnings.map((warning) => `<div class="kpi-import-warning">${escapeHtml(warning)}</div>`).join("")}
+      ${
+        blankCount
+          ? `<div class="kpi-import-warning">${blankCount} nilai masih kosong dan akan tampil sebagai "-".</div>`
+          : ""
+      }
+    </div>
+    <div class="kpi-import-preview-grid">
+      ${buildKpiImportPreviewCard("Periode", [
+        ["Format", format],
+        ["Triwulan", KPI_QUARTERS[payload.triwulan - 1]?.label || "-"],
+        ["Bulan", KPI_MONTHS[payload.month - 1] || "-"],
+        ["Tahun", payload.year || "-"]
+      ])}
+      ${buildKpiImportPreviewCard("KPI Summary", [
+        ["Piutang & PAD", kpiFormatDays(payload.piutang_pad_hari)],
+        ["EBITDA Portofolio", kpiFormatMoneyMillion(payload.ebitda_portfolio)],
+        ["Pendapatan Portofolio", kpiFormatMoneyMillion(payload.portfolio_revenue)],
+        ["Customer Retention", kpiFormatPercent(payload.customer_retention)],
+        ["KPI Keseluruhan", kpiFormatPercent(payload.kpi_keseluruhan)]
+      ])}
+      ${buildKpiImportPreviewCard(
+        "Capaian KPI per Indikator",
+        KPI_INDICATOR_BREAKDOWN.map((indicator) => [
+          indicator.label,
+          kpiFormatPercent(breakdownTotals[indicator.key] ?? payload[indicator.totalField])
+        ])
+      )}
+      ${buildKpiImportPreviewCard("Lagging Indicator", KPI_LAGGING_ITEMS.map(([label, key, fallbackKey]) => [
+        label,
+        formatKpiIndicatorValue(key, getKpiIndicatorValue(payload, key, fallbackKey))
+      ]))}
+      ${buildKpiImportPreviewCard("Leading Indicator", KPI_LEADING_ITEMS.map(([label, key]) => [
+        label,
+        formatKpiIndicatorValue(key, payload[key])
+      ]))}
+      ${buildKpiImportPreviewCard("Komposisi Pegawai", KPI_EMPLOYEE_ITEMS.map(([label, key, , fallbackKey]) => [
+        label,
+        kpiFormatInteger(getKpiIndicatorValue(payload, key, fallbackKey))
+      ]))}
+    </div>
+  `;
+}
+
+function buildKpiImportPreviewCard(title, rows) {
+  return `
+    <section class="kpi-import-preview-card">
+      <h3>${escapeHtml(title)}</h3>
+      <div>
+        ${rows
+          .map(([label, value]) => `
+            <p>
+              <span>${escapeHtml(label)}</span>
+              <strong>${escapeHtml(value ?? "-")}</strong>
+            </p>
+          `)
+          .join("")}
+      </div>
+    </section>
+  `;
+}
+
+function findKpiSheetName(workbook, aliases) {
+  return (workbook.SheetNames || []).find((sheetName) =>
+    aliases.some((alias) => normalizeExcelLabel(sheetName) === normalizeExcelLabel(alias))
+  );
+}
+
+function sheetToJsonRows(sheet) {
+  return window.XLSX.utils.sheet_to_json(sheet, {
+    defval: null,
+    raw: false
+  });
+}
+
+function parseKpiPeriodSheet(sheet) {
+  const rows = sheetToJsonRows(sheet);
+  const row = rows[0] || {};
+  let triwulan = parseKpiQuarterValue(getRowValue(row, ["triwulan", "quarter"]));
+  let month = parseKpiMonthValue(getRowValue(row, ["bulan", "month"]));
+  let year = kpiIntegerOrNull(parseExcelNumber(getRowValue(row, ["tahun", "year"])));
+
+  if (!triwulan || !month || !year) {
+    const matrix = window.XLSX.utils.sheet_to_json(sheet, {
+      header: 1,
+      defval: null,
+      raw: false
+    });
+    matrix.forEach((line) => {
+      const key = normalizeExcelLabel(line?.[0]);
+      const value = line?.[1];
+      if (!triwulan && key === "triwulan") triwulan = parseKpiQuarterValue(value);
+      if (!month && key === "bulan") month = parseKpiMonthValue(value);
+      if (!year && key === "tahun") year = kpiIntegerOrNull(parseExcelNumber(value));
+    });
+  }
+  return { triwulan, month, year };
+}
+
+function parseKpiWideSheet(sheet) {
+  return sheetToJsonRows(sheet)[0] || {};
+}
+
+function parseKpiBreakdownSheet(sheet) {
+  const breakdown = buildEmptyKpiBreakdown();
+  sheetToJsonRows(sheet).forEach((row) => {
+    const indicatorKey =
+      normalizeKpiIndicatorKey(getRowValue(row, ["indicator key", "indicator_key"])) ||
+      findKpiIndicatorKeyByLabel(getRowValue(row, ["indicator name", "indicator", "indikator"]));
+    const subLabel = getRowValue(row, [
+      "sub indicator name",
+      "sub_indicator_name",
+      "sub indikator",
+      "sub_indikator",
+      "sub indicator"
+    ]);
+    const value = parseExcelNumber(getRowValue(row, ["value", "nilai"]));
+    if (!indicatorKey || !subLabel) return;
+    assignKpiBreakdownByLabel(breakdown, normalizeExcelLabel(subLabel), value, indicatorKey);
+  });
+  return breakdown;
+}
+
+function buildEmptyKpiBreakdown() {
+  const breakdown = {};
+  KPI_INDICATOR_BREAKDOWN.forEach((indicator) => {
+    breakdown[indicator.key] = {
+      label: indicator.label,
+      groups: {}
+    };
+    indicator.groups.forEach((group) => {
+      breakdown[indicator.key].groups[group.name] = group.items.map((item) => ({
+        key: item.key,
+        name: item.label,
+        value: null
+      }));
+    });
+  });
+  return breakdown;
+}
+
+function getKpiWideValue(row, field) {
+  const value = getRowValue(row, KPI_IMPORT_FIELD_ALIASES[field] || [field]);
+  return parseExcelNumber(value);
+}
+
+function getRowValue(row, aliases) {
+  if (!row || typeof row !== "object") return null;
+  const normalizedAliases = aliases.map(normalizeExcelLabel);
+  const entry = Object.entries(row).find(([key]) =>
+    normalizedAliases.includes(normalizeExcelLabel(key))
+  );
+  return entry ? entry[1] : null;
+}
+
+function findKpiFieldByLabel(label) {
+  return Object.entries(KPI_IMPORT_FIELD_ALIASES).find(([, aliases]) =>
+    aliases.some((alias) => label.includes(normalizeExcelLabel(alias)))
+  )?.[0] || null;
+}
+
+function normalizeKpiIndicatorKey(value) {
+  const key = normalizeExcelLabel(value).replaceAll(" ", "_");
+  return KPI_INDICATOR_BREAKDOWN.some((indicator) => indicator.key === key) ? key : "";
+}
+
+function findKpiIndicatorKeyByLabel(value) {
+  const label = normalizeExcelLabel(value);
+  return (
+    KPI_INDICATOR_BREAKDOWN.find((indicator) =>
+      label === normalizeExcelLabel(indicator.label) ||
+      label.includes(normalizeExcelLabel(indicator.label))
+    )?.key || ""
+  );
+}
+
+function assignKpiBreakdownByLabel(breakdown, label, value, preferredIndicatorKey = "") {
+  const normalizedLabel = normalizeExcelLabel(label);
+  for (const indicator of KPI_INDICATOR_BREAKDOWN) {
+    if (preferredIndicatorKey && indicator.key !== preferredIndicatorKey) continue;
+    for (const group of indicator.groups) {
+      for (const item of group.items) {
+        const itemLabel = normalizeExcelLabel(item.label);
+        if (normalizedLabel === itemLabel || normalizedLabel.includes(itemLabel)) {
+          setKpiBreakdownValue(breakdown, indicator.key, group.name, item.key, value);
+          return true;
+        }
+      }
+    }
+  }
+  return false;
+}
+
+function setKpiBreakdownValue(breakdown, indicatorKey, groupName, itemKey, value) {
+  const items = breakdown?.[indicatorKey]?.groups?.[groupName];
+  if (!Array.isArray(items)) return;
+  const item = items.find((entry) => entry.key === itemKey);
+  if (item) item.value = kpiNumberOrNull(value);
+}
+
+function parseKpiQuarterValue(value) {
+  const raw = String(value ?? "").trim().toUpperCase();
+  if (!raw) return null;
+  const roman = { I: 1, II: 2, III: 3, IV: 4 };
+  if (roman[raw]) return roman[raw];
+  const number = kpiIntegerOrNull(parseExcelNumber(raw));
+  return number >= 1 && number <= 4 ? number : null;
+}
+
+function parseKpiMonthValue(value) {
+  if (value === null || value === undefined || value === "") return null;
+  const number = kpiIntegerOrNull(parseExcelNumber(value));
+  if (number >= 1 && number <= 12) return number;
+  const normalized = normalizeExcelLabel(value);
+  const index = KPI_MONTHS.findIndex((month) => normalizeExcelLabel(month) === normalized);
+  return index >= 0 ? index + 1 : null;
+}
+
+function parseExcelNumber(value) {
+  if (value === null || value === undefined || value === "") return null;
+  if (typeof value === "number") return Number.isFinite(value) ? value : null;
+  let text = String(value).trim();
+  if (!text) return null;
+  text = text
+    .replace(/\s+/g, "")
+    .replace(/rp/gi, "")
+    .replace(/miliar|juta|million|mio|jam|hari|pegawai|%/gi, "")
+    .replace(/−/g, "-");
+  text = text.replace(/[^0-9,.\-]/g, "");
+  if (!text || text === "-") return null;
+
+  const hasComma = text.includes(",");
+  const hasDot = text.includes(".");
+  if (hasComma && hasDot) {
+    text =
+      text.lastIndexOf(",") > text.lastIndexOf(".")
+        ? text.replace(/\./g, "").replace(",", ".")
+        : text.replace(/,/g, "");
+  } else if (hasComma) {
+    text = text.replace(",", ".");
+  } else if (hasDot && /^\d{1,3}(\.\d{3})+$/.test(text)) {
+    text = text.replace(/\./g, "");
+  }
+  const number = Number(text);
+  return Number.isFinite(number) ? number : null;
+}
+
+function normalizeExcelLabel(value) {
+  return String(value ?? "")
+    .toLowerCase()
+    .replace(/&/g, " dan ")
+    .replace(/[_/():.%\-]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function countKpiImportBlankValues(payload) {
+  const fields = [
+    "piutang_pad_hari",
+    "ebitda_portfolio",
+    "portfolio_revenue",
+    "customer_retention",
+    "kpi_keseluruhan",
+    "total_work_hours",
+    "kpi_kse",
+    ...KPI_LAGGING_ITEMS.map(([, key]) => key),
+    ...KPI_LEADING_ITEMS.map(([, key]) => key),
+    ...KPI_EMPLOYEE_ITEMS.map(([, key]) => key),
+    ...KPI_INDICATOR_BREAKDOWN.map((indicator) => indicator.totalField)
+  ];
+  const blankFields = fields.filter((field) => kpiNumberOrNull(payload[field]) === null).length;
+  const blankBreakdown = listKpiBreakdownValues(payload.kpi_indicator_breakdown).filter(
+    (value) => value === null
+  ).length;
+  return blankFields + blankBreakdown;
 }
 
 function renderKpiLaggingIndicators(record) {
@@ -783,6 +1548,7 @@ function ExportDashboardReport() {
   const kpiCategory = getKpiCategory(kpiOverall);
   const employees = getKpiEmployeeExportData(record);
   const kpiTrendValues = getKpiQuarterTrendValues();
+  const safetyManHours = getCumulativeSafetyManHours(state.selectedKpiYear, state.selectedKpiMonth);
 
   const wrapper = document.createElement("div");
   wrapper.className = "dashboard-export-host";
@@ -859,7 +1625,7 @@ function ExportDashboardReport() {
         <section class="export-section export-column export-hse-column">
           <h2>HSE Performance</h2>
           <div class="export-summary-grid export-summary-grid-hse">
-            ${buildKpiExportMetric("Safety Man Hours", kpiFormatHours(record?.total_work_hours), "jam")}
+            ${buildKpiExportMetric("Safety Man Hours", kpiFormatHours(safetyManHours), "jam")}
             ${buildKpiExportMetric("HSE Performance", kpiFormatPercent(getKpiKseValue(record)), "HSE")}
           </div>
 
@@ -1613,6 +2379,16 @@ function getKpiQuarterTrendValues() {
     const latestRecord = records.at(-1);
     return getKpiOverallValue(latestRecord);
   });
+}
+
+function getCumulativeSafetyManHours(year, month) {
+  const values = safeKpiRecords()
+    .filter((record) => Number(record.year) === Number(year))
+    .filter((record) => Number(record.month) >= 1 && Number(record.month) <= Number(month))
+    .map((record) => kpiNumberOrNull(record.total_work_hours))
+    .filter((value) => value !== null);
+  if (!values.length) return null;
+  return values.reduce((sum, value) => sum + value, 0);
 }
 
 function getKpiCategory(value) {

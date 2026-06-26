@@ -5491,6 +5491,143 @@ body.kpi-active .account-avatar {
   gap: 18px;
 }
 
+.kpi-import-card {
+  display: grid;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.kpi-import-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.kpi-import-heading h2 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 22px;
+  line-height: 1.2;
+}
+
+.kpi-import-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.kpi-upload-button {
+  cursor: pointer;
+}
+
+.kpi-import-status {
+  padding: 10px 12px;
+  border: 1px solid #dbe7ef;
+  border-radius: 12px;
+  background: #f8fafc;
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.kpi-import-status.is-error {
+  border-color: #fecaca;
+  background: #fff7f7;
+  color: #dc2626;
+}
+
+.kpi-import-preview {
+  display: grid;
+  gap: 14px;
+}
+
+.kpi-import-alerts {
+  display: grid;
+  gap: 8px;
+}
+
+.kpi-import-error,
+.kpi-import-warning {
+  padding: 10px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.kpi-import-error {
+  border: 1px solid #fecaca;
+  background: #fff7f7;
+  color: #dc2626;
+}
+
+.kpi-import-warning {
+  border: 1px solid #fde68a;
+  background: #fffbeb;
+  color: #92400e;
+}
+
+.kpi-import-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.kpi-import-preview-card {
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid #dbe7ef;
+  border-radius: 14px;
+  background: #ffffff;
+}
+
+.kpi-import-preview-card h3 {
+  margin: 0 0 10px;
+  color: #0f172a;
+  font-size: 14px;
+}
+
+.kpi-import-preview-card div {
+  display: grid;
+  gap: 7px;
+}
+
+.kpi-import-preview-card p {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  padding-bottom: 7px;
+  border-bottom: 1px solid #eef3f7;
+}
+
+.kpi-import-preview-card p:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.kpi-import-preview-card span {
+  min-width: 0;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.kpi-import-preview-card strong {
+  color: #0f766e;
+  font-size: 12px;
+  text-align: right;
+}
+
+.kpi-import-footer {
+  position: static;
+  padding: 0;
+  border-top: 0;
+  background: transparent;
+}
+
 .kpi-data-form .form-card {
   border-radius: 8px;
   box-shadow: 0 8px 20px rgba(15, 23, 42, 0.035);
@@ -5554,8 +5691,10 @@ body.kpi-active .account-avatar {
   .kpi-performance-grid,
   .kpi-kpi-grid,
   .kpi-hse-grid,
-    .kpi-rate-row,
-    .kpi-donut-layout {
+  .kpi-import-heading,
+  .kpi-import-preview-grid,
+  .kpi-rate-row,
+  .kpi-donut-layout {
     grid-template-columns: 1fr;
   }
 
