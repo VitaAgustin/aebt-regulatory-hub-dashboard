@@ -646,39 +646,6 @@
             </div>
           </div>
 
-          <section class="form-card kpi-import-card" aria-labelledby="kpi-import-title">
-            <div class="kpi-import-heading">
-              <div>
-                <p class="eyebrow">Excel import</p>
-                <h2 id="kpi-import-title">Import Excel Dashboard KPI &amp; HSE</h2>
-                <p class="form-hint">
-                  Gunakan file .xlsx dengan format template dashboard AURA. Data akan dipreview sebelum disimpan.
-                </p>
-              </div>
-              <div class="kpi-import-actions">
-                <button id="kpi-download-template" class="button secondary" type="button">
-                  Download Template Excel
-                </button>
-                <label class="button primary kpi-upload-button">
-                  Upload Excel
-                  <input id="kpi-excel-file" type="file" accept=".xlsx,.xls" hidden />
-                </label>
-              </div>
-            </div>
-            <div id="kpi-import-status" class="kpi-import-status muted">
-              Belum ada file dipilih.
-            </div>
-            <div id="kpi-import-preview" class="kpi-import-preview hidden"></div>
-            <div class="form-actions kpi-import-footer">
-              <button id="kpi-import-reset" class="button secondary" type="button" disabled>
-                Reset / Ganti File
-              </button>
-              <button id="kpi-import-save" class="button primary" type="button" disabled>
-                Simpan ke Dashboard
-              </button>
-            </div>
-          </section>
-
           <form id="kpi-data-form" class="kpi-data-form">
             <input name="id" type="hidden" />
             <fieldset class="form-card">
@@ -1448,7 +1415,6 @@
 
     <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" defer></script>
-    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" defer></script>
     <script src="app.js" defer></script>
     <script src="knowledge-features.js" defer></script>
     <script src="kpi-dashboard.js" defer></script>
